@@ -22,6 +22,11 @@ class UserResponse(BaseModel):
     picture: Optional[str] = None
 
 
+class UpdatePasswordRequest(BaseModel):
+    currentPassword: str
+    newPassword: str
+
+
 # ---------- Analysis ----------
 class ClauseAnalysis(BaseModel):
     clauseText: str

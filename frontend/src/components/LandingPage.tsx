@@ -9,10 +9,8 @@ import {
   FileTextIcon,
   DownloadIcon,
 } from "./Icons";
-
 const LandingPage: React.FC = () => {
   const router = useRouter();
-
   return (
     <div className="w-full fade-in">
       {/* Hero */}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { APP_NAME } from "@/constants";
 import { LogoIcon, UserIcon, LogOutIcon } from "./Icons";
 import { useAuth } from "@/context/AuthContext";
-
+import Link from "next/link";
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -39,7 +39,7 @@ const Header: React.FC = () => {
 
         {user ? (
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-300">
+            <Link href="/profile"><div className="flex items-center space-x-2 text-sm text-gray-300">
               {user.picture ? (
                 <img
                   src={user.picture}
@@ -50,7 +50,7 @@ const Header: React.FC = () => {
                 <UserIcon className="h-5 w-5 text-indigo-400" />
               )}
               <span>{user.username}</span>
-            </div>
+            </div></Link>
             <button
               onClick={handleLogout}
               className="inline-flex items-center justify-center h-9 w-9 text-sm font-medium text-indigo-300 bg-white/5 border border-indigo-500/20 rounded-full hover:bg-indigo-500/20 transition-colors"
@@ -61,18 +61,18 @@ const Header: React.FC = () => {
           </div>
         ) : (
           <div className="flex items-center space-x-3">
-            <button
-              onClick={() => router.push("/login")}
+            <Link
+              href="/login"
               className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-indigo-300 bg-white/5 border border-indigo-500/20 rounded-md hover:bg-indigo-500/10 transition-colors"
             >
               Sign in
-            </button>
-            <button
-              onClick={() => router.push("/signup")}
+            </Link>
+            <Link
+              href="/signup"
               className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors"
             >
               Get started
-            </button>
+            </Link>
           </div>
         )}
       </div>

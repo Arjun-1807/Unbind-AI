@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   title: "UnBind: AI Legal Contract Analyzer",
   description:
     "An AI-powered platform that analyzes complex legal documents. It identifies risky clauses, simplifies jargon, suggests fairer terms, and simulates what-if scenarios.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

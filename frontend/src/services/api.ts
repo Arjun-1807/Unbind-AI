@@ -50,6 +50,16 @@ export const getCurrentUser = async (): Promise<User | null> => {
   }
 };
 
+export const updatePassword = async (
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> => {
+  await apiFetch<{ ok: boolean; message: string }>("/auth/update-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+};
+
 // ─── Analysis ───
 
 export const analyzeText = async (

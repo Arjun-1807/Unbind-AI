@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Response
-from app.schemas import SignupRequest, LoginRequest, UserResponse
+from app.schemas import SignupRequest, LoginRequest, UserResponse, UpdatePasswordRequest
 from app.auth import (
     hash_password,
     verify_password,
@@ -79,3 +79,31 @@ async def me(request: Request):
         email=user["email"],
         picture=user.get("picture"),
     )
+
+
+@router.post("/update-password")
+async def update_password(body: UpdatePasswordRequest, request: Request):
+    user_id = await get_current_user_id(request)
+    db = get_db()
+    from bson import ObjectId
+
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Verify current password
+    if not verify_password(body.currentPassword, user["passwordHash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    # Validate new password
+    if len(body.newPassword) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+
+    # Hash and update password
+    new_password_hash = hash_password(body.newPassword)
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"passwordHash": new_password_hash}}
+    )
+
+    return {"ok": True, "message": "Password updated successfully"}

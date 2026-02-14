@@ -3,20 +3,10 @@ Contract analysis service – full port of analysisService.ts
 """
 
 import json
-import math
 import asyncio
 from typing import Any, Callable, Optional
-
 from app.services.groq_service import chat_complete, embed_texts
 from app.services.pdf_processing import chunk_text, convert_pdf_to_markdown
-from app.schemas import (
-    AnalysisResponse,
-    ClauseAnalysis,
-    MissingClause,
-    ChunkSummary,
-    KeyTerm,
-    KeyDate,
-)
 
 
 # ───── Helpers ─────
@@ -114,7 +104,7 @@ async def _create_chunk_summaries(
     chunks: list[str], clauses: list[dict], role: str
 ) -> list[dict]:
     summaries: list[dict] = []
-    per_chunk = math.ceil(len(clauses) / len(chunks)) if chunks else len(clauses)
+    per_chunk = len(clauses) // len(chunks) + (1 if len(clauses) % len(chunks) else 0) if chunks else len(clauses)
     for i, chunk in enumerate(chunks):
         start = i * per_chunk
         end = min(start + per_chunk, len(clauses))
@@ -192,67 +182,118 @@ async def analyze_contract(
     }
 
 
-# ───── Impact simulator ─────
+# ───── Impact simulator with LangChain Chroma ─────
 
-def _cosine_similarity(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    denom = na * nb or 1.0
-    return dot / denom
-
-
-async def _vector_retrieve_relevant_chunks(
-    chunks: list[str], query: str, top_k: int = 6
-) -> list[str]:
-    try:
-        inputs = chunks + [query]
-        vectors = await embed_texts(inputs)
-        if len(vectors) != len(inputs):
-            return chunks
-        query_vec = vectors[-1]
-        chunk_vecs = vectors[:-1]
-        scored = sorted(
-            [(i, _cosine_similarity(v, query_vec)) for i, v in enumerate(chunk_vecs)],
-            key=lambda x: x[1],
-            reverse=True,
-        )
-        selected = [chunks[idx] for idx, _ in scored[: min(top_k, len(scored))]]
-        return selected if selected else chunks
-    except Exception:
-        return chunks
+class GroqEmbeddingFunction:
+    """Custom embedding function for Chroma using Groq API."""
+    
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        # Synchronous wrapper for async embed_texts
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If already in async context, use run_coroutine_threadsafe
+            import concurrent.futures
+            future = asyncio.run_coroutine_threadsafe(embed_texts(input), loop)
+            return future.result()
+        else:
+            return loop.run_until_complete(embed_texts(input))
 
 
 async def simulate_impact(document_text: str, scenario: str) -> str:
+    """Vector-based impact simulation using LangChain Chroma."""
     if not scenario.strip():
         return "Please enter a scenario to simulate."
+    
+    # Chunk the document
     chunks = chunk_text(document_text, 1500, 200)
-    relevant = await _vector_retrieve_relevant_chunks(chunks, scenario, 6)
-    if not relevant:
-        return (
-            "Could not find any information in the document relevant to your scenario. "
-            "Please try rephrasing your question or check if the topic is covered in the contract."
+    
+    if not chunks:
+        return "Document appears to be empty or unreadable."
+    
+    try:
+        # Create Chroma vector store with Groq embeddings
+        from langchain_community.vectorstores import Chroma
+        from langchain.schema import Document
+        import chromadb
+        
+        # Create documents from chunks
+        documents = [Document(page_content=chunk) for chunk in chunks]
+        
+        # Create ephemeral Chroma client for this request
+        chroma_client = chromadb.EphemeralClient()
+        
+        # Create vector store with custom Groq embedding function
+        embedding_function = GroqEmbeddingFunction()
+        vectorstore = Chroma.from_documents(
+            documents=documents,
+            embedding=embedding_function,
+            client=chroma_client,
+            collection_name="contract_analysis"
         )
-    context = "\n\n---\n\n".join(relevant)
-    output = await chat_complete(
-        [
-            {
-                "role": "system",
-                "content": (
-                    "You help people with below-average literacy. Answer simply in plain words. "
-                    'Use up to 5 bullet points, each 1–2 short sentences, no jargon. '
-                    'If helpful, include 1 tiny example starting with "Example:".'
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Scenario: {scenario}\n\nContract Excerpts:\n{context}\n\n"
-                    "Write the answer in very simple words. Keep it under 300 words."
-                ),
-            },
-        ],
-        model="llama-3.3-70b-versatile",
-        temperature=0.2,
-    )
-    return output
+        
+        # Perform similarity search
+        relevant_docs = vectorstore.similarity_search(scenario, k=6)
+        relevant_chunks = [doc.page_content for doc in relevant_docs]
+        
+        if not relevant_chunks:
+            return (
+                "Could not find any information in the document relevant to your scenario. "
+                "Please try rephrasing your question or check if the topic is covered in the contract."
+            )
+        
+        context = "\n\n---\n\n".join(relevant_chunks)
+        output = await chat_complete(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "You help people with below-average literacy. Answer simply in plain words. "
+                        'Use up to 5 bullet points, each 1–2 short sentences, no jargon. '
+                        'If helpful, include 1 tiny example starting with "Example:".'
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Scenario: {scenario}\n\nContract Excerpts:\n{context}\n\n"
+                        "Write the answer in very simple words. Keep it under 300 words."
+                    ),
+                },
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.2,
+        )
+        return output
+        
+    except Exception as e:
+        # Fallback to simple keyword matching if vector search fails
+        scenario_lower = scenario.lower()
+        relevant = [c for c in chunks if any(word in c.lower() for word in scenario_lower.split())]
+        
+        if not relevant:
+            relevant = chunks[:6]  # Take first 6 chunks as fallback
+        
+        context = "\n\n---\n\n".join(relevant[:6])
+        output = await chat_complete(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "You help people with below-average literacy. Answer simply in plain words. "
+                        'Use up to 5 bullet points, each 1–2 short sentences, no jargon. '
+                        'If helpful, include 1 tiny example starting with "Example:".'
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Scenario: {scenario}\n\nContract Excerpts:\n{context}\n\n"
+                        "Write the answer in very simple words. Keep it under 300 words."
+                    ),
+                },
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.2,
+        )
+        return output
