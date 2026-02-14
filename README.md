@@ -1,163 +1,184 @@
-# UnBind AI — Legal Contract Analyzer
+# ⚖️ UnbindAI — AI-Powered Legal Contract Analyzer
 
-A full-stack AI-powered legal contract analysis platform. Upload a contract (PDF or text), and the AI breaks it down clause-by-clause with risk ratings, negotiation suggestions, key terms glossary, important dates, and an impact simulator.
+UnbindAI uses AI to break down legal contracts into plain English. Upload a PDF, get instant clause-by-clause risk analysis, negotiation suggestions, key terms glossary, deadline tracking, and what-if impact simulations.
 
-## Architecture
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white)
+
+---
+
+## ✨ Features
+
+| Feature                   | Description                                                 |
+| ------------------------- | ----------------------------------------------------------- |
+| **📄 PDF Upload**         | Drag-and-drop or click to upload any legal contract         |
+| **⚠️ Risk Analysis**      | Clause-by-clause risk scoring with a visual risk meter      |
+| **🤝 Negotiation Helper** | AI-generated suggestions with keep/AI/custom clause options |
+| **📖 Key Terms Glossary** | Legal jargon explained in plain English                     |
+| **📅 Key Dates**          | Automatic deadline extraction with ICS calendar export      |
+| **🎯 Impact Simulator**   | "What if I…?" scenario testing against your contract        |
+| **📄 Document View**      | Side-by-side view with interactive clause highlighting      |
+| **📥 PDF Export**         | Download full analysis reports and modified contracts       |
+| **🔐 Auth**               | Secure JWT-based signup/login                               |
+| **📁 Dashboard**          | View and manage all past analyses                           |
+
+---
+
+## 🏗️ Architecture
 
 ```
 UnbindAI/
-├── backend/          # FastAPI (Python) backend
+├── backend/                    # Python FastAPI
 │   ├── app/
-│   │   ├── config.py
-│   │   ├── database.py
-│   │   ├── schemas.py
-│   │   ├── auth.py
-│   │   ├── main.py
+│   │   ├── main.py             # App entry + lifespan
+│   │   ├── config.py           # Pydantic Settings
+│   │   ├── database.py         # Motor (async MongoDB)
+│   │   ├── schemas.py          # Request/response models
+│   │   ├── auth.py             # JWT + bcrypt
 │   │   ├── routes/
 │   │   │   ├── auth_routes.py
 │   │   │   └── analysis_routes.py
 │   │   └── services/
-│   │       ├── groq_service.py
-│   │       ├── pdf_processing.py
-│   │       └── analysis_service.py
+│   │       ├── groq_service.py       # Groq LLM API client
+│   │       ├── pdf_processing.py     # Text extraction + chunking
+│   │       └── analysis_service.py   # Contract analysis pipeline
 │   ├── requirements.txt
-│   └── .env
+│   └── .env.example
 │
-└── frontend/         # Next.js 15 (React 19) frontend
+└── frontend/                   # Next.js 15 (App Router)
     ├── src/
-    │   ├── app/          # App Router pages
-    │   ├── components/   # React components
-    │   ├── context/      # Auth context
-    │   ├── services/     # API client
+    │   ├── app/                # File-based routing
+    │   ├── components/         # 18 React components
+    │   ├── context/            # Auth context provider
+    │   ├── services/api.ts     # Backend API client
     │   ├── types.ts
     │   └── constants.ts
     ├── package.json
-    └── next.config.mjs
+    └── next.config.mjs         # API proxy to backend
 ```
-
-## Prerequisites
-
-- **Python 3.10+**
-- **Node.js 18+**
-- **MongoDB** (Atlas or local)
-- **Groq API Key** — get one at [console.groq.com](https://console.groq.com)
 
 ---
 
-## Backend Setup
+## 🧠 How It Works
+
+```
+User uploads PDF
+       ↓
+Backend extracts text (pdfplumber / PyPDF2)
+       ↓
+Text is semantically chunked (heading-aware splitting)
+       ↓
+Each chunk → Groq LLM (Llama 3.3 70B) for analysis
+       ↓
+Results synthesized into unified report
+       ↓
+Stored in MongoDB + returned to frontend
+       ↓
+Interactive UI with tabs, highlighting, and export
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.12+
+- Node.js 18+
+- [MongoDB Atlas](https://cloud.mongodb.com/) account (free M0 tier)
+- [Groq API](https://console.groq.com/) key (free)
+
+### 1. Clone
+
+```bash
+git clone https://github.com/YOUR_USERNAME/UnbindAI.git
+cd UnbindAI
+```
+
+### 2. Backend
 
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
 
-# Activate (Windows)
+# Windows
 venv\Scripts\activate
-# Activate (macOS/Linux)
+# macOS/Linux
 source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
-```
 
-### Configure Environment
+# Create .env from template
+cp .env.example .env
+# Edit .env with your actual credentials
 
-Edit `backend/.env`:
-
-```env
-PORT=8000
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/
-JWT_SECRET=your_jwt_secret_here
-GROQ_API_KEY=your_groq_api_key_here
-FRONTEND_URL=http://localhost:3000
-```
-
-### Run Backend
-
-```bash
-cd backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-The API will be available at `http://localhost:8000`. Health check: `GET /api/health`
+→ API at **http://localhost:8000** | Docs at **http://localhost:8000/docs**
 
----
-
-## Frontend Setup
+### 3. Frontend
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-```
-
-### Run Frontend
-
-```bash
 npm run dev
 ```
 
-The app will be available at `http://localhost:3000`.
-
-> The frontend proxies `/api/*` requests to the backend at `http://localhost:8000` via Next.js rewrites configured in `next.config.mjs`.
+→ App at **http://localhost:3000**
 
 ---
 
-## API Endpoints
+## 🔑 API Keys
+
+| Variable       | Source                                                                                | Cost           |
+| -------------- | ------------------------------------------------------------------------------------- | -------------- |
+| `MONGODB_URI`  | [MongoDB Atlas](https://cloud.mongodb.com/) → Create free cluster → Connect → Drivers | Free (512MB)   |
+| `GROQ_API_KEY` | [Groq Console](https://console.groq.com/) → API Keys → Create                         | Free           |
+| `JWT_SECRET`   | `python -c "import secrets; print(secrets.token_hex(32))"`                            | Self-generated |
+
+---
+
+## 📡 API Endpoints
 
 ### Auth
 
-| Method | Endpoint           | Description                  |
-| ------ | ------------------ | ---------------------------- |
-| POST   | `/api/auth/signup` | Register a new user          |
-| POST   | `/api/auth/login`  | Login and receive JWT cookie |
-| POST   | `/api/auth/logout` | Clear auth cookie            |
-| GET    | `/api/auth/me`     | Get current user info        |
+| Method | Endpoint           | Description             |
+| ------ | ------------------ | ----------------------- |
+| POST   | `/api/auth/signup` | Create account          |
+| POST   | `/api/auth/login`  | Login (sets JWT cookie) |
+| POST   | `/api/auth/logout` | Clear auth cookie       |
+| GET    | `/api/auth/me`     | Current user info       |
 
 ### Analysis
 
-| Method | Endpoint                     | Description                       |
-| ------ | ---------------------------- | --------------------------------- |
-| POST   | `/api/analysis/upload`       | Upload PDF/text file for analysis |
-| POST   | `/api/analysis/analyze`      | Analyze raw text                  |
-| GET    | `/api/analysis/history`      | Get user's analysis history       |
-| GET    | `/api/analysis/history/{id}` | Get specific analysis             |
-| POST   | `/api/analysis/simulate`     | Run impact simulation             |
+| Method | Endpoint                    | Description                |
+| ------ | --------------------------- | -------------------------- |
+| POST   | `/api/analysis/upload`      | Upload PDF → full analysis |
+| POST   | `/api/analysis/analyze`     | Analyze raw text           |
+| GET    | `/api/analysis/history`     | User's past analyses       |
+| GET    | `/api/analysis/history/:id` | Single analysis by ID      |
+| POST   | `/api/analysis/simulate`    | What-if impact simulation  |
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-### Backend
-
-- **FastAPI** — async Python web framework
-- **Motor** — async MongoDB driver
-- **Groq API** (llama-3.3-70b-versatile) — AI analysis
-- **pdfplumber / PyPDF2** — server-side PDF text extraction
-- **python-jose** — JWT authentication
-- **passlib + bcrypt** — password hashing
-
-### Frontend
-
-- **Next.js 15** (App Router)
-- **React 19**
-- **Tailwind CSS v4**
-- **jsPDF** — PDF report export
-- **pdf-lib** — PDF overlay generation
-- **pdfjs-dist** — client-side PDF rendering
+| Layer    | Tech                                                            |
+| -------- | --------------------------------------------------------------- |
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS v4               |
+| Backend  | FastAPI, Python 3.12, Pydantic                                  |
+| Database | MongoDB Atlas (Motor async driver)                              |
+| AI       | Groq API — Llama 3.3 70B Versatile                              |
+| Auth     | JWT (python-jose), bcrypt (passlib)                             |
+| PDF      | pdfplumber, PyPDF2 (backend) · jsPDF, pdf-lib (frontend export) |
 
 ---
 
-## Features
+## 📄 License
 
-- 🔍 **Risk Analysis** — clause-by-clause risk rating with visual risk meter
-- 🤝 **Negotiation Helper** — AI-generated suggestions with keep/use-AI/custom options
-- 📖 **Key Terms Glossary** — plain-English definitions of legal terms
-- 📅 **Key Dates** — deadline extraction with ICS calendar export
-- 🎯 **Impact Simulator** — what-if scenario analysis against your contract
-- 📄 **Document View** — side-by-side document with clause highlighting
-- 📥 **PDF Export** — downloadable analysis reports and modified contracts
-- 🔐 **Authentication** — secure JWT-based user accounts
-- 💾 **History** — saved analyses accessible from dashboard
+MIT
