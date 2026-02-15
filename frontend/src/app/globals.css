@@ -43,3 +43,13 @@ body {
 .fade-in {
   animation: fadeIn 0.5s ease-in-out forwards;
 }
+@keyframes tilt {
+  0% { transform: rotate(-8deg); }
+  50% { transform: rotate(8deg); }
+  100% { transform: rotate(-8deg); }
+}
+
+.animate-tilt {
+  animation: tilt 1.8s ease-in-out infinite;
+  transform-origin: center top;
+}

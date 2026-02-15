@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import FileUpload from "@/components/FileUpload";
+import Loading from "../loading";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorMessage from "@/components/ErrorMessage";
 import Header from "@/components/Header";
@@ -49,12 +50,13 @@ export default function UploadPage() {
 
   if (!user) return null;
 
+  if (isLoading) return <Loading />;
+
   return (
     <div className="min-h-screen font-sans">
       <Header />
       <main className="container mx-auto px-4 py-10 max-w-7xl">
-        {isLoading && <LoadingSpinner message={loadingMessage} />}
-        {!isLoading && error && (
+        {error && (
           <ErrorMessage
             message={error}
             onRetry={() => {
@@ -62,7 +64,7 @@ export default function UploadPage() {
             }}
           />
         )}
-        {!isLoading && !error && (
+        {!error && (
           <FileUpload
             onStartAnalysis={handleStartAnalysis}
             onBack={() => router.push("/dashboard")}
