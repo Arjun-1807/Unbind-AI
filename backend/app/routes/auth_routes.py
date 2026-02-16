@@ -9,6 +9,7 @@ from app.auth import (
     get_current_user_id,
 )
 from app.database import get_db
+import datetime
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -21,11 +22,13 @@ async def signup(body: SignupRequest, response: Response):
         raise HTTPException(status_code=409, detail="An account with this email already exists")
 
     password_hash = hash_password(body.password)
+    now = datetime.datetime.now()
     doc = {
         "username": body.username,
         "email": body.email.lower(),
         "passwordHash": password_hash,
         "picture": None,
+        "createdAt":now
     }
     result = await db.users.insert_one(doc)
     user_id = str(result.inserted_id)
@@ -33,7 +36,7 @@ async def signup(body: SignupRequest, response: Response):
     token = create_access_token(user_id)
     set_auth_cookie(response, token)
 
-    return UserResponse(id=user_id, username=body.username, email=body.email.lower())
+    return UserResponse(id=user_id, username=body.username, email=body.email.lower(),pro=False,createdAt=now)
 
 
 @router.post("/login", response_model=UserResponse)
@@ -55,6 +58,8 @@ async def login(body: LoginRequest, response: Response):
         username=user["username"],
         email=user["email"],
         picture=user.get("picture"),
+        pro=user.get("pro",False),
+        createdAt=user.get("createdAt")
     )
 
 
@@ -78,6 +83,7 @@ async def me(request: Request):
         username=user["username"],
         email=user["email"],
         picture=user.get("picture"),
+        pro = user.get("pro",False),
     )
 
 

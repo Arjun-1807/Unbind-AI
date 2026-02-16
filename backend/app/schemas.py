@@ -20,6 +20,8 @@ class UserResponse(BaseModel):
     username: str
     email: str
     picture: Optional[str] = None
+    pro: bool = False
+    createdAt: datetime
 
 
 class UpdatePasswordRequest(BaseModel):

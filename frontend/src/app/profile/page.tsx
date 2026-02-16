@@ -10,7 +10,6 @@ import { useAuth } from "@/context/AuthContext";
 export default function ProfilePage() {
   const { user, analyses } = useAuth();
   const router = useRouter();
-
   useEffect(() => {
     if (!user) {
       router.replace("/login");

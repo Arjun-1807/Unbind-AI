@@ -6,6 +6,7 @@ import { UserIcon, SparklesIcon, FileTextIcon, ShieldCheckIcon, CheckCircleIcon,
 import { updatePassword } from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
 
 interface ProfileViewProps {
   user: User;
@@ -61,26 +62,53 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
     (sum, a) => sum + a.analysisResult.clauses.filter(c => c.riskLevel === 'High').length,
     0
   );
-  const onBack = () => {
-    router.replace('/dashboard')
-  }
+
+  // const onBack = () => {
+  //   router.push('/dashboard')
+  // }
+
   const handleLogout = async () => {
     await logout();
     router.push("/");
   };
+
+  // const handleGetPro = () => {
+  //   router.push("/pricing");
+  // };
+
+  const [plan, setPlan] = React.useState<string | null>(null);
+  const [isPro, setIsPro] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("http://localhost:8000/api/user/plan/", { credentials: "include" })
+      .then(res => res.json())
+      .then(data => {
+        setPlan(data.plan);
+        setIsPro(data.isPro);
+      });
+  }, [])
+
+  const handleCancel = async () => {
+    await fetch("http://localhost:8000/api/user/plan/cancel", {
+      method: "POST",
+      credentials: "include",
+    });
+    setPlan(null);
+    setIsPro(false);
+  }
 
   return (
     <div className="space-y-8 fade-in">
       {/* Header */}
       <div>
         <div className="w-full max-w-3xl mb-4 text-left">
-        <button
-          onClick={onBack}
-          className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
-        >
-          &larr; Back to Dashboard
-        </button>
-      </div>
+         <Link href="/dashboard"><button
+            // onClick={onBack}
+            className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            &larr; Back to Dashboard
+          </button></Link>
+        </div>
         <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
           Your Profile
         </h2>
@@ -89,16 +117,16 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
         {/* Main Profile Card */}
         <div className="relative lg:col-span-2 glass-card p-6 sm:p-8 rounded-xl">
           <button
-  onClick={handleLogout}
-  className="absolute top-6 right-6 inline-flex items-center px-4 py-2 font-semibold text-white bg-red-600 border border-transparent rounded-md hover:bg-red-500 transition-colors text-sm shadow-lg"
->
-  Logout
-  <LogOutIcon className="ml-2 h-4 w-4" />
-</button>
+            onClick={handleLogout}
+            className="absolute top-6 right-6 inline-flex items-center px-4 py-2 font-semibold cursor-pointer text-white bg-red-600 border border-transparent rounded-md hover:bg-red-500 transition-colors text-sm shadow-lg"
+          >
+            <LogOutIcon className="mr-2 h-4 w-4" />
+            Logout
+          </button>
 
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
             {/* Left Section */}
@@ -110,7 +138,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
               {/* User Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2">
-                  
                   <UserIcon className="h-5 w-5 text-indigo-400" />
                   <h3 className="text-2xl font-semibold text-white truncate">
                     {user.username}
@@ -119,9 +146,25 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                 <p className="mt-1 text-gray-400 text-sm truncate">
                   {user.email}
                 </p>
-                <div className="mt-3 flex items-center space-x-2 text-xs text-green-500">
-                  <ShieldCheckIcon className="h-4 w-4" />
-                  <span>Account Active</span>
+                <div className="mt-3 flex items-center space-x-2 text-xs">
+                  <ShieldCheckIcon className={`h-4 w-4 ${isPro ? 'text-green-400' : 'text-gray-400'}`} />
+                  {isPro && plan ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-green-400 font-semibold">
+                        Active Plan: {plan}
+                      </span>
+                      <button 
+                        className="inline-flex cursor-pointer items-center px-3 py-1 font-semibold text-white  border border-red-400 rounded-md  transition-colors text-xs shadow-lg" 
+                        onClick={handleCancel}
+                      >
+                        Cancel Plan
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">
+                      Active Plan: Free
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -140,7 +183,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
               {!showPasswordForm && (
                 <button
                   onClick={() => setShowPasswordForm(true)}
-                  className="inline-flex items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
+                  className="inline-flex cursor-pointer items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
                 >
                   Update Password
                   <SparklesIcon className="ml-2 h-4 w-4" />
@@ -271,7 +314,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">Member Since</span>
-                <span className="text-gray-300">2024</span>
+                <span className="text-gray-300">N/A</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Last Login</span>
@@ -279,10 +322,32 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Account Type</span>
-                <span className="text-indigo-400 font-semibold">Free</span>
+                <span className={isPro ? 'text-green-400 font-semibold' : 'text-indigo-400 font-semibold'}>
+                  {plan || 'Free'}
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Get Pro Button for Free Users */}
+          {!isPro && (
+            <div className="glass-card p-6 rounded-xl bg-gradient-to-br from-indigo-600/10 to-purple-600/10 border border-indigo-500/20">
+              <div className="text-center space-y-3">
+                <SparklesIcon className="h-8 w-8 text-indigo-400 mx-auto" />
+                <h4 className="text-lg font-semibold text-white">Upgrade to Pro</h4>
+                <p className="text-sm text-gray-400">
+                  Unlock unlimited analyses and advanced features
+                </p>
+               <Link href="/pricing"><button
+                  // onClick={handleGetPro}
+                  className="w-full  cursor-pointer inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 border border-transparent rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg"
+                >
+                  Get Pro
+                  <SparklesIcon className="ml-2 h-4 w-4" />
+                </button></Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@ import {
   CheckCircleIcon,
 } from "./Icons";
 import { RISK_COLORS } from "@/constants";
+import Link from "next/link";
 
 interface DashboardViewProps {
   user: User;
@@ -61,22 +62,78 @@ const RiskSummary: React.FC<{ analysis: StoredAnalysis }> = ({ analysis }) => {
     </div>
   );
 };
+const PLAN_BENEFITS: Record<string, string[]> = {
+  Brief: [
+    "Unlimited contract analysis",
+    "Basic risk detection",
+    "Download summary PDF",
+  ],
+  Motion: [
+    "Everything in Brief",
+    "Advanced clause insights",
+    "Priority support",
+    "Export to Word",
+  ],
+  Verdict: [
+    "Everything in Motion",
+    "AI-powered negotiation suggestions",
+    "Team collaboration",
+    "Dedicated legal expert review",
+  ],
+};
 
+const PlanTooltip: React.FC<{ plan: string }> = ({ plan }) => {
+  if (!plan || !PLAN_BENEFITS[plan]) return null;
+  return (
+    <div className="absolute z-50 right-0 mt-2 w-64 bg-gray-900 text-white text-sm rounded-lg shadow-lg p-4 border border-indigo-500">
+      <div className="font-bold mb-2">{plan} Plan Benefits</div>
+      <ul className="list-disc pl-5 space-y-1">
+        {PLAN_BENEFITS[plan].map((benefit) => (
+          <li key={benefit}>{benefit}</li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 const DashboardView: React.FC<DashboardViewProps> = ({
   user,
   analyses,
   onSelectAnalysis,
   onNewAnalysis,
 }) => {
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const [plan, setPlan] = React.useState<string | null>(null);
+  
+    React.useEffect(() => {
+      fetch("http://localhost:8000/api/user/plan/", { credentials: "include" })
+        .then(res => res.json())
+        .then(data => {
+          setPlan(data.plan);
+        });
+    }, [])
+  const isFreePlan = plan !== "Brief" && plan !== "Motion" && plan !== "Verdict";
+  const hasReachedLimit = isFreePlan && analyses.length >= 1;
   return (
     <div className="space-y-10 fade-in">
-      <div>
+      <div className="relative">
         <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
           Welcome back, {user.username}
         </h2>
-        <p className="mt-4 text-lg leading-8 text-gray-400">
-          Review your past analyses or upload a new document to begin.
-        </p>
+        <div className="mt-4 flex items-center space-x-4">
+          <p className="text-lg leading-8 text-gray-400">
+            Review your past analyses or upload a new document to begin.
+          </p>
+        </div>
+        <span
+          className="absolute top-0 right-0 text-sm text-white px-3 py-1 cursor-pointer"
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
+          Active Plan :{plan? (<span className="text-green-400">{plan}</span>): (<span className="text-red-400">Free</span>)}
+          {showTooltip && plan && (
+            <PlanTooltip plan={plan} />
+          )}
+        </span>
       </div>
 
       <div className="glass-card p-6 sm:p-8 rounded-xl">
@@ -84,13 +141,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <h3 className="text-xl font-semibold text-white">
             Your Document History
           </h3>
-          <button
-            onClick={onNewAnalysis}
-            className="inline-flex items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
-          >
-            Analyze New Document
-            <SparklesIcon className="ml-2 h-5 w-5" />
-          </button>
+         {!hasReachedLimit ? (
+  <button
+    onClick={onNewAnalysis}
+    className="inline-flex items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
+  >
+    Analyze New Document
+    <SparklesIcon className="ml-2 h-5 w-5" />
+  </button>
+) : (
+ <Link href="/pricing"> <button className="inline-flex items-center px-4 py-2 font-semibold text-whitebg-gradient-to-r from-indigo-600 to-purple-600 border border-purple-600 rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg cursor-pointer">
+    Upgrade to pro to get more analyses
+  </button></Link>
+)}
+
+          
         </div>
 
         {analyses.length > 0 ? (

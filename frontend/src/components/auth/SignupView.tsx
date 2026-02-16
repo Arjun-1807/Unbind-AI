@@ -10,6 +10,7 @@ const SignupView: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  // ...existing code...
   const [error, setError] = useState("");
   const { signup } = useAuth();
   const router = useRouter();
@@ -134,6 +135,7 @@ const SignupView: React.FC = () => {
                 className="w-full p-3 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-white placeholder-gray-500"
               />
             </div>
+            {/* Pro user toggle removed */}
           </div>
 
           {error && <p className="text-sm text-red-400">{error}</p>}

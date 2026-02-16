@@ -50,6 +50,7 @@ const Header: React.FC = () => {
                 <UserIcon className="h-5 w-5 text-indigo-400" />
               )}
               <span>{user.username}</span>
+              
             </div></Link>
             <button
               onClick={handleLogout}
@@ -58,6 +59,7 @@ const Header: React.FC = () => {
             >
               <LogOutIcon className="h-4 w-4" />
             </button>
+            
           </div>
         ) : (
           <div className="flex items-center space-x-3">
