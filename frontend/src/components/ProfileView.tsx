@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import type { User, StoredAnalysis } from "@/types";
 import { UserIcon, SparklesIcon, FileTextIcon, ShieldCheckIcon, CheckCircleIcon, AlertCircleIcon, LogOutIcon } from "./Icons";
-import { updatePassword } from "@/services/api";
+import { updatePassword, getUserPlan, cancelUserPlan } from "@/services/api";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
@@ -77,24 +77,40 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
   // };
 
   const [plan, setPlan] = React.useState<string | null>(null);
-  const [isPro, setIsPro] = React.useState(false);
+  const [isPro, setIsPro] = React.useState<boolean>(user.pro === true);
+  const [planLoaded, setPlanLoaded] = React.useState(false);
 
   React.useEffect(() => {
-    fetch("http://localhost:8000/api/user/plan/", { credentials: "include" })
-      .then(res => res.json())
-      .then(data => {
-        setPlan(data.plan);
-        setIsPro(data.isPro);
-      });
-  }, [])
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getUserPlan();
+        if (!cancelled) {
+          setPlan(data.plan);
+          setIsPro(data.isPro);
+          setPlanLoaded(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setPlan(null);
+          setIsPro(false);
+          setPlanLoaded(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCancel = async () => {
-    await fetch("http://localhost:8000/api/user/plan/cancel", {
-      method: "POST",
-      credentials: "include",
-    });
-    setPlan(null);
-    setIsPro(false);
+    try {
+      await cancelUserPlan();
+      setPlan(null);
+      setIsPro(false);
+    } catch {
+      // Silently ignore for now; UI will still show old plan until next refresh
+    }
   }
 
   return (
@@ -132,7 +148,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             {/* Left Section */}
             <div className="flex items-start space-x-4">
               {/* Avatar */}
-              <div className="h-20 w-20 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-400 flex items-center justify-center text-white text-3xl font-bold shadow-lg flex-shrink-0">
+              <div className="h-20 w-20 rounded-full bg-linear-to-br from-indigo-600 to-indigo-400 flex items-center justify-center text-white text-3xl font-bold shadow-lg shrink-0">
                 {user.username.charAt(0).toUpperCase()}
               </div>
               {/* User Info */}
@@ -329,9 +345,9 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             </div>
           </div>
 
-          {/* Get Pro Button for Free Users */}
-          {!isPro && (
-            <div className="glass-card p-6 rounded-xl bg-gradient-to-br from-indigo-600/10 to-purple-600/10 border border-indigo-500/20">
+          {/* Get Pro Button for Free Users (wait for plan status to avoid flicker) */}
+          {planLoaded && !isPro && (
+            <div className="glass-card p-6 rounded-xl bg-linear-to-br from-indigo-600/10 to-purple-600/10 border border-indigo-500/20">
               <div className="text-center space-y-3">
                 <SparklesIcon className="h-8 w-8 text-indigo-400 mx-auto" />
                 <h4 className="text-lg font-semibold text-white">Upgrade to Pro</h4>
@@ -340,7 +356,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                 </p>
                <Link href="/pricing"><button
                   // onClick={handleGetPro}
-                  className="w-full  cursor-pointer inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 border border-transparent rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg"
+                  className="w-full  cursor-pointer inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-linear-to-r from-indigo-600 to-purple-600 border border-transparent rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg"
                 >
                   Get Pro
                   <SparklesIcon className="ml-2 h-4 w-4" />

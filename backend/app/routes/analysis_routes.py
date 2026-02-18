@@ -132,6 +132,19 @@ async def get_analysis(analysis_id: str, request: Request):
     }
 
 
+@router.delete("/history/{analysis_id}")
+async def delete_analysis(analysis_id: str, request: Request):
+    """Delete a single analysis by id for the authenticated user."""
+    user_id = await get_current_user_id(request)
+    db = get_db()
+    from bson import ObjectId
+
+    result = await db.analyses.delete_one({"_id": ObjectId(analysis_id), "userId": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    return {"ok": True}
+
+
 @router.post("/simulate")
 async def simulate(body: SimulateRequest, request: Request):
     """Run a what-if impact simulation against the contract text."""

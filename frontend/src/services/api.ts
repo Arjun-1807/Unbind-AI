@@ -5,7 +5,7 @@ const API_BASE = "/api";
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
     ...init,
   });
   if (!res.ok) {
@@ -111,4 +111,29 @@ export const simulateImpact = async (
     body: JSON.stringify({ documentText, scenario }),
   });
   return data.result;
+};
+
+export const deleteAnalysis = async (id: string): Promise<void> => {
+  await apiFetch<{ ok: boolean }>(`/analysis/history/${id}`, {
+    method: "DELETE",
+  });
+};
+
+// ─── User Plan ───
+
+export const getUserPlan = async (): Promise<{ plan: string | null; isPro: boolean }> => {
+  return apiFetch<{ plan: string | null; isPro: boolean }>("/user/plan/");
+};
+
+export const activateUserPlan = async (plan: string): Promise<{ success: boolean; plan: string }> => {
+  return apiFetch<{ success: boolean; plan: string }>("/user/plan/activate", {
+    method: "POST",
+    body: JSON.stringify({ plan }),
+  });
+};
+
+export const cancelUserPlan = async (): Promise<{ success: boolean }> => {
+  return apiFetch<{ success: boolean }>("/user/plan/cancel", {
+    method: "POST",
+  });
 };

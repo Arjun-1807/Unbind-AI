@@ -37,26 +37,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Load user on mount
   useEffect(() => {
     (async () => {
-      try {
-        const localUser = localStorage.getItem("user");
-        if (localUser) {
-          const parsed = JSON.parse(localUser);
-          setUser(parsed);
-          // Fetch analyses from backend
+      // 1) Prefer backend truth
+      const remoteUser = await api.getCurrentUser();
+      if (remoteUser) {
+        setUser(remoteUser);
+        localStorage.setItem("user", JSON.stringify(remoteUser));
+        try {
           const data = await api.getUserAnalyses();
           setAnalyses(data);
-          return;
+        } catch {
+          setAnalyses([]);
         }
-        const u = await api.getCurrentUser();
-        if (u) {
-          setUser(u);
-          localStorage.setItem("user", JSON.stringify(u));
-          const data = await api.getUserAnalyses();
-          setAnalyses(data);
-        }
-      } catch {
-        setUser(null);
+        return;
       }
+
+      // 2) Fallback to any cached user in localStorage
+      const localUser = localStorage.getItem("user");
+      if (localUser) {
+        try {
+          const parsed = JSON.parse(localUser) as User;
+          setUser(parsed);
+          try {
+            const data = await api.getUserAnalyses();
+            setAnalyses(data);
+          } catch {
+            setAnalyses([]);
+          }
+          return;
+        } catch {
+          // If parsing fails, clear the bad cache
+          localStorage.removeItem("user");
+        }
+      }
+
+      // 3) No valid session
+      setUser(null);
+      setAnalyses([]);
     })();
   }, []);
 

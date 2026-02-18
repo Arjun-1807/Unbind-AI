@@ -8,8 +8,12 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const { user } = useAuth();
   const router = useRouter();
-  if (user)
+  // Redirect authenticated users away from the login page
+  if (user) {
+    // In practice this runs only client-side because of "use client"
     router.replace("/dashboard");
+    return null;
+  }
   return (
     <div className="min-h-screen font-sans">
       <Header />

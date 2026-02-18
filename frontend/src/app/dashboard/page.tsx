@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -6,9 +6,10 @@ import DashboardView from "@/components/DashboardView";
 import Header from "@/components/Header";
 import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
+import * as api from "@/services/api";
 
 export default function DashboardPage() {
-  const { user, analyses } = useAuth();
+  const { user, analyses, refreshAnalyses } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -31,6 +32,10 @@ export default function DashboardPage() {
             router.push("/analysis");
           }}
           onNewAnalysis={() => router.push("/upload")}
+          onDeleteAnalysis={async (id) => {
+            await api.deleteAnalysis(id);
+            await refreshAnalyses();
+          }}
         />
       </main>
       <footer className="text-center py-8 text-sm text-gray-500">

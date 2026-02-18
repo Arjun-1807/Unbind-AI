@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import { LogoIcon } from "@/components/Icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { activateUserPlan } from "@/services/api";
 export default function Pricing() {
     const router = useRouter();
   const onBack = () => {
@@ -13,18 +14,16 @@ export default function Pricing() {
       router.push('/dashboard')
     }
     }
-  const [plan,setPlan] = React.useState<string | null>(null);
+  const [plan, setPlan] = React.useState<string | null>(null);
   const handleSelectPlan = async (selectedPlan: string) => {
     setPlan(selectedPlan);
-    await fetch("http://localhost:8000/api/user/plan/activate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials:'include',
-      body: JSON.stringify({ plan: selectedPlan }),
-    });
-    router.push("/profile")
+    try {
+      await activateUserPlan(selectedPlan);
+      router.push("/profile");
+    } catch {
+      // If activation fails, reset local selection; you could also show a toast here.
+      setPlan(null);
+    }
   };
   return (
     <>

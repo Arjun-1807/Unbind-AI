@@ -18,6 +18,7 @@ interface DashboardViewProps {
   analyses: StoredAnalysis[];
   onSelectAnalysis: (analysis: StoredAnalysis) => void;
   onNewAnalysis: () => void;
+  onDeleteAnalysis: (analysisId: string) => void | Promise<void>;
 }
 
 const RiskSummary: React.FC<{ analysis: StoredAnalysis }> = ({ analysis }) => {
@@ -100,18 +101,36 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   analyses,
   onSelectAnalysis,
   onNewAnalysis,
+  onDeleteAnalysis,
 }) => {
   const [showTooltip, setShowTooltip] = React.useState(false);
   const [plan, setPlan] = React.useState<string | null>(null);
-  
-    React.useEffect(() => {
-      fetch("http://localhost:8000/api/user/plan/", { credentials: "include" })
-        .then(res => res.json())
-        .then(data => {
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await import("@/services/api").then((m) => m.getUserPlan());
+        if (!cancelled) {
           setPlan(data.plan);
-        });
-    }, [])
-  const isFreePlan = plan !== "Brief" && plan !== "Motion" && plan !== "Verdict";
+        }
+      } catch {
+        if (!cancelled) {
+          setPlan(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Treat the user as "pro" if either:
+  // - the auth user object says pro === true, or
+  // - their active plan is one of the paid tiers.
+  const isPaidPlan = plan === "Brief" || plan === "Motion" || plan === "Verdict";
+  const isProUser = user.pro === true || isPaidPlan;
+  const isFreePlan = !isPaidPlan;
   const hasReachedLimit = isFreePlan && analyses.length >= 1;
   return (
     <div className="space-y-10 fade-in">
@@ -129,7 +148,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
         >
-          Active Plan :{plan? (<span className="text-green-400">{plan}</span>): (<span className="text-red-400">Free</span>)}
+          Active Plan:
+          {plan ? (
+            <span className="ml-1 text-green-400">{plan}</span>
+          ) : isProUser ? (
+            <span className="ml-1 text-green-400">Pro</span>
+          ) : (
+            <span className="ml-1 text-red-400">Free</span>
+          )}
           {showTooltip && plan && (
             <PlanTooltip plan={plan} />
           )}
@@ -141,7 +167,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <h3 className="text-xl font-semibold text-white">
             Your Document History
           </h3>
-         {!hasReachedLimit ? (
+         {!hasReachedLimit? (
   <button
     onClick={onNewAnalysis}
     className="inline-flex items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
@@ -150,9 +176,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     <SparklesIcon className="ml-2 h-5 w-5" />
   </button>
 ) : (
- <Link href="/pricing"> <button className="inline-flex items-center px-4 py-2 font-semibold text-whitebg-gradient-to-r from-indigo-600 to-purple-600 border border-purple-600 rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg cursor-pointer">
+ <Link href="/pricing" className="inline-flex items-center px-4 py-2 font-semibold text-white border border-purple-600 rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg cursor-pointer">
     Upgrade to pro to get more analyses
-  </button></Link>
+  </Link>
 )}
 
           
@@ -167,7 +193,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 className="group flex items-center justify-between p-4 rounded-lg bg-white/5 hover:bg-indigo-500/10 border border-transparent hover:border-indigo-500/30 cursor-pointer transition-all duration-300 shadow-md hover:shadow-xl hover:shadow-indigo-500/10"
               >
                 <div className="flex items-center space-x-4">
-                  <FileTextIcon className="h-8 w-8 text-indigo-400 flex-shrink-0" />
+                  <FileTextIcon className="h-8 w-8 text-indigo-400 shrink-0" />
                   <div>
                     <p className="font-semibold text-gray-100 group-hover:text-white">
                       {analysis.fileName}
@@ -180,6 +206,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <div className="flex items-center space-x-4">
                   <RiskSummary analysis={analysis} />
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const confirmed = window.confirm(
+                        "Delete this analysis? This action cannot be undone.",
+                      );
+                      if (!confirmed) return;
+                      await onDeleteAnalysis(analysis.id);
+                      // analyses.length = analyses.length - 1;
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300 underline cursor-pointer"
+                  >
+                    Delete
+                  </button>
                   <span className="text-indigo-400 text-lg font-semibold transform group-hover:translate-x-1 transition-transform">
                     &rarr;
                   </span>
