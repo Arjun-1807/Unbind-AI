@@ -215,7 +215,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                       );
                       if (!confirmed) return;
                       await onDeleteAnalysis(analysis.id);
-                      // analyses.length = analyses.length - 1;
+                      // analyses.length = analyses.length - 
                     }}
                     className="text-xs text-red-400 hover:text-red-300 underline cursor-pointer"
                   >
