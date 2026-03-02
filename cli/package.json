@@ -1,0 +1,35 @@
+{
+  "name": "unbindai",
+  "version": "1.0.0",
+  "description": "CLI REPL for UnBindAI – AI-powered legal contract analysis",
+  "type": "module",
+  "bin": {
+    "unbind": "bin/unbind.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "legal",
+    "contract",
+    "ai",
+    "cli",
+    "pdf",
+    "repl",
+    "unbindai"
+  ],
+  "author": "UnBindAI",
+  "license": "MIT",
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
+  "dependencies": {
+    "boxen": "^7.1.1",
+    "chalk": "^5.3.0",
+    "conf": "^12.0.0",
+    "inquirer": "^9.2.15",
+    "ora": "^8.1.0"
+  }
+}
