@@ -15,6 +15,7 @@ interface AuthContextValue {
   analyses: StoredAnalysis[];
   login: (email: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshAnalyses: () => Promise<void>;
 }
@@ -96,6 +97,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [refreshAnalyses],
   );
 
+  const loginWithGoogleHandler = useCallback(
+    async (credential: string) => {
+      const u = await api.googleLogin(credential);
+      setUser(u);
+      localStorage.setItem("user", JSON.stringify(u));
+      await refreshAnalyses();
+    },
+    [refreshAnalyses],
+  );
+
   const logoutHandler = useCallback(async () => {
     await api.logout();
     localStorage.removeItem("user");
@@ -110,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         analyses,
         login: loginHandler,
         signup: signupHandler,
+        loginWithGoogle: loginWithGoogleHandler,
         logout: logoutHandler,
         refreshAnalyses,
       }}

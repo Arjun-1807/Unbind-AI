@@ -4,12 +4,13 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { LogoIcon } from "../Icons";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 
 const LoginView: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,6 +22,19 @@ const LoginView: React.FC = () => {
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "An unknown error occurred.",
+      );
+    }
+  };
+
+  const handleGoogleSuccess = async (response: CredentialResponse) => {
+    if (!response.credential) return;
+    setError("");
+    try {
+      await loginWithGoogle(response.credential);
+      router.push("/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Google sign-in failed.",
       );
     }
   };
@@ -89,6 +103,29 @@ const LoginView: React.FC = () => {
             </button>
           </div>
         </form>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-600" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-gray-800/40 text-gray-400">or</span>
+          </div>
+        </div>
+
+        {/* Google Sign-In */}
+        <div className="flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError("Google sign-in failed. Please try again.")}
+            theme="filled_black"
+            shape="rectangular"
+            width="368"
+            text="continue_with"
+          />
+        </div>
+
         <p className="text-sm text-center text-gray-400">
           Don&apos;t have an account?{" "}
           <button

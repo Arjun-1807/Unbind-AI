@@ -58,8 +58,8 @@ UnbindAI/
     │   ├── types.ts
     │   └── constants.ts
     ├── package.json
-    └── next.config.mjs         # API proxy to backend
-```
+    └── next.config.mjs   
+    |__ .env.example
 
 ---
 
@@ -126,6 +126,7 @@ uvicorn app.main:app --reload --port 8000
 ```bash
 cd frontend
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
@@ -140,6 +141,8 @@ npm run dev
 | `MONGODB_URI`  | [MongoDB Atlas](https://cloud.mongodb.com/) → Create free cluster → Connect → Drivers | Free (512MB)   |
 | `GROQ_API_KEY` | [Groq Console](https://console.groq.com/) → API Keys → Create                         | Free           |
 | `JWT_SECRET`   | `python -c "import secrets; print(secrets.token_hex(32))"`                            | Self-generated |
+| `GOOGLE_CLIENT_ID` | [Google Cloud Console](https://console.cloud.google.com/) → Create → OAuth 2.0 Client ID | Free           |
+| `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/) → Create → OAuth 2.0 Client ID | Free           |
 
 ---
 

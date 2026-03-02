@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Response
+from pydantic import BaseModel
 from app.schemas import SignupRequest, LoginRequest, UserResponse, UpdatePasswordRequest
 from app.auth import (
     hash_password,
@@ -9,9 +10,15 @@ from app.auth import (
     get_current_user_id,
 )
 from app.database import get_db
+from app.config import get_settings
 import datetime
+import httpx
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+class GoogleLoginRequest(BaseModel):
+    credential: str
 
 
 @router.post("/signup", response_model=UserResponse)
@@ -28,7 +35,7 @@ async def signup(body: SignupRequest, response: Response):
         "email": body.email.lower(),
         "passwordHash": password_hash,
         "picture": None,
-        "createdAt":now
+        "createdAt": now
     }
     result = await db.users.insert_one(doc)
     user_id = str(result.inserted_id)
@@ -36,7 +43,7 @@ async def signup(body: SignupRequest, response: Response):
     token = create_access_token(user_id)
     set_auth_cookie(response, token)
 
-    return UserResponse(id=user_id, username=body.username, email=body.email.lower(),pro=False,createdAt=now)
+    return UserResponse(id=user_id, username=body.username, email=body.email.lower(), pro=False, createdAt=now)
 
 
 @router.post("/login", response_model=UserResponse)
@@ -58,7 +65,7 @@ async def login(body: LoginRequest, response: Response):
         username=user["username"],
         email=user["email"],
         picture=user.get("picture"),
-        pro=user.get("pro",False),
+        pro=user.get("pro", False),
         createdAt=user.get("createdAt")
     )
 
@@ -83,7 +90,7 @@ async def me(request: Request):
         username=user["username"],
         email=user["email"],
         picture=user.get("picture"),
-        pro = user.get("pro",False),
+        pro=user.get("pro", False),
     )
 
 
@@ -113,3 +120,75 @@ async def update_password(body: UpdatePasswordRequest, request: Request):
     )
 
     return {"ok": True, "message": "Password updated successfully"}
+
+
+@router.post("/google", response_model=UserResponse)
+async def google_login(body: GoogleLoginRequest, response: Response):
+    settings = get_settings()
+
+    # Verify the Google ID token with Google's tokeninfo endpoint
+    async with httpx.AsyncClient() as client:
+        res = await client.get(
+            "https://oauth2.googleapis.com/tokeninfo",
+            params={"id_token": body.credential},
+        )
+
+    if res.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+
+    info = res.json()
+
+    # Make sure the token was issued for our app
+    if info.get("aud") != settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=401, detail="Token audience mismatch")
+
+    google_sub = info.get("sub")
+    email = info.get("email", "").lower()
+    name = info.get("name") or email.split("@")[0]
+    picture = info.get("picture")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Google account has no email")
+
+    db = get_db()
+    now = datetime.datetime.now()
+
+    user = await db.users.find_one({"email": email})
+
+    if user:
+        # Update picture in case it changed
+        await db.users.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"picture": picture, "googleSub": google_sub}},
+        )
+        user_id = str(user["_id"])
+        username = user["username"]
+        pro = user.get("pro", False)
+        created_at = user.get("createdAt", now)
+    else:
+        doc = {
+            "username": name,
+            "email": email,
+            "passwordHash": None,
+            "googleSub": google_sub,
+            "picture": picture,
+            "pro": False,
+            "createdAt": now,
+        }
+        result = await db.users.insert_one(doc)
+        user_id = str(result.inserted_id)
+        username = name
+        pro = False
+        created_at = now
+
+    token = create_access_token(user_id)
+    set_auth_cookie(response, token)
+
+    return UserResponse(
+        id=user_id,
+        username=username,
+        email=email,
+        picture=picture,
+        pro=pro,
+        createdAt=created_at,
+    )

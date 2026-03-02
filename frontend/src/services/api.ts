@@ -50,6 +50,13 @@ export const getCurrentUser = async (): Promise<User | null> => {
   }
 };
 
+export const googleLogin = async (credential: string): Promise<User> => {
+  return apiFetch<User>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ credential }),
+  });
+};
+
 export const updatePassword = async (
   currentPassword: string,
   newPassword: string,

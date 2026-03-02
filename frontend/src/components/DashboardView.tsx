@@ -130,7 +130,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   // - their active plan is one of the paid tiers.
   const isPaidPlan = plan === "Brief" || plan === "Motion" || plan === "Verdict";
   const isProUser = user.pro === true || isPaidPlan;
-  const isFreePlan = !isPaidPlan;
+  const isFreePlan = !isPaidPlan
   const hasReachedLimit = isFreePlan && analyses.length >= 1;
   return (
     <div className="space-y-10 fade-in">
@@ -149,11 +149,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           onMouseLeave={() => setShowTooltip(false)}
         >
           Active Plan:
-          {plan ? (
+          {isProUser ? (
             <span className="ml-1 text-green-400">{plan}</span>
-          ) : isProUser ? (
-            <span className="ml-1 text-green-400">Pro</span>
-          ) : (
+          ) : !isProUser ? (
+            <span className="ml-1 text-red-400">Free</span>
+          ) :  (
             <span className="ml-1 text-red-400">Free</span>
           )}
           {showTooltip && plan && (
