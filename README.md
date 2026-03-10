@@ -284,7 +284,3 @@ Credentials are stored in `~/.config/unbindai/config.json` (Linux) and reused ac
 | CLI      | Node.js 18+, inquirer, chalk, ora, boxen, conf                  |
 
 ---
-
-## 📄 License
-
-MIT
