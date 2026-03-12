@@ -1,15 +1,17 @@
 import path from 'path';
 import fs from 'fs';
 import chalk from 'chalk';
+import inquirer from 'inquirer';
 import { setApiUrl, clearToken } from './config.js';
 import { ensureAuth, ensureProAccess } from './auth.js';
-import { uploadAndAnalyze } from './api.js';
+import { uploadAndAnalyze, getAnalysisHistory } from './api.js';
 import { startRepl } from './repl.js';
 import { printBanner, createSpinner } from './display.js';
 
 // ─── Help text ────────────────────────────────────────────────────────────────
 
 function printHelp() {
+  printBanner();
   console.log(
     [
       '',
@@ -18,6 +20,7 @@ function printHelp() {
       '  ' + chalk.bold('Usage:'),
       '    unbind ' + chalk.cyan('<document.pdf>') + '         — analyse a contract',
       '    unbind ' + chalk.cyan('<document.txt>') + '         — analyse a text file',
+      '    unbind ' + chalk.cyan('list') + '                   — browse & open a past analysis',
       '',
       '  ' + chalk.bold('Options:'),
       '    ' +
@@ -71,6 +74,14 @@ export async function main(rawArgs) {
     process.exit(0);
   }
 
+  // ── list ───────────────────────────────────────────────────────────────────
+  if (command === 'list') {
+    printBanner();
+    await ensureAuth();
+    await listCommand();
+    process.exit(0);
+  }
+
   // ── Validate file path ─────────────────────────────────────────────────────
   const filePath = path.resolve(command);
 
@@ -118,4 +129,64 @@ export async function main(rawArgs) {
 
   // Hand off to interactive REPL
   await startRepl(analysis);
+}
+
+// ─── list command ─────────────────────────────────────────────────────────────
+
+async function listCommand() {
+  const spin = createSpinner('Fetching your analysis history…').start();
+
+  let history;
+  try {
+    history = await getAnalysisHistory();
+    spin.stop();
+  } catch (err) {
+    spin.fail(chalk.red(err.message));
+    process.exit(1);
+  }
+
+  if (!history || history.length === 0) {
+    console.log(chalk.yellow('\n  No analyses found. Run `unbind <file>` to analyse a document.\n'));
+    return;
+  }
+
+  // Build choices sorted newest-first (API already sorts, but be safe)
+  const sorted = [...history].sort(
+    (a, b) => new Date(b.analysisDate) - new Date(a.analysisDate)
+  );
+
+  const choices = sorted.map((a, i) => {
+    const date = new Date(a.analysisDate).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+    const highCount = a.analysisResult?.clauses?.filter((c) => c.riskLevel === 'High').length ?? 0;
+    const riskLabel = highCount > 0 ? chalk.red(`  ⚠ ${highCount} high-risk`) : '';
+    return {
+      name: `${chalk.bold(String(i + 1).padStart(2) + '.')} ${chalk.white(a.fileName)}  ${chalk.dim(date)}${riskLabel}`,
+      value: a,
+      short: a.fileName,
+    };
+  });
+
+  choices.push(new inquirer.Separator(chalk.dim('─────────────────────')));
+  choices.push({ name: chalk.dim('Cancel'), value: null, short: 'Cancel' });
+
+  console.log();
+  const { selected } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'selected',
+      message: chalk.bold('Select an analysis to open:'),
+      choices,
+      pageSize: 12,
+    },
+  ]);
+
+  if (!selected) {
+    console.log(chalk.dim('\n  Cancelled.\n'));
+    return;
+  }
+
+  await startRepl(selected);
 }

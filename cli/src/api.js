@@ -147,3 +147,13 @@ export async function askQuestion(documentText, question) {
     body: JSON.stringify({ documentText, scenario: question }),
   });
 }
+
+/** GET /api/analysis/history — returns all stored analyses for the user. */
+export async function getAnalysisHistory() {
+  return apiFetch('/analysis/history');
+}
+
+/** GET /api/analysis/history/:id — returns a single stored analysis. */
+export async function getAnalysisById(id) {
+  return apiFetch(`/analysis/history/${id}`);
+}

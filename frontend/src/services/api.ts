@@ -128,8 +128,8 @@ export const deleteAnalysis = async (id: string): Promise<void> => {
 
 // ─── User Plan ───
 
-export const getUserPlan = async (): Promise<{ plan: string | null; isPro: boolean }> => {
-  return apiFetch<{ plan: string | null; isPro: boolean }>("/user/plan/");
+export const getUserPlan = async (): Promise<{ plan: string | null; isPro: boolean; dailyCount: number; dailyLimit: number | null; limitReached: boolean }> => {
+  return apiFetch<{ plan: string | null; isPro: boolean; dailyCount: number; dailyLimit: number | null; limitReached: boolean }>("/user/plan/");
 };
 
 export const activateUserPlan = async (plan: string): Promise<{ success: boolean; plan: string }> => {

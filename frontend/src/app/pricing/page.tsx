@@ -14,17 +14,40 @@ export default function Pricing() {
       router.push('/dashboard')
     }
     }
-  const [plan, setPlan] = React.useState<string | null>(null);
+  const [currentPlan, setCurrentPlan] = React.useState<string | null>(null);
+  const [activating, setActivating] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await import("@/services/api").then((m) => m.getUserPlan());
+        if (!cancelled) setCurrentPlan(data.plan);
+      } catch {
+        if (!cancelled) setCurrentPlan(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const handleSelectPlan = async (selectedPlan: string) => {
-    setPlan(selectedPlan);
+    if (selectedPlan === currentPlan || activating) return;
+    setActivating(selectedPlan);
     try {
       await activateUserPlan(selectedPlan);
       router.push("/profile");
     } catch {
-      // If activation fails, reset local selection; you could also show a toast here.
-      setPlan(null);
+      setActivating(null);
     }
   };
+
+  const isDisabled = (btnPlan: string) => btnPlan === currentPlan || activating !== null;
+  const btnClass = (btnPlan: string) =>
+    isDisabled(btnPlan)
+      ? "w-full bg-gray-700 text-gray-400 font-semibold py-2.5 rounded-lg cursor-not-allowed opacity-60"
+      : "w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-colors";
+  const btnLabel = (btnPlan: string, label: string) =>
+    btnPlan === currentPlan ? "Current Plan" : activating === btnPlan ? "Activating…" : label;
   return (
     <>
           <Header />
@@ -137,10 +160,14 @@ export default function Pricing() {
                       <span className="text-green-400 mt-0.5">✓</span>
                       <span>Valid for 1 month</span>
                     </li>
+                    <li className="flex items-start gap-2 text-purple-100 text-sm">
+                      <span className="text-green-400 mt-0.5">✓</span>
+                      <span>3 analysis per day</span>
+                    </li>
                   </ul>
                   {/* <Link href="/checkout?plan=pro1"> */}
-                    <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-colors" onClick={() => handleSelectPlan("Brief")}>
-                      Get Brief
+                    <button className={btnClass("Brief")} onClick={() => handleSelectPlan("Brief")} disabled={isDisabled("Brief")}>
+                      {btnLabel("Brief", "Get Brief")}
                     </button>
                   {/* </Link> */}
                 </div>
@@ -178,10 +205,14 @@ export default function Pricing() {
                       <span className="text-green-400 mt-0.5">✓</span>
                       <span>Valid for 3 months</span>
                     </li>
+                    <li className="flex items-start gap-2 text-purple-100 text-sm">
+                      <span className="text-green-400 mt-0.5">✓</span>
+                      <span>5 analyses per day</span>
+                    </li>
                   </ul>
                   {/* <Link href="/checkout?plan=pro2"> */}
-                    <button className="w-full bg-gradient-to-r bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-all" onClick={()=>handleSelectPlan("Motion")}>
-                      Get Motion
+                    <button className={btnClass("Motion")} onClick={() => handleSelectPlan("Motion")} disabled={isDisabled("Motion")}>
+                      {btnLabel("Motion", "Get Motion")}
                     </button>
                   {/* </Link> */}
                               </div>
@@ -222,10 +253,18 @@ export default function Pricing() {
                     <span className="text-green-400 mt-1">✓</span>
                     <span className="font-semibold">Lifetime access</span>
                   </li>
+                   <li className="flex items-start gap-2 text-purple-100">
+                    <span className="text-green-400 mt-1">✓</span>
+                    <span className="font-semibold">Unlimited Analysis</span>
+                  </li>
+                   <li className="flex items-start gap-2 text-purple-100">
+                    <span className="text-green-400 mt-1">✓</span>
+                    <span className="font-semibold">CLI tool access</span>
+                  </li>
                 </ul>
                 {/* <Link href="/checkout?plan=pro3"> */}
-                  <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-lg transition-colors" onClick={() => handleSelectPlan("Verdict")}>
-                    Get Verdict
+                  <button className={btnClass("Verdict")} onClick={() => handleSelectPlan("Verdict")} disabled={isDisabled("Verdict")}>
+                    {btnLabel("Verdict", "Get Verdict")}
                   </button>
                 {/* </Link> */}
               </div>

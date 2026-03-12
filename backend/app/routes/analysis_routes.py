@@ -1,6 +1,7 @@
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 
+from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form
 from app.schemas import AnalyzeRequest, SimulateRequest, StoredAnalysis
 from app.auth import get_current_user_id
@@ -9,11 +10,62 @@ from app.services.analysis_service import analyze_contract, simulate_impact
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
+# Daily analysis limits per plan (None = unlimited)
+PLAN_LIMITS: dict[str | None, int | None] = {
+    None: 1,        # free tier: 1 analysis per day
+    "Brief": 3,     # Brief plan: 3 analyses per day
+    "Motion": 5,    # Motion plan: 5 analyses per day
+    "Verdict": None,  # Verdict plan: unlimited
+}
+
+
+async def _enforce_rate_limit(user_id: str) -> None:
+    """Check the user's plan limit and increment the daily counter.
+
+    Raises HTTP 429 if the daily quota has been reached.
+    """
+    db = get_db()
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    plan: str | None = user.get("plan")
+    limit = PLAN_LIMITS.get(plan, 1)  # default to 1 if plan key is unknown
+
+    # Unlimited plan — skip all checks
+    if limit is None:
+        return
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    last_date: str = user.get("lastAnalysisDate", "")
+    daily_count: int = user.get("dailyAnalysisCount", 0)
+
+    # Reset counter when the calendar date changes
+    if last_date != today:
+        daily_count = 0
+
+    if daily_count >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                f"Daily analysis limit reached for your plan "
+                f"({'Free' if plan is None else plan}). "
+                f"Limit: {limit} per day. Upgrade your plan to continue."
+            ),
+        )
+
+    # Increment counter
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"dailyAnalysisCount": daily_count + 1, "lastAnalysisDate": today}},
+    )
+
 
 @router.post("/analyze")
 async def analyze(body: AnalyzeRequest, request: Request):
     """Analyse contract text and return the full result."""
     user_id = await get_current_user_id(request)
+    await _enforce_rate_limit(user_id)
 
     try:
         result = await analyze_contract(body.text, body.role)
@@ -49,6 +101,7 @@ async def upload_and_analyze(
 ):
     """Upload a file (PDF or text), extract text, and analyse."""
     user_id = await get_current_user_id(request)
+    await _enforce_rate_limit(user_id)
 
     content = await file.read()
     file_name = file.filename or "document"

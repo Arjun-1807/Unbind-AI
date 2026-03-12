@@ -105,6 +105,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const [showTooltip, setShowTooltip] = React.useState(false);
   const [plan, setPlan] = React.useState<string | null>(null);
+  const [limitReached, setLimitReached] = React.useState(false);
+  const [dailyCount, setDailyCount] = React.useState(0);
+  const [dailyLimit, setDailyLimit] = React.useState<number | null>(1);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -113,6 +116,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         const data = await import("@/services/api").then((m) => m.getUserPlan());
         if (!cancelled) {
           setPlan(data.plan);
+          setLimitReached(data.limitReached);
+          setDailyCount(data.dailyCount);
+          setDailyLimit(data.dailyLimit);
         }
       } catch {
         if (!cancelled) {
@@ -130,8 +136,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   // - their active plan is one of the paid tiers.
   const isPaidPlan = plan === "Brief" || plan === "Motion" || plan === "Verdict";
   const isProUser = user.pro === true || isPaidPlan;
-  const isFreePlan = !isPaidPlan
-  const hasReachedLimit = isFreePlan && analyses.length >= 1;
   return (
     <div className="space-y-10 fade-in">
       <div className="relative">
@@ -167,7 +171,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <h3 className="text-xl font-semibold text-white">
             Your Document History
           </h3>
-         {!hasReachedLimit? (
+         {!limitReached ? (
   <button
     onClick={onNewAnalysis}
     className="inline-flex items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
@@ -176,9 +180,19 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     <SparklesIcon className="ml-2 h-5 w-5" />
   </button>
 ) : (
- <Link href="/pricing" className="inline-flex items-center px-4 py-2 font-semibold text-white border border-purple-600 rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg cursor-pointer">
-    Upgrade to pro to get more analyses
-  </Link>
+  <div className="flex flex-col items-end gap-1">
+    <button
+      disabled
+      className="inline-flex items-center px-4 py-2 font-semibold text-gray-400 bg-gray-700 border border-gray-600 rounded-md cursor-not-allowed text-sm shadow-lg opacity-60"
+    >
+      Analyze New Document
+      <SparklesIcon className="ml-2 h-5 w-5" />
+    </button>
+    <span className="text-xs text-orange-400">
+      Daily limit reached ({dailyCount}/{dailyLimit ?? "∞"}).
+      {" "}<Link href="/pricing" className="underline hover:text-orange-300">Upgrade your plan</Link>
+    </span>
+  </div>
 )}
 
           

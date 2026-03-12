@@ -42,6 +42,9 @@ export async function startRepl(analysis) {
     chalk.dim(`    ${clauseCount} clauses`) +
       (highCount > 0 ? chalk.red(`  ·  ${highCount} high-risk`) : '')
   );
+  console.log(
+    chalk.dim(`    AI Model: llama-3.3-70b-versatile  ·  Groq`)
+  );
 
   // ── REPL loop ──
   while (true) {

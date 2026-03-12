@@ -342,6 +342,10 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                   {plan || 'Free'}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">AI Model</span>
+                <span className="text-gray-300">llama-3.3-70b-versatile</span>
+              </div>
             </div>
           </div>
 
