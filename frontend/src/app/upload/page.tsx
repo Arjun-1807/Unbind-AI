@@ -11,7 +11,7 @@ import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 import * as api from "@/services/api";
 import type { StoredAnalysis } from "@/types";
-
+import footer from "@/components/footer";
 export default function UploadPage() {
   const { user, refreshAnalyses } = useAuth();
   const router = useRouter();
@@ -71,12 +71,7 @@ export default function UploadPage() {
           />
         )}
       </main>
-      <footer className="text-center py-8 text-sm text-gray-500">
-        <div className="flex items-center justify-center space-x-2">
-          <LogoIcon className="h-6 w-6 text-indigo-500" />
-          <p>UnBind: AI Legal Contract Analyzer</p>
-        </div>
-      </footer>
+      <footer />
     </div>
   );
 }
