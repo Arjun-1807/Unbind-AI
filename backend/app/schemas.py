@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
     picture: Optional[str] = None
     pro: bool = False
     plan: Optional[str] = None
+    aiModel: Optional[str] = None
     createdAt: Optional[datetime] = None
 
 

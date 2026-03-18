@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from bson import ObjectId
 from app.auth import get_current_user_id
 from app.database import get_db
+from app.services.model_selector import select_model
 
 router = APIRouter(prefix="/user/plan", tags=["user_plan"])
 
@@ -59,6 +60,7 @@ async def get_plan(request: Request):
     return {
         "plan": plan,
         "isPro": user.get("pro", False),
+        "aiModel": select_model(user),
         "dailyCount": daily_count,
         "dailyLimit": limit,  # None means unlimited
         "limitReached": False if limit is None else daily_count >= limit,

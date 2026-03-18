@@ -26,7 +26,11 @@ def _try_parse_json(text: str) -> Any | None:
 
 # ───── Chunk analysis ─────
 
-async def _analyze_chunk(chunk: str, role: str) -> list[dict]:
+async def _analyze_chunk(
+    chunk: str,
+    role: str,
+    user_id: str | None = None,
+) -> list[dict]:
     role_instruction = f"The user's role is: {role}. Analyze ALL content in this chunk from their perspective."
     output = await chat_complete([
         {
@@ -53,7 +57,7 @@ async def _analyze_chunk(chunk: str, role: str) -> list[dict]:
             "role": "user",
             "content": f"{role_instruction}\n\nTEXT CHUNK TO ANALYZE:\n{chunk}\n\nAnalyze EVERY part of this text and return JSON with all clauses found.",
         },
-    ])
+    ], user_id=user_id)
     parsed = _try_parse_json(output)
     if parsed and isinstance(parsed, dict):
         return parsed.get("clauses", [])
@@ -62,7 +66,11 @@ async def _analyze_chunk(chunk: str, role: str) -> list[dict]:
 
 # ───── Report synthesis ─────
 
-async def _synthesize_report(clauses: list[dict], role: str) -> dict:
+async def _synthesize_report(
+    clauses: list[dict],
+    role: str,
+    user_id: str | None = None,
+) -> dict:
     role_instruction = f"The user's role is: {role}. Generate a comprehensive summary and extract all relevant information from their perspective."
     clause_context = "\n".join(
         f'Clause {i+1}:\n- Text: "{c.get("clauseText", "")}"\n- Explanation: "{c.get("simplifiedExplanation", "")}"\n- Risk: {c.get("riskLevel", "")}\n- Risk Reason: "{c.get("riskReason", "")}"\n'
@@ -89,7 +97,7 @@ async def _synthesize_report(clauses: list[dict], role: str) -> dict:
             "role": "user",
             "content": f"{role_instruction}\n\nCOMPLETE ANALYSIS ({len(clauses)} clauses analyzed):\n{clause_context}\n\nGenerate comprehensive summary covering ALL analyzed content.",
         },
-    ])
+    ], user_id=user_id)
     parsed = _try_parse_json(output)
     if not parsed:
         raise RuntimeError("Failed to parse synthesis JSON")
@@ -101,7 +109,10 @@ async def _synthesize_report(clauses: list[dict], role: str) -> dict:
 # ───── Chunk summaries ─────
 
 async def _create_chunk_summaries(
-    chunks: list[str], clauses: list[dict], role: str
+    chunks: list[str],
+    clauses: list[dict],
+    role: str,
+    user_id: str | None = None,
 ) -> list[dict]:
     summaries: list[dict] = []
     per_chunk = len(clauses) // len(chunks) + (1 if len(clauses) % len(chunks) else 0) if chunks else len(clauses)
@@ -131,7 +142,7 @@ async def _create_chunk_summaries(
                     "Provide a simple summary of what this chunk covers."
                 ),
             },
-        ])
+        ], user_id=user_id)
         summaries.append({"chunkIndex": i + 1, "summary": output.strip()})
     return summaries
 
@@ -141,6 +152,7 @@ async def _create_chunk_summaries(
 async def analyze_contract(
     document_text: str,
     role: str,
+    user_id: str | None = None,
     on_progress: Optional[Callable[[str], None]] = None,
 ) -> dict:
     """Full contract analysis pipeline – mirrors analyzeContract in analysisService.ts."""
@@ -157,7 +169,7 @@ async def analyze_contract(
 
     progress(f"Analyzing {len(chunks)} document section(s)...")
     chunk_results = await asyncio.gather(
-        *[_analyze_chunk(chunk, role) for chunk in chunks]
+        *[_analyze_chunk(chunk, role, user_id=user_id) for chunk in chunks]
     )
     all_clauses: list[dict] = []
     for result in chunk_results:
@@ -170,10 +182,15 @@ async def analyze_contract(
         )
 
     progress("Creating chunk summaries...")
-    chunk_summaries = await _create_chunk_summaries(chunks, all_clauses, role)
+    chunk_summaries = await _create_chunk_summaries(
+        chunks,
+        all_clauses,
+        role,
+        user_id=user_id,
+    )
 
     progress("Synthesizing final report...")
-    final_report = await _synthesize_report(all_clauses, role)
+    final_report = await _synthesize_report(all_clauses, role, user_id=user_id)
 
     return {
         **final_report,
@@ -200,7 +217,11 @@ class GroqEmbeddingFunction:
             return loop.run_until_complete(embed_texts(input))
 
 
-async def simulate_impact(document_text: str, scenario: str) -> str:
+async def simulate_impact(
+    document_text: str,
+    scenario: str,
+    user_id: str | None = None,
+) -> str:
     """Vector-based impact simulation using LangChain Chroma."""
     if not scenario.strip():
         return "Please enter a scenario to simulate."
@@ -261,7 +282,7 @@ async def simulate_impact(document_text: str, scenario: str) -> str:
                     ),
                 },
             ],
-            model="llama-3.3-70b-versatile",
+            user_id=user_id,
             temperature=0.2,
         )
         return output
@@ -293,7 +314,7 @@ async def simulate_impact(document_text: str, scenario: str) -> str:
                     ),
                 },
             ],
-            model="llama-3.3-70b-versatile",
+            user_id=user_id,
             temperature=0.2,
         )
         return output

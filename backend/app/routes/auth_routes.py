@@ -11,6 +11,7 @@ from app.auth import (
 )
 from app.database import get_db
 from app.config import get_settings
+from app.services.model_selector import select_model
 import datetime
 import httpx
 
@@ -43,7 +44,14 @@ async def signup(body: SignupRequest, response: Response):
     token = create_access_token(user_id)
     set_auth_cookie(response, token)
 
-    return UserResponse(id=user_id, username=body.username, email=body.email.lower(), pro=False, createdAt=now)
+    return UserResponse(
+        id=user_id,
+        username=body.username,
+        email=body.email.lower(),
+        pro=False,
+        aiModel=select_model(doc),
+        createdAt=now,
+    )
 
 
 @router.post("/login", response_model=UserResponse)
@@ -66,6 +74,7 @@ async def login(body: LoginRequest, response: Response):
         email=user["email"],
         picture=user.get("picture"),
         pro=user.get("pro", False),
+        aiModel=select_model(user),
         createdAt=user.get("createdAt")
     )
 
@@ -92,6 +101,7 @@ async def me(request: Request):
         picture=user.get("picture"),
         pro=user.get("pro", False),
         plan=user.get("plan"),
+        aiModel=select_model(user),
         createdAt=user.get("createdAt"),
     )
 
@@ -192,5 +202,6 @@ async def google_login(body: GoogleLoginRequest, response: Response):
         email=email,
         picture=picture,
         pro=pro,
+        aiModel=select_model(user if user else {"pro": pro}),
         createdAt=created_at,
     )

@@ -57,6 +57,8 @@ export interface User {
   email: string;
   picture?: string;
   pro?: boolean;
+  plan?: string | null;
+  aiModel?: string;
 }
 
 export interface StoredAnalysis {

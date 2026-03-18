@@ -68,7 +68,7 @@ async def analyze(body: AnalyzeRequest, request: Request):
     await _enforce_rate_limit(user_id)
 
     try:
-        result = await analyze_contract(body.text, body.role)
+        result = await analyze_contract(body.text, body.role, user_id=user_id)
     except RuntimeError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -119,7 +119,7 @@ async def upload_and_analyze(
         )
 
     try:
-        result = await analyze_contract(text, role)
+        result = await analyze_contract(text, role, user_id=user_id)
     except RuntimeError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -201,8 +201,8 @@ async def delete_analysis(analysis_id: str, request: Request):
 @router.post("/simulate")
 async def simulate(body: SimulateRequest, request: Request):
     """Run a what-if impact simulation against the contract text."""
-    await get_current_user_id(request)  # ensure auth
-    result = await simulate_impact(body.documentText, body.scenario)
+    user_id = await get_current_user_id(request)
+    result = await simulate_impact(body.documentText, body.scenario, user_id=user_id)
     return {"result": result}
 
 

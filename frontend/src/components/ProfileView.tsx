@@ -78,6 +78,9 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
 
   const [plan, setPlan] = React.useState<string | null>(null);
   const [isPro, setIsPro] = React.useState<boolean>(user.pro === true);
+  const [aiModel, setAiModel] = React.useState<string>(
+    user.aiModel || (user.pro ? "gpt-oss-120b" : "llama-3.3-70b-versatile")
+  );
   const [planLoaded, setPlanLoaded] = React.useState(false);
 
   React.useEffect(() => {
@@ -88,12 +91,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
         if (!cancelled) {
           setPlan(data.plan);
           setIsPro(data.isPro);
+          setAiModel(data.aiModel);
           setPlanLoaded(true);
         }
       } catch {
         if (!cancelled) {
           setPlan(null);
           setIsPro(false);
+          setAiModel("llama-3.3-70b-versatile");
           setPlanLoaded(true);
         }
       }
@@ -108,6 +113,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
       await cancelUserPlan();
       setPlan(null);
       setIsPro(false);
+      setAiModel("llama-3.3-70b-versatile");
     } catch {
       // Silently ignore for now; UI will still show old plan until next refresh
     }
@@ -344,7 +350,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">AI Model</span>
-                <span className="text-gray-300">llama-3.3-70b-versatile</span>
+                <span className="text-gray-300">{aiModel}</span>
               </div>
             </div>
           </div>
