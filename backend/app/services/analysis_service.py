@@ -4,24 +4,85 @@ Contract analysis service – full port of analysisService.ts
 
 import json
 import asyncio
+import logging
+import re
 from typing import Any, Callable, Optional
 from app.services.groq_service import chat_complete, embed_texts
 from app.services.pdf_processing import chunk_text, convert_pdf_to_markdown
 
 
+logger = logging.getLogger(__name__)
+
+
 # ───── Helpers ─────
 
-def _try_parse_json(text: str) -> Any | None:
+def _strip_code_fence(text: str) -> str:
+    """Remove optional markdown code fences while preserving JSON content."""
     cleaned = text.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.lstrip("`").lstrip("json").lstrip("`")
-    if cleaned.endswith("```"):
-        cleaned = cleaned.rstrip("`")
-    cleaned = cleaned.strip()
+    # Matches fenced blocks like ```json ... ``` or ``` ... ```
+    fence_match = re.match(r"^```(?:json)?\s*(.*?)\s*```$", cleaned, re.DOTALL | re.IGNORECASE)
+    if fence_match:
+        return fence_match.group(1).strip()
+    return cleaned
+
+
+def _extract_json_span(text: str) -> str | None:
+    """Extract the first balanced JSON object/array from mixed text."""
+    start = -1
+    opening = ""
+    closing = ""
+    for idx, ch in enumerate(text):
+        if ch == "{":
+            start = idx
+            opening, closing = "{", "}"
+            break
+        if ch == "[":
+            start = idx
+            opening, closing = "[", "]"
+            break
+
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escaped = False
+    for idx in range(start, len(text)):
+        ch = text[idx]
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\":
+            escaped = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == opening:
+            depth += 1
+        elif ch == closing:
+            depth -= 1
+            if depth == 0:
+                return text[start : idx + 1]
+    return None
+
+
+def _try_parse_json(text: str) -> Any | None:
+    cleaned = _strip_code_fence(text)
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
-        return None
+        pass
+
+    candidate = _extract_json_span(cleaned)
+    if candidate:
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            return None
+    return None
 
 
 # ───── Chunk analysis ─────
@@ -30,7 +91,7 @@ async def _analyze_chunk(
     chunk: str,
     role: str,
     user_id: str | None = None,
-) -> list[dict]:
+) -> tuple[list[dict], bool]:
     role_instruction = f"The user's role is: {role}. Analyze ALL content in this chunk from their perspective."
     output = await chat_complete([
         {
@@ -60,8 +121,12 @@ async def _analyze_chunk(
     ], user_id=user_id)
     parsed = _try_parse_json(output)
     if parsed and isinstance(parsed, dict):
-        return parsed.get("clauses", [])
-    return []
+        clauses = parsed.get("clauses", [])
+        if isinstance(clauses, list):
+            return clauses, False
+
+    logger.warning("Chunk analysis JSON parse failed; output preview=%r", output[:500])
+    return [], True
 
 
 # ───── Report synthesis ─────
@@ -172,10 +237,18 @@ async def analyze_contract(
         *[_analyze_chunk(chunk, role, user_id=user_id) for chunk in chunks]
     )
     all_clauses: list[dict] = []
-    for result in chunk_results:
-        all_clauses.extend(result)
+    parse_failures = 0
+    for clauses, had_parse_failure in chunk_results:
+        all_clauses.extend(clauses)
+        if had_parse_failure:
+            parse_failures += 1
 
     if not all_clauses:
+        if parse_failures > 0:
+            raise RuntimeError(
+                "The AI model returned output in an unexpected format, so clauses could not be parsed. "
+                "Please retry, switch model, or contact support if this persists."
+            )
         raise RuntimeError(
             "No legal clauses were identified in the document. "
             "It might be too short or in an unsupported format."
