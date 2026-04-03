@@ -37,13 +37,14 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const requestInit = withAuthHeader(init);
   const method = (requestInit?.method || "GET").toUpperCase();
   const shouldSetJsonHeader = method !== "GET" && !(requestInit?.body instanceof FormData);
+  const headers = {
+    ...(shouldSetJsonHeader ? { "Content-Type": "application/json" } : {}),
+    ...(requestInit?.headers || {}),
+  };
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
-    headers: {
-      ...(shouldSetJsonHeader ? { "Content-Type": "application/json" } : {}),
-      ...(requestInit?.headers || {}),
-    },
     ...requestInit,
+    headers,
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
