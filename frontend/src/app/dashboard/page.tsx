@@ -9,16 +9,16 @@ import { useAuth } from "@/context/AuthContext";
 import * as api from "@/services/api";
 import Footer from "@/components/footer";
 export default function DashboardPage() {
-  const { user, analyses, refreshAnalyses } = useAuth();
+  const { user, authReady, analyses, refreshAnalyses } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
+    if (authReady && !user) {
       router.replace("/login");
     }
-  }, [user, router]);
+  }, [authReady, user, router]);
 
-  if (!user) return null;
+  if (!authReady || !user) return null;
 
   return (
     <div className="min-h-screen font-sans">

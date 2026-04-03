@@ -8,15 +8,15 @@ import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 
 export default function ProfilePage() {
-  const { user, analyses } = useAuth();
+  const { user, authReady, analyses } = useAuth();
   const router = useRouter();
   useEffect(() => {
-    if (!user) {
+    if (authReady && !user) {
       router.replace("/login");
     }
-  }, [user, router]);
+  }, [authReady, user, router]);
 
-  if (!user) return null;
+  if (!authReady || !user) return null;
 
   return (
     <div className="min-h-screen font-sans">

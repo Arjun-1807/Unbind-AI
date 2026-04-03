@@ -12,6 +12,7 @@ import * as api from "@/services/api";
 
 interface AuthContextValue {
   user: User | null;
+  authReady: boolean;
   analyses: StoredAnalysis[];
   login: (email: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string) => Promise<void>;
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [analyses, setAnalyses] = useState<StoredAnalysis[]>([]);
 
   const refreshAnalyses = useCallback(async () => {
@@ -49,31 +51,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch {
           setAnalyses([]);
         }
+        setAuthReady(true);
         return;
       }
 
-      // 2) Fallback to any cached user in localStorage
-      const localUser = localStorage.getItem("user");
-      if (localUser) {
-        try {
-          const parsed = JSON.parse(localUser) as User;
-          setUser(parsed);
-          try {
-            const data = await api.getUserAnalyses();
-            setAnalyses(data);
-          } catch {
-            setAnalyses([]);
-          }
-          return;
-        } catch {
-          // If parsing fails, clear the bad cache
-          localStorage.removeItem("user");
-        }
-      }
-
-      // 3) No valid session
+      // 2) No valid backend session; clear stale local cache
+      localStorage.removeItem("user");
       setUser(null);
       setAnalyses([]);
+      setAuthReady(true);
     })();
   }, []);
 
@@ -118,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        authReady,
         analyses,
         login: loginHandler,
         signup: signupHandler,

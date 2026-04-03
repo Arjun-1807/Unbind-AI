@@ -5,8 +5,10 @@ import { LogoIcon } from "@/components/Icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { activateUserPlan } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 export default function Pricing() {
     const router = useRouter();
+  const { user, authReady } = useAuth();
   const onBack = () => {
     if (window.history.length > 1) {
       router.back();
@@ -18,6 +20,7 @@ export default function Pricing() {
   const [activating, setActivating] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    if (!authReady || !user) return;
     let cancelled = false;
     (async () => {
       try {
@@ -28,7 +31,7 @@ export default function Pricing() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [authReady, user]);
 
   const handleSelectPlan = async (selectedPlan: string) => {
     if (selectedPlan === currentPlan || activating) return;
