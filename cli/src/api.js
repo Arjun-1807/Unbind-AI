@@ -36,7 +36,7 @@ async function apiFetch(urlPath, options = {}) {
       throw new Error(
         `Cannot connect to UnBindAI server at ${getApiUrl()}.\n` +
           '  → Make sure the backend is running.\n' +
-          '  → Override with: unbind --server http://your-server:8000 …\n' +
+          '  → Override with: unbind --server http://your-server.com …\n' +
           '  → Or set the UNBINDAI_API_URL environment variable.'
       );
     }

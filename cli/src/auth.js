@@ -32,7 +32,7 @@ export async function ensureProAccess() {
         : chalk.dim('  Your current plan: ') + chalk.yellow('Free') + '\n') +
       '\n' +
       chalk.white('  Upgrade at: ') +
-      chalk.underline.cyan('http://localhost:3000/pricing') +
+      chalk.underline.cyan('https://unbind-eight.vercel.app/pricing') +
       '\n'
     );
     process.exit(1);
