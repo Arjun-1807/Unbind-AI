@@ -5,7 +5,10 @@ Port of pdfProcessingService.ts + pdfToMarkdownService.ts
 
 import re
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+try:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+except ImportError:  # Backward compatibility with older langchain builds
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
 def _is_likely_heading(text: str) -> bool:

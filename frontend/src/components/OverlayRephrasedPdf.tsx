@@ -191,7 +191,7 @@ const OverlayRephrasedPdf: React.FC<OverlayRephrasedPdfProps> = ({
       }
 
       const outBytes = await outDoc.save();
-      const blob = new Blob([outBytes], { type: "application/pdf" });
+      const blob = new Blob([new Uint8Array(outBytes)], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
