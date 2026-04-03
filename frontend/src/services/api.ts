@@ -1,10 +1,6 @@
 import type { User, StoredAnalysis, AnalysisResponse } from "@/types";
 
-const rawApiBase =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "/api";
-const API_BASE = rawApiBase.endsWith("/api")
-  ? rawApiBase
-  : `${rawApiBase}/api`;
+const API_BASE = "/api";
 const ACCESS_TOKEN_KEY = "unbind_access_token";
 
 function getStoredAccessToken(): string | null {
