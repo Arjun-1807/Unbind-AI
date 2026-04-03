@@ -152,7 +152,7 @@ const LandingPage: React.FC = () => {
               <div className="text-center">
                 <FileTextIcon className="h-16 w-16 text-indigo-500/30 mx-auto mb-4" />
                 <p className="text-gray-500 text-sm font-medium">App Screenshot — Risk Analysis Dashboard</p>
-                <p className="text-gray-600 text-xs mt-1">Replace with actual product screenshot</p>
+                <p className="text-gray-600 text-xs mt-1"></p>
               </div>
             </div>
           </div>
