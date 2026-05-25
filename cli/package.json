@@ -1,5 +1,5 @@
 {
-  "name": "unbindai",
+  "name": "@Sachin-0001/UnBind",
   "version": "1.0.3",
   "description": "CLI REPL for UnBindAI – AI-powered legal contract analysis",
   "type": "module",
@@ -20,6 +20,13 @@
   ],
   "author": "UnBindAI",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sachin-0001/UnBind.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "files": [
     "bin/",
     "src/",
