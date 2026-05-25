@@ -83,11 +83,11 @@ export const logout = async (): Promise<void> => {
 
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
-    return await apiFetch<User>("/auth/me");
+    const user = await apiFetch<User & { accessToken?: string }>("/auth/me");
+    // Re-hydrate the stored token on every page load
+    if (user?.accessToken) storeAccessToken(user.accessToken);
+    return user;
   } catch (error: any) {
-    // Only clear token if the server explicitly says we're not authenticated.
-    // Network errors or transient failures should NOT wipe the stored token,
-    // otherwise every subsequent request (getUserPlan, etc.) will also fail.
     if (error?.message?.includes("401") || error?.message?.includes("Not authenticated")) {
       storeAccessToken(null);
     }

@@ -96,6 +96,8 @@ async def me(request: Request):
     user = await db.users.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = create_access_token(user_id)
     return UserResponse(
         id=str(user["_id"]),
         username=user["username"],
@@ -105,6 +107,7 @@ async def me(request: Request):
         plan=user.get("plan"),
         aiModel=select_model(user),
         createdAt=user.get("createdAt"),
+        accessToken=token
     )
 
 
