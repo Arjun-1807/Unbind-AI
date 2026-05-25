@@ -30,28 +30,44 @@ def decode_access_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
 
-def set_auth_cookie(response: Response, token: str) -> None:
+def _is_local_dev(request: Request | None = None) -> bool:
+    """Check if we are running in local development mode.
+    
+    When a *request* is available we also inspect the ``X-Forwarded-Proto``
+    header that reverse-proxies such as Vercel inject.  If the original
+    request was over HTTPS we know we are **not** in local dev even when
+    ``FRONTEND_URL`` still points to localhost (a common misconfiguration).
+    """
+    if request is not None:
+        proto = request.headers.get("x-forwarded-proto", "")
+        if "https" in proto:
+            return False
     settings = get_settings()
-    is_local_dev = settings.FRONTEND_URL.startswith("http://localhost") or settings.FRONTEND_URL.startswith("http://127.0.0.1")
+    return settings.FRONTEND_URL.startswith("http://localhost") or settings.FRONTEND_URL.startswith("http://127.0.0.1")
+
+
+def set_auth_cookie(response: Response, token: str, request: Request | None = None) -> None:
+    settings = get_settings()
+    local = _is_local_dev(request)
     response.set_cookie(
         key=settings.COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax" if is_local_dev else "none",
-        secure=not is_local_dev,
+        samesite="lax" if local else "none",
+        secure=not local,
         path="/",
         max_age=settings.JWT_EXPIRE_DAYS * 86400,
     )
 
 
-def clear_auth_cookie(response: Response) -> None:
+def clear_auth_cookie(response: Response, request: Request | None = None) -> None:
     settings = get_settings()
-    is_local_dev = settings.FRONTEND_URL.startswith("http://localhost") or settings.FRONTEND_URL.startswith("http://127.0.0.1")
+    local = _is_local_dev(request)
     response.delete_cookie(
         key=settings.COOKIE_NAME,
         path="/",
-        secure=not is_local_dev,
-        samesite="lax" if is_local_dev else "none",
+        secure=not local,
+        samesite="lax" if local else "none",
     )
 
 

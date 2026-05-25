@@ -23,7 +23,7 @@ class GoogleLoginRequest(BaseModel):
 
 
 @router.post("/signup", response_model=UserResponse)
-async def signup(body: SignupRequest, response: Response):
+async def signup(body: SignupRequest, request: Request, response: Response):
     db = get_db()
     existing = await db.users.find_one({"email": body.email.lower()})
     if existing:
@@ -42,7 +42,7 @@ async def signup(body: SignupRequest, response: Response):
     user_id = str(result.inserted_id)
 
     token = create_access_token(user_id)
-    set_auth_cookie(response, token)
+    set_auth_cookie(response, token, request)
 
     return UserResponse(
         id=user_id,
@@ -56,7 +56,7 @@ async def signup(body: SignupRequest, response: Response):
 
 
 @router.post("/login", response_model=UserResponse)
-async def login(body: LoginRequest, response: Response):
+async def login(body: LoginRequest, request: Request, response: Response):
     db = get_db()
     user = await db.users.find_one({"email": body.email.lower()})
     if not user:
@@ -67,7 +67,7 @@ async def login(body: LoginRequest, response: Response):
 
     user_id = str(user["_id"])
     token = create_access_token(user_id)
-    set_auth_cookie(response, token)
+    set_auth_cookie(response, token, request)
 
     return UserResponse(
         id=user_id,
@@ -82,8 +82,8 @@ async def login(body: LoginRequest, response: Response):
 
 
 @router.post("/logout")
-async def logout(response: Response):
-    clear_auth_cookie(response)
+async def logout(request: Request, response: Response):
+    clear_auth_cookie(response, request)
     return {"ok": True}
 
 
@@ -137,7 +137,7 @@ async def update_password(body: UpdatePasswordRequest, request: Request):
 
 
 @router.post("/google", response_model=UserResponse)
-async def google_login(body: GoogleLoginRequest, response: Response):
+async def google_login(body: GoogleLoginRequest, request: Request, response: Response):
     settings = get_settings()
 
     # Verify the Google ID token with Google's tokeninfo endpoint
@@ -196,7 +196,7 @@ async def google_login(body: GoogleLoginRequest, response: Response):
         created_at = now
 
     token = create_access_token(user_id)
-    set_auth_cookie(response, token)
+    set_auth_cookie(response, token, request)
 
     return UserResponse(
         id=user_id,
