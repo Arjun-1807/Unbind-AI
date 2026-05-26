@@ -1,6 +1,6 @@
 {
   "name": "@sachin-0001/unbind",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "CLI REPL for UnBindAI – AI-powered legal contract analysis",
   "type": "module",
   "bin": {
@@ -25,7 +25,6 @@
     "url": "https://github.com/Sachin-0001/UnBind.git"
   },
   "publishConfig": { "registry": "https://npm.pkg.github.com" },
-
   "files": [
     "bin/",
     "src/",
