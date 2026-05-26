@@ -1,4 +1,4 @@
-# ⚖️ UnbindAI — AI-Powered Legal Contract Analyzer
+## UnbindAI — AI-Powered Legal Contract Analyzer
 
 UnbindAI uses AI to break down legal contracts into plain English. Upload a PDF, get instant clause-by-clause risk analysis, negotiation suggestions, key terms glossary, deadline tracking, and what-if impact simulations.
 
@@ -12,7 +12,7 @@ UnbindAI uses AI to break down legal contracts into plain English. Upload a PDF,
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature                   | Description                                                 |
 | ------------------------- | ----------------------------------------------------------- |
@@ -30,7 +30,7 @@ UnbindAI uses AI to break down legal contracts into plain English. Upload a PDF,
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 UnbindAI/
@@ -73,9 +73,9 @@ UnbindAI/
     │   └── display.js           # chalk/boxen formatters
     └── package.json
 
----
+```
 
-## 🧠 How It Works
+## How It Works
 
 ```
 User uploads PDF
@@ -95,7 +95,7 @@ Interactive UI with tabs, highlighting, and export
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -158,7 +158,7 @@ unbind contract.pdf
 
 ---
 
-## 🔑 API Keys
+## API Keys
 
 | Variable       | Source                                                                                | Cost           |
 | -------------- | ------------------------------------------------------------------------------------- | -------------- |
@@ -170,7 +170,7 @@ unbind contract.pdf
 
 ---
 
-## � CLI — `unbind`
+## CLI — `unbind`
 
 A standalone terminal REPL that talks to the same backend. Useful for quick analysis without opening a browser.
 
@@ -248,7 +248,7 @@ Credentials are stored in `~/.config/unbindai/config.json` (Linux) and reused ac
 
 ---
 
-## �📡 API Endpoints
+## API Endpoints
 
 ### Auth
 
@@ -271,7 +271,7 @@ Credentials are stored in `~/.config/unbindai/config.json` (Linux) and reused ac
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer    | Tech                                                            |
 | -------- | --------------------------------------------------------------- |
