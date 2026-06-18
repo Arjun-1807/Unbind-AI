@@ -1,4 +1,4 @@
-import type { User, StoredAnalysis, AnalysisResponse } from "@/types";
+import type { User, StoredAnalysis, AnalysisResponse, LawyerProfile } from "@/types";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api`;
 const ACCESS_TOKEN_KEY = "unbind_access_token";
@@ -205,4 +205,33 @@ export const cancelUserPlan = async (): Promise<{ success: boolean }> => {
   return apiFetch<{ success: boolean }>("/user/plan/cancel", {
     method: "POST",
   });
+};
+
+// ─── Lawyer Referral ───
+
+export const getLawyers = async (
+  specialization?: string,
+): Promise<LawyerProfile[]> => {
+  const qs = specialization
+    ? `?specialization=${encodeURIComponent(specialization)}`
+    : "";
+  return apiFetch<LawyerProfile[]>(`/lawyers/${qs}`);
+};
+
+export const getLawyerById = async (id: string): Promise<LawyerProfile> => {
+  return apiFetch<LawyerProfile>(`/lawyers/${id}`);
+};
+
+export const contactLawyer = async (
+  lawyerId: string,
+  message: string,
+  contactEmail: string,
+): Promise<{ success: boolean; requestId: string }> => {
+  return apiFetch<{ success: boolean; requestId: string }>(
+    `/lawyers/${lawyerId}/contact`,
+    {
+      method: "POST",
+      body: JSON.stringify({ lawyerId, message, contactEmail }),
+    },
+  );
 };

@@ -174,7 +174,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
          {!limitReached ? (
   <button
     onClick={onNewAnalysis}
-    className="inline-flex items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
+    className="inline-flex items-center cursor-pointer px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
   >
     Analyze New Document
     <SparklesIcon className="ml-2 h-5 w-5" />
@@ -254,6 +254,36 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Verdict-only: Find a Lawyer banner */}
+      {plan === "Verdict" && (
+        <div className="glass-card p-6 sm:p-8 rounded-xl bg-gradient-to-r from-indigo-600/10 to-purple-600/10 border border-indigo-500/30">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-semibold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded-full">
+                  Verdict Exclusive
+                </span>
+              </div>
+              <h3 className="text-xl font-semibold text-white">
+                Curated Lawyer Assistance
+              </h3>
+              <p className="mt-1 text-sm text-gray-400">
+                Connect with vetted legal professionals who specialise in the
+                same contract types our AI analyses — employment, SaaS, real
+                estate, NDAs, and more.
+              </p>
+            </div>
+            <Link
+              href="/lawyers"
+              className="shrink-0 inline-flex items-center px-5 py-2.5 font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg"
+            >
+              Find a Lawyer
+              <span className="ml-2">→</span>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
