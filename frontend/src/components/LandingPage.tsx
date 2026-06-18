@@ -713,13 +713,13 @@ const LandingPage: React.FC = () => {
           <p className="mt-6 text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
             Join our curated Lawyer Referral Network and get matched with clients who need your specific legal expertise — powered by UnBind AI contract analysis.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-gray-400">
+          {/* <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm text-gray-400">
             {['No upfront fees', 'Verified client leads', 'Instant profile listing'].map((item) => (
               <span key={item} className="flex items-center gap-1.5">
                 <span className="text-purple-400 font-bold">✓</span> {item}
               </span>
             ))}
-          </div>
+          </div> */}
           <div className="mt-8 flex justify-center">
             <div className="flex flex-col items-center text-gray-600 animate-bounce">
               <ChevronDownIcon className="h-5 w-5" />
