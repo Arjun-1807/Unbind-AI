@@ -61,7 +61,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       <div className="flex justify-between items-center mb-6">
         <button
           onClick={onBackToDashboard}
-          className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="text-sm cursor-pointer text-indigo-400 hover:text-indigo-300 transition-colors"
         >
           &larr; Back to Dashboard
         </button>
@@ -89,7 +89,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`whitespace-nowrap py-2 px-4 rounded-md font-medium text-sm transition-colors duration-200
+                className={`whitespace-nowrap py-2 px-4 cursor-pointer rounded-md font-medium text-sm transition-colors duration-200
                   ${
                     activeTab === tab
                       ? "bg-indigo-600 text-white shadow-md"

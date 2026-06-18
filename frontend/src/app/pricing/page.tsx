@@ -54,7 +54,7 @@ export default function Pricing() {
   const btnClass = (btnPlan: string) =>
     isDisabled(btnPlan)
       ? "w-full bg-gray-700 text-gray-400 font-semibold py-2.5 rounded-lg cursor-not-allowed opacity-60"
-      : "w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-colors";
+      : "w-full cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-colors";
   const btnLabel = (btnPlan: string, label: string) =>
     btnPlan === currentPlan ? "Current Plan" : activating === btnPlan ? "Activating…" : label;
   return (
@@ -66,7 +66,7 @@ export default function Pricing() {
             <div className="w-full max-w-3xl mb-4 text-left">
         <Link href="/profile"><button
           onClick={onBack}
-          className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="text-sm cursor-pointer text-indigo-400 hover:text-indigo-300 transition-colors"
         >
           &larr; Back
         </button></Link>

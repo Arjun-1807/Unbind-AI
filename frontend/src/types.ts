@@ -69,3 +69,17 @@ export interface StoredAnalysis {
   analysisResult: AnalysisResponse;
   documentText: string;
 }
+
+export interface LawyerProfile {
+  id: string;
+  name: string;
+  specializations: string[];
+  bio: string;
+  experienceYears: number;
+  city: string;
+  email: string;
+  phone?: string;
+  rating?: number;
+  verified: boolean;
+  createdAt: string;
+}

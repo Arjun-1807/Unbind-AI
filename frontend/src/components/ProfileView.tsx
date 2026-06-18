@@ -126,7 +126,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
         <div className="w-full max-w-3xl mb-4 text-left">
          <Link href="/dashboard"><button
             // onClick={onBack}
-            className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="text-sm cursor-pointer text-indigo-400 hover:text-indigo-300 transition-colors"
           >
             &larr; Back to Dashboard
           </button></Link>

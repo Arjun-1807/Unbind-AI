@@ -58,7 +58,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
       <div className="w-full max-w-3xl mb-4 text-left">
         <button
           onClick={onBack}
-          className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="text-sm cursor-pointer text-indigo-400 hover:text-indigo-300 transition-colors"
         >
           &larr; Back to Dashboard
         </button>
@@ -153,7 +153,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
         <button
           type="submit"
           disabled={!file}
-          className="inline-flex items-center justify-center px-10 py-4 font-semibold text-white bg-indigo-600 border border-transparent rounded-lg shadow-lg hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 transition-all duration-300 text-base"
+          className="inline-flex cursor-pointer items-center justify-center px-10 py-4 font-semibold text-white bg-indigo-600 border border-transparent rounded-lg shadow-lg hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 transition-all duration-300 text-base"
         >
           Analyze Document
           <SparklesIcon className="ml-2 h-5 w-5" />

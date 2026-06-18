@@ -89,3 +89,24 @@ class AnalyzeRequest(BaseModel):
 class SimulateRequest(BaseModel):
     documentText: str
     scenario: str
+
+
+# ---------- Lawyer Referral ----------
+class LawyerProfile(BaseModel):
+    id: str
+    name: str
+    specializations: list[str]
+    bio: str
+    experienceYears: int
+    city: str
+    email: str
+    phone: Optional[str] = None
+    rating: Optional[float] = 0.0
+    verified: bool = False
+    createdAt: datetime
+
+
+class ContactLawyerRequest(BaseModel):
+    lawyerId: str
+    message: str
+    contactEmail: str

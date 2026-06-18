@@ -94,7 +94,7 @@ const ImpactSimulatorView: React.FC<ImpactSimulatorViewProps> = ({
           <button
             type="submit"
             disabled={isLoading || !scenario}
-            className="inline-flex items-center px-6 py-2.5 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex cursor-pointer items-center px-6 py-2.5 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? "Simulating..." : "Simulate Impact"}
             <SparklesIcon className="ml-2 h-5 w-5" />
@@ -103,7 +103,7 @@ const ImpactSimulatorView: React.FC<ImpactSimulatorViewProps> = ({
             type="button"
             onClick={handleReset}
             disabled={isLoading}
-            className="inline-flex items-center px-4 py-2.5 font-semibold text-indigo-300 bg-indigo-900/40 border border-indigo-500/50 rounded-md hover:bg-indigo-900/70 disabled:opacity-50 transition-colors"
+            className="inline-flex cursor-pointer items-center px-4 py-2.5 font-semibold text-indigo-300 bg-indigo-900/40 border border-indigo-500/50 rounded-md hover:bg-indigo-900/70 disabled:opacity-50 transition-colors"
           >
             Reset
           </button>
