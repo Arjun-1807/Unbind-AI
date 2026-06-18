@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request, Query
 from app.auth import get_current_user_id
 from app.database import get_db
 from app.schemas import LawyerProfile, ContactLawyerRequest
+from app.services.email_service import send_lawyer_contact_email
 
 router = APIRouter(prefix="/lawyers", tags=["lawyers"])
 
@@ -118,7 +119,7 @@ async def get_lawyer(lawyer_id: str, request: Request):
 
 @router.post("/{lawyer_id}/contact")
 async def contact_lawyer(lawyer_id: str, request: ContactLawyerRequest, http_request: Request):
-    """Submit a contact request to a lawyer."""
+    """Submit a contact request to a lawyer and email them."""
     user_id = await get_current_user_id(http_request)
     await _require_verdict_plan(user_id)
 
@@ -135,7 +136,7 @@ async def contact_lawyer(lawyer_id: str, request: ContactLawyerRequest, http_req
     if not lawyer_doc:
         raise HTTPException(status_code=404, detail="Lawyer not found")
 
-    # Create contact request
+    # Save contact request to DB
     contact_request_doc = {
         "userId": user_id,
         "lawyerId": lawyer_id,
@@ -144,8 +145,16 @@ async def contact_lawyer(lawyer_id: str, request: ContactLawyerRequest, http_req
         "createdAt": datetime.utcnow(),
         "status": "pending"
     }
-
-    # Insert contact request
     result = await db.lawyer_contact_requests.insert_one(contact_request_doc)
+
+    # Fire-and-forget: send email to the lawyer (never blocks the response)
+    asyncio.create_task(
+        send_lawyer_contact_email(
+            lawyer_email=lawyer_doc["email"],
+            lawyer_name=lawyer_doc["name"],
+            user_email=request.contactEmail,
+            message=request.message,
+        )
+    )
 
     return {"success": True, "requestId": str(result.inserted_id)}

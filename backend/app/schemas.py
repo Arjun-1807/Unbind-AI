@@ -110,3 +110,13 @@ class ContactLawyerRequest(BaseModel):
     lawyerId: str
     message: str
     contactEmail: str
+
+
+class LawyerRegistrationRequest(BaseModel):
+    name: str
+    email: EmailStr
+    specializations: list[str]
+    bio: str
+    experienceYears: int
+    city: str
+    phone: Optional[str] = None

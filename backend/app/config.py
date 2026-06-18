@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     JWT_EXPIRE_DAYS: int = 7
     COOKIE_NAME: str = "unbind_token"
 
+    # ── Email (SMTP) ──────────────────────────────────────────────────────────
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""          # Gmail address used to send emails
+    SMTP_PASSWORD: str = ""      # Gmail App Password (not your login password)
+    EMAIL_FROM_NAME: str = "UnBind AI"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
