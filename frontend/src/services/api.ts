@@ -235,3 +235,21 @@ export const contactLawyer = async (
     },
   );
 };
+
+export const registerLawyer = async (data: {
+  name: string;
+  email: string;
+  specializations: string[];
+  bio: string;
+  experienceYears: number;
+  city: string;
+  phone?: string;
+}): Promise<{ success: boolean; message: string; lawyerId: string }> => {
+  return apiFetch<{ success: boolean; message: string; lawyerId: string }>(
+    "/lawyer-register/",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
+};
