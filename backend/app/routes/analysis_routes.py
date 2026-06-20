@@ -80,6 +80,10 @@ async def analyze(body: AnalyzeRequest, request: Request):
             tags=["analysis", "api", "text"],
         ):
             result = await analyze_contract(body.text, body.role, user_id=user_id)
+    except ValueError as e:
+        if str(e) == "NOT_A_LEGAL_DOCUMENT":
+            raise HTTPException(status_code=422, detail="NOT_A_LEGAL_DOCUMENT")
+        raise
     except RuntimeError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -142,6 +146,10 @@ async def upload_and_analyze(
             tags=["analysis", "api", "upload"],
         ):
             result = await analyze_contract(text, role, user_id=user_id)
+    except ValueError as e:
+        if str(e) == "NOT_A_LEGAL_DOCUMENT":
+            raise HTTPException(status_code=422, detail="NOT_A_LEGAL_DOCUMENT")
+        raise
     except RuntimeError as e:
         raise HTTPException(status_code=422, detail=str(e))
 

@@ -216,6 +216,41 @@ async def _create_chunk_summaries(
     return summaries
 
 
+# ───── Legal document validation ─────
+
+async def validate_legal_document(
+    text: str,
+    user_id: str | None = None,
+) -> bool:
+    """Validate if the provided text is a legal document.
+    
+    Returns True if the text appears to be a legal document (contract, agreement, NDA, etc.).
+    Defaults to True if parsing fails (fail open).
+    """
+    output = await chat_complete([
+        {
+            "role": "system",
+            "content": (
+                "You are a legal document classifier. Determine if the provided text is a legal document "
+                "such as a contract, agreement, NDA, terms of service, lease, employment agreement, or similar legal document.\n\n"
+                "Respond ONLY with a JSON object: {\"isLegal\": true} or {\"isLegal\": false}. "
+                "Nothing else."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"Is this text a legal document?\n\n{text[:2000]}",
+        },
+    ], user_id=user_id)
+    
+    parsed = _try_parse_json(output)
+    if parsed and isinstance(parsed, dict):
+        return parsed.get("isLegal", True)
+    
+    # Fail open: if parsing fails, default to True (don't block valid documents)
+    return True
+
+
 # ───── Public: analyse contract ─────
 
 @traceable(name="analyze_contract_pipeline")
@@ -233,6 +268,11 @@ async def analyze_contract(
 
     progress("Converting document to Markdown for better parsing...")
     markdown_text = convert_pdf_to_markdown(document_text)
+
+    progress("Validating legal document...")
+    is_legal = await validate_legal_document(markdown_text, user_id=user_id)
+    if not is_legal:
+        raise ValueError("NOT_A_LEGAL_DOCUMENT")
 
     progress("Chunking document...")
     chunks = chunk_text(markdown_text)
