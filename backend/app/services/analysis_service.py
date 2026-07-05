@@ -1,15 +1,13 @@
-"""
-Contract analysis service – full port of analysisService.ts
-"""
-
 from email.mime import text
 import json
 import asyncio
 import logging
 import re
-from typing import Any, Callable, Optional
+from functools import lru_cache
+from typing import Callable, Optional, Any
 from langsmith import traceable
-from app.services.groq_service import chat_complete, embed_texts
+from langchain_core.embeddings import Embeddings
+from app.services.groq_service import chat_complete
 from app.services.pdf_processing import chunk_text, convert_pdf_to_markdown
 
 
@@ -269,7 +267,7 @@ async def analyze_contract(
     user_id: str | None = None,
     on_progress: Optional[Callable[[str], None]] = None,
 ) -> dict:
-    """Full contract analysis pipeline – mirrors analyzeContract in analysisService.ts."""
+    """Full contract analysis pipeline"""
 
     def progress(msg: str) -> None:
         if on_progress:
@@ -284,7 +282,9 @@ async def analyze_contract(
         raise ValueError("NOT_A_LEGAL_DOCUMENT")
 
     progress("Chunking document...")
-    chunks = chunk_text(markdown_text)
+    # Smaller chunks keep each per-chunk clause analysis within the model's
+    # output-token limit, avoiding truncated (unparseable) JSON responses.
+    chunks = chunk_text(markdown_text, 2000, 200)
 
     progress(f"Analyzing {len(chunks)} document section(s)...")
     chunk_results = await asyncio.gather(
@@ -326,22 +326,98 @@ async def analyze_contract(
     }
 
 
-# ───── Impact simulator with LangChain Chroma ─────
+# ───── Impact simulator with LangChain Chroma (HuggingFace hosted embeddings) ─────
 
-class GroqEmbeddingFunction:
-    """Custom embedding function for Chroma using Groq API."""
-    
-    def __call__(self, input: list[str]) -> list[list[float]]:
-        # Synchronous wrapper for async embed_texts
-        import asyncio
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If already in async context, use run_coroutine_threadsafe
-            import concurrent.futures
-            future = asyncio.run_coroutine_threadsafe(embed_texts(input), loop)
-            return future.result()
-        else:
-            return loop.run_until_complete(embed_texts(input))
+# Small, fast & free embedding model served via HuggingFace's hosted Inference
+# API — nothing runs locally, so no torch/GPU and it works the same in
+# deployment. 384-dim, ~256-token input limit, which is why the retrieval chunks
+# below are kept small so nothing gets silently truncated.
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+
+
+class _HFInferenceEmbeddings(Embeddings):
+    """LangChain embeddings backed by huggingface_hub's InferenceClient.
+
+    We use InferenceClient directly (not langchain-community's
+    HuggingFaceInferenceAPIEmbeddings) because the latter hardcodes the retired
+    ``api-inference.huggingface.co`` host, which no longer resolves. The modern
+    client targets ``router.huggingface.co`` and needs only huggingface_hub —
+    no local torch/transformers.
+    """
+
+    def __init__(self, token: str, model: str) -> None:
+        from huggingface_hub import InferenceClient
+
+        self._model = model
+        self._client = InferenceClient(
+            model=model, token=token, provider="hf-inference"
+        )
+
+    def _embed_one(self, text: str) -> list[float]:
+        import numpy as np
+
+        vec = self._client.feature_extraction(text, model=self._model)
+        arr = np.asarray(vec, dtype="float32")
+        # Some models return per-token vectors (seq_len, dim); mean-pool them
+        # down to a single sentence vector. Sentence-transformers models
+        # usually already return the pooled (dim,) vector.
+        if arr.ndim == 2:
+            arr = arr.mean(axis=0)
+        elif arr.ndim > 2:
+            arr = arr.reshape(-1, arr.shape[-1]).mean(axis=0)
+        return arr.astype("float32").tolist()
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed_one(t) for t in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed_one(text)
+
+
+@lru_cache(maxsize=1)
+def _get_embeddings() -> Embeddings:
+    """Build the HuggingFace Inference-API embedding client once per process."""
+    from app.config import get_settings
+
+    token = get_settings().HUGGINGFACEHUB_API_TOKEN
+    if not token:
+        raise RuntimeError("HUGGINGFACEHUB_API_TOKEN is not set")
+
+    return _HFInferenceEmbeddings(token=token, model=EMBEDDING_MODEL_NAME)
+
+
+def _run_vector_search(chunks: list[str], scenario: str, k: int) -> list[str]:
+    """Build an ephemeral Chroma index and return the top-k relevant chunks.
+
+    Synchronous and CPU-bound (model inference), so call it via
+    ``asyncio.to_thread`` from async code to avoid blocking the event loop.
+    """
+    from langchain_community.vectorstores import Chroma
+    from langchain.schema import Document
+    import chromadb
+    from chromadb.config import Settings as ChromaSettings
+
+    documents = [Document(page_content=chunk) for chunk in chunks]
+    # Disable Chroma's anonymized telemetry — it otherwise spams noisy
+    # "Failed to send telemetry event" logs on every request.
+    chroma_client = chromadb.EphemeralClient(
+        settings=ChromaSettings(anonymized_telemetry=False)
+    )
+    vectorstore = Chroma.from_documents(
+        documents=documents,
+        embedding=_get_embeddings(),
+        client=chroma_client,
+        collection_name="contract_analysis",
+    )
+    try:
+        relevant_docs = vectorstore.similarity_search(scenario, k=k)
+        return [doc.page_content for doc in relevant_docs]
+    finally:
+        # Drop the in-memory collection so repeated requests never collide.
+        try:
+            chroma_client.delete_collection("contract_analysis")
+        except Exception:
+            pass
 
 
 @traceable(name="simulate_impact")
@@ -350,41 +426,26 @@ async def simulate_impact(
     scenario: str,
     user_id: str | None = None,
 ) -> str:
-    """Vector-based impact simulation using LangChain Chroma."""
+    """Vector-based impact simulation using LangChain Chroma + local embeddings."""
     if not scenario.strip():
         return "Please enter a scenario to simulate."
-    
-    # Chunk the document
-    chunks = chunk_text(document_text, 1500, 200)
-    
+
+    # ~1000-char chunks (~250 tokens) sit just under the embedding model's
+    # 256-token limit, so each chunk is embedded in full — no truncation, which
+    # keeps retrieval accurate even for a 3–5 page document.
+    chunks = chunk_text(document_text, 1000, 150)
+
     if not chunks:
         return "Document appears to be empty or unreadable."
-    
+
     try:
-        # Create Chroma vector store with Groq embeddings
-        from langchain_community.vectorstores import Chroma
-        from langchain.schema import Document
-        import chromadb
-        
-        # Create documents from chunks
-        documents = [Document(page_content=chunk) for chunk in chunks]
-        
-        # Create ephemeral Chroma client for this request
-        chroma_client = chromadb.EphemeralClient()
-        
-        # Create vector store with custom Groq embedding function
-        embedding_function = GroqEmbeddingFunction()
-        vectorstore = Chroma.from_documents(
-            documents=documents,
-            embedding=embedding_function,
-            client=chroma_client,
-            collection_name="contract_analysis"
+        # Never ask for more neighbours than we have chunks (avoids edge errors
+        # on short docs), but cap at 6 to keep the LLM context focused.
+        k = min(6, len(chunks))
+        relevant_chunks = await asyncio.to_thread(
+            _run_vector_search, chunks, scenario, k
         )
-        
-        # Perform similarity search
-        relevant_docs = vectorstore.similarity_search(scenario, k=6)
-        relevant_chunks = [doc.page_content for doc in relevant_docs]
-        
+
         if not relevant_chunks:
             return (
                 "Could not find any information in the document relevant to your scenario. "
@@ -416,6 +477,7 @@ async def simulate_impact(
         return output
         
     except Exception as e:
+        logger.warning("simulate_impact vector search failed, falling back to keyword matching: %s", e)
         # Fallback to simple keyword matching if vector search fails
         scenario_lower = scenario.lower()
         relevant = [c for c in chunks if any(word in c.lower() for word in scenario_lower.split())]

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     MONGODB_URI: str = "mongodb://localhost:27017/unbindai"
     JWT_SECRET: str = "dev_secret_change_me"
     GROQ_API_KEY: str = ""
+    HUGGINGFACEHUB_API_TOKEN: str = ""  # Free token from huggingface.co/settings/tokens
     LANGCHAIN_TRACING_V2: bool = Field(
         default=False,
         validation_alias=AliasChoices("LANGCHAIN_TRACING_V2", "LANGSMITH_TRACING"),

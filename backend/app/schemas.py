@@ -36,7 +36,7 @@ class UpdatePasswordRequest(BaseModel):
 class ClauseAnalysis(BaseModel):
     clauseText: str
     simplifiedExplanation: str
-    riskLevel: str  # Low | Medium | High | Negligible | No Risk
+    riskLevel: str 
     riskReason: str
     negotiationSuggestion: str
     suggestedRewrite: Optional[str] = None

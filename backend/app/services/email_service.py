@@ -1,11 +1,3 @@
-"""
-email_service.py
-~~~~~~~~~~~~~~~~
-Async email sender using Python's stdlib smtplib (no extra dependencies).
-Runs the blocking SMTP call in a thread pool via asyncio.to_thread so it
-doesn't block FastAPI's async event loop.
-"""
-
 import asyncio
 import smtplib
 import logging

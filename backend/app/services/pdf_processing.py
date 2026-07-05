@@ -48,7 +48,7 @@ def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 300) -> list[st
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=overlap,
-        separators=["\n\n", "\n", ". ", " ", ""],  # Prioritize semantic breaks
+        separators=["\n\n", "\n", ". ", " ", ""],
         length_function=len,
     )
     return splitter.split_text(text)
