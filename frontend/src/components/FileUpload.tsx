@@ -54,7 +54,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 text-center fade-in">
+    <div className="flex flex-col items-center justify-center p-4 sm:p-8 text-center fade-in">
       <div className="w-full max-w-3xl mb-4 text-left">
         <button
           onClick={onBack}
@@ -63,11 +63,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
           &larr; Back to Dashboard
         </button>
       </div>
-      <div className="max-w-3xl">
-        <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+      <div className="w-full max-w-3xl">
+        <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
           Transform Legal Docs into Clear Insights
         </h2>
-        <p className="mt-6 text-lg leading-8 text-gray-400">
+        <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-8 text-gray-400">
           Upload a contract, specify your role (e.g., Tenant, Employee), and let
           our AI provide an instant, easy-to-understand analysis.
         </p>
@@ -75,7 +75,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
 
       <form
         onSubmit={handleSubmit}
-        className="mt-12 w-full max-w-2xl space-y-8"
+        className="mt-8 sm:mt-12 w-full max-w-2xl space-y-6 sm:space-y-8"
       >
         <div
           onDragEnter={handleDrag}
@@ -85,7 +85,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
         >
           <label
             htmlFor="dropzone-file"
-            className={`relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-300 group
+            className={`relative flex flex-col items-center justify-center w-full min-h-56 sm:h-64 p-6 sm:p-10 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-300 group
               ${
                 dragActive
                   ? "border-indigo-500 bg-indigo-500/20"
@@ -93,9 +93,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
               }`}
           >
             <div className="absolute top-0 left-0 w-full h-full rounded-xl bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+            <div className="flex w-full min-w-0 flex-col items-center justify-center pt-5 pb-6">
               <UploadCloudIcon
-                className={`w-10 h-10 mb-4 transition-colors ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 mb-4 transition-colors ${
                   dragActive
                     ? "text-indigo-400"
                     : "text-gray-500 group-hover:text-indigo-400"
@@ -111,9 +111,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
                 PDF, TXT, MD, or other plain text files
               </p>
               {file && (
-                <div className="mt-4 flex items-center space-x-2 text-sm text-green-300 bg-green-500/10 px-3 py-1.5 rounded-full ring-1 ring-inset ring-green-500/20">
-                  <FileTextIcon className="w-5 h-5" />
-                  <span>{file.name}</span>
+                <div className="mt-4 flex max-w-full min-w-0 items-center space-x-2 text-sm text-green-300 bg-green-500/10 px-3 py-1.5 rounded-full ring-1 ring-inset ring-green-500/20">
+                  <FileTextIcon className="w-5 h-5 shrink-0" />
+                  <span className="min-w-0 truncate">{file.name}</span>
                 </div>
               )}
             </div>
@@ -153,7 +153,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
         <button
           type="submit"
           disabled={!file}
-          className="inline-flex cursor-pointer items-center justify-center px-10 py-4 font-semibold text-white bg-indigo-600 border border-transparent rounded-lg shadow-lg hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 transition-all duration-300 text-base"
+          className="inline-flex w-full sm:w-auto cursor-pointer items-center justify-center px-10 py-4 font-semibold text-white bg-indigo-600 border border-transparent rounded-lg shadow-lg hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 transition-all duration-300 text-base"
         >
           Analyze Document
           <SparklesIcon className="ml-2 h-5 w-5" />

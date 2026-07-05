@@ -174,10 +174,10 @@ const DocumentView: React.FC<DocumentViewProps> = ({
   };
 
   return (
-    <div className="glass-card p-6 h-[75vh] overflow-y-auto rounded-xl">
+    <div className="glass-card p-4 sm:p-6 h-[75vh] overflow-y-auto rounded-xl">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white text-gray-900 shadow-lg rounded-lg p-8 min-h-full">
-          <div className="prose prose-lg max-w-none">
+        <div className="bg-white text-gray-900 shadow-lg rounded-lg p-4 sm:p-8 min-h-full">
+          <div className="prose prose-base sm:prose-lg max-w-none break-words">
             {safeParts.map((part, index) => {
               if (typeof part === "string") {
                 if (!part || part.trim().length === 0) {
@@ -198,7 +198,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({
                       return (
                         <h3
                           key={lineIndex}
-                          className="text-xl font-bold text-gray-800 mt-8 mb-4 first:mt-0 bg-gray-100 px-4 py-2 rounded-lg border-l-4 border-indigo-500"
+                          className="text-lg sm:text-xl font-bold text-gray-800 mt-8 mb-4 first:mt-0 bg-gray-100 px-3 sm:px-4 py-2 rounded-lg border-l-4 border-indigo-500 break-words"
                         >
                           {line}
                         </h3>

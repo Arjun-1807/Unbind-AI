@@ -10,8 +10,10 @@ import Link from "next/link";
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
   const handleReset = () => {
+    setMenuOpen(false);
     if (user) {
       router.push("/dashboard");
     } else {
@@ -20,6 +22,7 @@ const Header: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    setMenuOpen(false);
     await logout();
     router.push("/");
   };
@@ -30,12 +33,12 @@ const Header: React.FC = () => {
 
         {/* ── Zone 1: Brand (left) ── */}
         <div
-          className="flex items-center space-x-3 cursor-pointer group"
+          className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group min-w-0"
           onClick={handleReset}
           title="Go to Dashboard"
         >
-          <LogoIcon className="h-8 w-8 text-indigo-500 group-hover:text-indigo-400 transition-colors" />
-          <h1 className="text-2xl font-bold text-gray-100 tracking-tight">
+          <LogoIcon className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 text-indigo-500 group-hover:text-indigo-400 transition-colors" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-100 tracking-tight truncate">
             {APP_NAME}
           </h1>
         </div>
@@ -105,6 +108,28 @@ const Header: React.FC = () => {
             >
               <LogOutIcon className="h-4 w-4" />
             </button>
+            {/* Mobile menu toggle — surfaces the nav links hidden on small screens */}
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="sm:hidden inline-flex items-center justify-center h-9 w-9 text-gray-200 bg-white/5 border border-white/10 rounded-md hover:bg-white/10 transition-colors"
+              aria-label="Menu"
+              aria-expanded={menuOpen}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.8}
+                stroke="currentColor"
+                className="h-5 w-5"
+              >
+                {menuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+                )}
+              </svg>
+            </button>
           </div>
         ) : (
           <div className="flex items-center space-x-3">
@@ -124,6 +149,39 @@ const Header: React.FC = () => {
         )}
 
       </div>
+
+      {/* ── Mobile dropdown menu (logged-in only) ── */}
+      {user && menuOpen && (
+        <nav className="sm:hidden mt-3 pt-3 border-t border-white/10 flex flex-col gap-2 fade-in">
+          <Link
+            href="/lawyers"
+            onClick={() => setMenuOpen(false)}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-colors"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4 shrink-0"
+            >
+              <path d="M12 3v18M5 6l7-3 7 3M3 9l4 8H1l4-8zM17 9l4 8h-8l4-8z" />
+            </svg>
+            Find a Lawyer
+          </Link>
+          <Link
+            href="/profile"
+            onClick={() => setMenuOpen(false)}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md text-gray-200 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+          >
+            <UserIcon className="h-4 w-4 text-indigo-400 shrink-0" />
+            Profile
+          </Link>
+        </nav>
+      )}
     </header>
   );
 };

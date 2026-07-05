@@ -124,7 +124,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({ analysisResult }) => {
   return (
     <button
       onClick={handleExport}
-      className="inline-flex cursor-pointer items-center px-4 py-2 text-sm font-medium text-indigo-300 bg-indigo-900/40 border border-indigo-500/50 rounded-md hover:bg-indigo-900/70 transition-colors"
+      className="inline-flex w-full sm:w-auto justify-center cursor-pointer items-center px-4 py-2 text-sm font-medium text-indigo-300 bg-indigo-900/40 border border-indigo-500/50 rounded-md hover:bg-indigo-900/70 transition-colors"
     >
       <DownloadIcon className="mr-2 h-4 w-4" />
       Export PDF

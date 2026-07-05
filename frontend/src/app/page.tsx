@@ -25,7 +25,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen font-sans">
       <Header />
-      <main className="container mx-auto px-4 py-10 max-w-7xl">
+      <main className="container mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10 overflow-x-hidden">
         <LandingPage />
       </main>
       <Footer />

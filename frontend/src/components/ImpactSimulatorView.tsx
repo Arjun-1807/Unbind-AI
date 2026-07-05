@@ -72,7 +72,9 @@ const ImpactSimulatorView: React.FC<ImpactSimulatorViewProps> = ({
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-2xl font-bold text-white">Impact Simulator</h3>
+        <h3 className="text-xl sm:text-2xl font-bold text-white">
+          Impact Simulator
+        </h3>
         <p className="text-gray-300 mt-2 max-w-3xl">
           Test potential real-world scenarios against your contract. Enter a
           situation (e.g., &quot;What if I quit my job after 3 months?&quot;) to
@@ -90,11 +92,11 @@ const ImpactSimulatorView: React.FC<ImpactSimulatorViewProps> = ({
           rows={3}
           disabled={isLoading}
         />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <button
             type="submit"
             disabled={isLoading || !scenario}
-            className="inline-flex cursor-pointer items-center px-6 py-2.5 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex w-full sm:w-auto justify-center cursor-pointer items-center px-6 py-2.5 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? "Simulating..." : "Simulate Impact"}
             <SparklesIcon className="ml-2 h-5 w-5" />
@@ -103,7 +105,7 @@ const ImpactSimulatorView: React.FC<ImpactSimulatorViewProps> = ({
             type="button"
             onClick={handleReset}
             disabled={isLoading}
-            className="inline-flex cursor-pointer items-center px-4 py-2.5 font-semibold text-indigo-300 bg-indigo-900/40 border border-indigo-500/50 rounded-md hover:bg-indigo-900/70 disabled:opacity-50 transition-colors"
+            className="inline-flex w-full sm:w-auto justify-center cursor-pointer items-center px-4 py-2.5 font-semibold text-indigo-300 bg-indigo-900/40 border border-indigo-500/50 rounded-md hover:bg-indigo-900/70 disabled:opacity-50 transition-colors"
           >
             Reset
           </button>
@@ -137,11 +139,11 @@ const ImpactSimulatorView: React.FC<ImpactSimulatorViewProps> = ({
       )}
 
       {result && (
-        <div className="mt-6 p-5 glass-card rounded-lg fade-in">
+        <div className="mt-6 p-4 sm:p-5 glass-card rounded-lg fade-in">
           <h4 className="font-semibold text-lg text-indigo-300 mb-2">
             Simulation Result
           </h4>
-          <p className="text-gray-200 whitespace-pre-wrap leading-relaxed">
+          <p className="text-gray-200 whitespace-pre-wrap break-words leading-relaxed">
             {result}
           </p>
         </div>
@@ -161,13 +163,13 @@ const ImpactSimulatorView: React.FC<ImpactSimulatorViewProps> = ({
                 <div className="text-sm text-gray-400 mb-1">
                   {new Date(item.ts).toLocaleString()}
                 </div>
-                <div className="text-gray-200">
+                <div className="text-gray-200 break-words">
                   <span className="font-semibold text-indigo-200">
                     Scenario:
                   </span>{" "}
                   {item.scenario}
                 </div>
-                <div className="text-gray-300 mt-2 whitespace-pre-wrap">
+                <div className="text-gray-300 mt-2 whitespace-pre-wrap break-words">
                   <span className="font-semibold text-indigo-200">Answer:</span>{" "}
                   {item.result}
                 </div>

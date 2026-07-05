@@ -21,13 +21,13 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen font-sans">
       <Header />
-      <main className="container mx-auto px-4 py-10 max-w-7xl">
+      <main className="container mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
         <ProfileView user={user} analyses={analyses} />
       </main>
-      <footer className="text-center py-8 text-sm text-gray-500">
-        <div className="flex items-center justify-center space-x-2">
+      <footer className="px-4 py-6 text-center text-sm text-gray-500 sm:py-8">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
           <LogoIcon className="h-6 w-6 text-indigo-500" />
-          <p>UnBind: AI Legal Contract Analyzer</p>
+          <p className="break-words">UnBind: AI Legal Contract Analyzer</p>
         </div>
       </footer>
     </div>

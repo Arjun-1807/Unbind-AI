@@ -61,7 +61,7 @@ export default function Pricing() {
     <>
           <Header />
           
-      <div className="min-h-screen bg-gradient-to-br pt-24 pb-16 px-4 fade-in font-sans">
+      <div className="min-h-screen bg-gradient-to-br pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 fade-in font-sans">
         <div className="max-w-7xl mx-auto">
             <div className="w-full max-w-3xl mb-4 text-left">
         <Link href="/profile"><button
@@ -71,14 +71,14 @@ export default function Pricing() {
           &larr; Back
         </button></Link>
       </div>
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
             {/* Left Section - Information */}
             <div className="space-y-8">
               <div>
-                <h1 className="text-5xl font-bold text-white mb-4">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
                   Unlock Pro Features
                 </h1>
-                <p className="text-xl">
+                <p className="text-lg sm:text-xl">
                   Upgrade to UnBind Pro and supercharge your contract analysis
                   experience.
                 </p>
@@ -139,7 +139,7 @@ export default function Pricing() {
 
             {/* Right Section - Pricing Cards */}
             <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-white text-center mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8">
                 Choose Your Plan
               </h2>
 
@@ -229,11 +229,11 @@ export default function Pricing() {
               </div>
 
               {/* Bottom Row - Pro 3 full width */}
-              <div className="backdrop-blur-md rounded-2xl p-8 border border-purple-500/30 hover:border-purple-400/60 transition-all hover:shadow-2xl hover:shadow-purple-500/20">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-2xl font-bold text-white">Verdict</h3>
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-purple-300">
+              <div className="backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-purple-500/30 hover:border-purple-400/60 transition-all hover:shadow-2xl hover:shadow-purple-500/20">
+                <div className="flex justify-between items-start gap-3 mb-4">
+                  <h3 className="text-xl sm:text-2xl font-bold text-white min-w-0 break-words">Verdict</h3>
+                  <div className="text-right shrink-0">
+                    <div className="text-2xl sm:text-3xl font-bold text-purple-300">
                       ₹1500
                     </div>
                     <div className="text-sm text-purple-200">Lifetime</div>

@@ -70,7 +70,7 @@ export default function UploadPage() {
           onRetry={() => setToastError(null)}
         />
       )}
-      <main className="container mx-auto px-4 py-10 max-w-7xl">
+      <main className="container mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
         {error && (
           <ErrorMessage
             message={error}

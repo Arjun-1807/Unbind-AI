@@ -41,7 +41,7 @@ const LoginView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center pt-10">
+    <div className="flex flex-col items-center justify-center pt-6 sm:pt-10">
       <div className="w-full max-w-3xl mb-4 text-left">
          <Link href="/"><button
             // onClick={onBack}
@@ -50,10 +50,10 @@ const LoginView: React.FC = () => {
             &larr; Back
           </button></Link>
         </div>
-      <div className="w-full max-w-md p-8 space-y-6 bg-gray-800/40 rounded-lg shadow-xl border border-indigo-500/20">
+      <div className="w-full max-w-md p-6 sm:p-8 space-y-6 bg-gray-800/40 rounded-lg shadow-xl border border-indigo-500/20">
         <div className="flex flex-col items-center space-y-2">
           <LogoIcon className="h-12 w-12 text-indigo-400" />
-          <h2 className="text-2xl font-bold text-center text-white">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white">
             Welcome Back
           </h2>
           <p className="text-center text-gray-400">
@@ -124,7 +124,7 @@ const LoginView: React.FC = () => {
         </div>
 
         {/* Google Sign-In */}
-        <div className="flex justify-center">
+        <div className="flex justify-center overflow-x-auto">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
             onError={() => setError("Google sign-in failed. Please try again.")}

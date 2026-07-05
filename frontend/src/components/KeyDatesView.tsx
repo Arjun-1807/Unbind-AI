@@ -95,7 +95,9 @@ const KeyDatesView: React.FC<KeyDatesViewProps> = ({ analysisResult }) => {
   if (!analysisResult.keyDates || analysisResult.keyDates.length === 0) {
     return (
       <div>
-        <h3 className="text-2xl font-bold text-white mb-2">Key Dates</h3>
+        <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+          Key Dates
+        </h3>
         <p className="text-gray-400">
           No specific dates or deadlines were identified in this document.
         </p>
@@ -106,7 +108,7 @@ const KeyDatesView: React.FC<KeyDatesViewProps> = ({ analysisResult }) => {
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-2xl font-bold text-white">
+        <h3 className="text-xl sm:text-2xl font-bold text-white">
           Key Dates &amp; Deadlines
         </h3>
         <p className="text-gray-300 mt-2 max-w-3xl">
@@ -118,13 +120,17 @@ const KeyDatesView: React.FC<KeyDatesViewProps> = ({ analysisResult }) => {
         {analysisResult.keyDates.map((item, index) => (
           <div
             key={index}
-            className="flex items-center justify-between p-4 rounded-lg bg-gray-900/50 hover:bg-gray-900/80 border border-gray-700 transition-colors"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-gray-900/50 hover:bg-gray-900/80 border border-gray-700 transition-colors"
           >
-            <div>
-              <p className="font-semibold text-indigo-300">{item.date}</p>
-              <p className="text-sm text-gray-300">{item.description}</p>
+            <div className="min-w-0">
+              <p className="font-semibold text-indigo-300 break-words">
+                {item.date}
+              </p>
+              <p className="text-sm text-gray-300 break-words">
+                {item.description}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => generateIcsFile(item.date, item.description)}
                 className="inline-flex cursor-pointer items-center px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-500 transition-colors"

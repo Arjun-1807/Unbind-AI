@@ -134,26 +134,26 @@ const LandingPage: React.FC = () => {
     <div className="w-full fade-in">
 
       {/* Tab Switcher */}
-      <div className="flex justify-center pt-8 pb-2">
-        <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-gray-900/80 border border-gray-700/60 shadow-lg shadow-black/20 backdrop-blur-sm">
+      <div className="flex justify-center pt-8 pb-2 px-4">
+        <div className="inline-flex max-w-full items-center gap-1 p-1 rounded-xl bg-gray-900/80 border border-gray-700/60 shadow-lg shadow-black/20 backdrop-blur-sm">
           <button
             id="tab-analyze"
             onClick={() => setActiveTab('users')}
-            className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap ${
               activeTab === 'users' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
             }`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             Analyze Contracts
           </button>
           <button
             id="tab-lawyers"
             onClick={() => setActiveTab('lawyers')}
-            className={`inline-flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap ${
               activeTab === 'lawyers' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
             }`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             For Legal Professionals
           </button>
         </div>
@@ -171,11 +171,11 @@ const LandingPage: React.FC = () => {
           <div className="text-center">
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm font-medium mb-8">
-              <SparklesIcon className="h-3.5 w-3.5" />
+              <SparklesIcon className="h-3.5 w-3.5 shrink-0" />
               AI-Powered Contract Intelligence
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
               Contracts decoded.
               <br />
               <span className="bg-linear-to-r from-indigo-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
@@ -190,16 +190,16 @@ const LandingPage: React.FC = () => {
 
             {/* Install command */}
             <div className="mt-10 flex flex-col items-center gap-4">
-              <div className="inline-flex items-center gap-2">
+              <div className="inline-flex max-w-full items-center gap-2">
                 <div
                   onClick={handleCopy}
-                  className="group cursor-pointer inline-flex items-center gap-3 px-5 py-3 rounded-lg bg-gray-900/80 border border-gray-700/80 hover:border-indigo-500/50 transition-all duration-200"
+                  className="group cursor-pointer inline-flex min-w-0 items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 rounded-lg bg-gray-900/80 border border-gray-700/80 hover:border-indigo-500/50 transition-all duration-200"
                 >
                   <span className="text-green-400 font-mono text-sm select-none">$</span>
-                  <code className="text-gray-200 font-mono text-sm sm:text-base">
+                  <code className="truncate text-gray-200 font-mono text-sm sm:text-base">
                     npm install -g unbindai
                   </code>
-                  <span className="text-gray-500 group-hover:text-indigo-400 transition-colors">
+                  <span className="shrink-0 text-gray-500 group-hover:text-indigo-400 transition-colors">
                     {copied ? (
                       <CheckIcon className="h-4 w-4 text-green-400" />
                     ) : (
@@ -207,7 +207,7 @@ const LandingPage: React.FC = () => {
                     )}
                   </span>
                 </div>
-                <div className="relative group/info">
+                <div className="relative shrink-0 group/info">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 hover:text-indigo-400 cursor-help transition-colors">
                     <circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="16" y2="12" /><line x1="12" x2="12.01" y1="8" y2="8" />
                   </svg>
@@ -281,13 +281,13 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Features Grid */}
-      <section className="py-16 sm:py-24">
+      <section className="py-12 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-4xl font-bold text-white">
               Everything you need to understand any contract
             </h2>
-            <p className="mt-4 text-lg text-gray-400 max-w-2xl mx-auto">
+            <p className="mt-4 text-base sm:text-lg text-gray-400 max-w-2xl mx-auto">
               From risk analysis to deadline tracking — UnBind gives you complete contract intelligence in minutes.
             </p>
           </div>
@@ -349,15 +349,15 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* CLI Section */}
-      <section className="py-16 sm:py-24 border-t border-gray-800/50">
+      <section className="py-12 sm:py-24 border-t border-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium mb-6">
-                <TerminalIcon className="h-3.5 w-3.5" />
+                <TerminalIcon className="h-3.5 w-3.5 shrink-0" />
                 CLI Tool · Exclusive to Verdict
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white">
+              <h2 className="text-2xl sm:text-4xl font-bold text-white">
                 Analyze contracts from
                 <br />
                 your terminal
@@ -392,7 +392,7 @@ const LandingPage: React.FC = () => {
                 <div className="w-3 h-3 rounded-full bg-green-500/70" />
                 <span className="ml-3 text-xs text-gray-500 font-mono">terminal</span>
               </div>
-              <div className="p-5 font-mono text-sm leading-relaxed">
+              <div className="p-5 font-mono text-xs sm:text-sm leading-relaxed overflow-x-auto">
                 <div className="text-gray-400">
                   <span className="text-green-400">$</span> npm install -g unbindai
                 </div>
@@ -400,7 +400,7 @@ const LandingPage: React.FC = () => {
                 <div className="text-gray-400 mt-3">
                   <span className="text-green-400">$</span> unbind contract.pdf
                 </div>
-                <div className="mt-2 text-gray-500">
+                <div className="mt-2 text-gray-500 whitespace-nowrap">
                   <div className="text-indigo-400">╭──────────────────────────────────────╮</div>
                   <div className="text-indigo-400">│ <span className="text-white font-bold">UnBindAI CLI</span>                        │</div>
                   <div className="text-indigo-400">│ <span className="text-gray-400">AI-powered contract analysis</span>        │</div>
@@ -425,11 +425,11 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* How it works */}
-      <section className="py-16 sm:py-24 border-t border-gray-800/50">
+      <section className="py-12 sm:py-24 border-t border-gray-800/50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white">How it works</h2>
-            <p className="mt-4 text-lg text-gray-400">Three steps to contract clarity</p>
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-4xl font-bold text-white">How it works</h2>
+            <p className="mt-4 text-base sm:text-lg text-gray-400">Three steps to contract clarity</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -481,13 +481,13 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Pricing Plans */}
-      <section className="py-16 sm:py-24 border-t border-gray-800/50">
+      <section className="py-12 sm:py-24 border-t border-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-4xl font-bold text-white">
               Simple, transparent pricing
             </h2>
-            <p className="mt-4 text-lg text-gray-400 max-w-2xl mx-auto">
+            <p className="mt-4 text-base sm:text-lg text-gray-400 max-w-2xl mx-auto">
               Start free and upgrade when you need more. Cancel anytime.
             </p>
           </div>
@@ -592,11 +592,11 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Extra features row */}
-      <section className="py-16 sm:py-24 border-t border-gray-800/50">
+      <section className="py-12 sm:py-24 border-t border-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* PDF Export card */}
-            <div className="glass-card rounded-xl p-8 flex flex-col justify-between">
+            <div className="glass-card rounded-xl p-6 sm:p-8 flex flex-col justify-between">
               <div>
                 <DownloadIcon className="h-8 w-8 text-indigo-400 mb-4" />
                 <h3 className="text-xl font-bold text-white mb-2">PDF Export & Modified Contracts</h3>
@@ -619,7 +619,7 @@ const LandingPage: React.FC = () => {
             </div>
 
             {/* Dashboard card */}
-            <div className="glass-card rounded-xl p-8 flex flex-col justify-between">
+            <div className="glass-card rounded-xl p-6 sm:p-8 flex flex-col justify-between">
               <div>
                 <LogoIcon className="h-8 w-8 text-indigo-400 mb-4" />
                 <h3 className="text-xl font-bold text-white mb-2">Dashboard & History</h3>
@@ -645,12 +645,12 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 border-t border-gray-800/50">
+      <section className="py-12 sm:py-24 border-t border-gray-800/50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white">
+          <h2 className="text-2xl sm:text-4xl font-bold text-white">
             Stop signing contracts you don&apos;t fully understand
           </h2>
-          <p className="mt-4 text-lg text-gray-400 max-w-xl mx-auto">
+          <p className="mt-4 text-base sm:text-lg text-gray-400 max-w-xl mx-auto">
             Get started free — no credit card required. Analyze your first contract in under two minutes.
           </p>
 
@@ -675,10 +675,10 @@ const LandingPage: React.FC = () => {
             <p className="text-gray-500 text-sm mb-2">Or install the CLI</p>
             <div
               onClick={handleCopy}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gray-900/80 border border-gray-700/80 hover:border-indigo-500/50 cursor-pointer transition-all duration-200"
+              className="inline-flex max-w-full items-center gap-2 px-4 py-2 rounded-md bg-gray-900/80 border border-gray-700/80 hover:border-indigo-500/50 cursor-pointer transition-all duration-200"
             >
               <span className="text-green-400 font-mono text-sm">$</span>
-              <code className="text-gray-300 font-mono text-sm">npm install -g unbindai</code>
+              <code className="truncate text-gray-300 font-mono text-sm">npm install -g unbindai</code>
               <span className="text-gray-500 hover:text-indigo-400 transition-colors">
                 {copied ? (
                   <CheckIcon className="h-3.5 w-3.5 text-green-400" />
@@ -700,10 +700,10 @@ const LandingPage: React.FC = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-100 bg-purple-500/5 rounded-full blur-3xl" />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm font-medium mb-8">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             Lawyer Referral Network · Join Now
           </div>
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
             Grow your practice.
             <br />
             <span className="bg-gradient-to-r from-purple-400 via-fuchsia-300 to-pink-400 bg-clip-text text-transparent">
@@ -741,7 +741,7 @@ const LandingPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto glass-card rounded-2xl p-8">
+          <div className="max-w-3xl mx-auto glass-card rounded-2xl p-6 sm:p-8">
             {lawyerSuccess ? (
               <div className="text-center py-8">
                 <div className="flex justify-center mb-4">

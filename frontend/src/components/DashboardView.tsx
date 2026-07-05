@@ -11,6 +11,7 @@ import {
   CheckCircleIcon,
 } from "./Icons";
 import { RISK_COLORS } from "@/constants";
+import ConfirmModal from "./ConfirmModal";
 import Link from "next/link";
 
 interface DashboardViewProps {
@@ -108,6 +109,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [limitReached, setLimitReached] = React.useState(false);
   const [dailyCount, setDailyCount] = React.useState(0);
   const [dailyLimit, setDailyLimit] = React.useState<number | null>(1);
+  const [pendingDelete, setPendingDelete] =
+    React.useState<StoredAnalysis | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    try {
+      setIsDeleting(true);
+      await onDeleteAnalysis(pendingDelete.id);
+      setPendingDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   React.useEffect(() => {
     let cancelled = false;
@@ -137,65 +152,65 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const isPaidPlan = plan === "Brief" || plan === "Motion" || plan === "Verdict";
   const isProUser = user.pro === true || isPaidPlan;
   return (
-    <div className="space-y-10 fade-in">
-      <div className="relative">
-        <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-          Welcome back, {user.username}
-        </h2>
-        <div className="mt-4 flex items-center space-x-4">
-          <p className="text-lg leading-8 text-gray-400">
+    <div className="space-y-8 sm:space-y-10 fade-in">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl break-words">
+            Welcome back, {user.username}
+          </h2>
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg leading-7 sm:leading-8 text-gray-400">
             Review your past analyses or upload a new document to begin.
           </p>
         </div>
         <span
-          className="absolute top-0 right-0 text-sm text-white px-3 py-1 cursor-pointer"
+          className="relative self-start shrink-0 text-sm text-white cursor-pointer"
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
+          onClick={() => setShowTooltip((v) => !v)}
         >
           Active Plan:
           {isProUser ? (
             <span className="ml-1 text-green-400">{plan}</span>
-          ) : !isProUser ? (
-            <span className="ml-1 text-red-400">Free</span>
-          ) :  (
+          ) : (
             <span className="ml-1 text-red-400">Free</span>
           )}
-          {showTooltip && plan && (
-            <PlanTooltip plan={plan} />
-          )}
+          {showTooltip && plan && <PlanTooltip plan={plan} />}
         </span>
       </div>
 
-      <div className="glass-card p-6 sm:p-8 rounded-xl">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold text-white">
+      <div className="glass-card p-5 sm:p-8 rounded-xl">
+        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
+          <h3 className="text-lg sm:text-xl font-semibold text-white">
             Your Document History
           </h3>
-         {!limitReached ? (
-  <button
-    onClick={onNewAnalysis}
-    className="inline-flex items-center cursor-pointer px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
-  >
-    Analyze New Document
-    <SparklesIcon className="ml-2 h-5 w-5" />
-  </button>
-) : (
-  <div className="flex flex-col items-end gap-1">
-    <button
-      disabled
-      className="inline-flex items-center px-4 py-2 font-semibold text-gray-400 bg-gray-700 border border-gray-600 rounded-md cursor-not-allowed text-sm shadow-lg opacity-60"
-    >
-      Analyze New Document
-      <SparklesIcon className="ml-2 h-5 w-5" />
-    </button>
-    <span className="text-xs text-orange-400">
-      Daily limit reached ({dailyCount}/{dailyLimit ?? "∞"}).
-      {" "}<Link href="/pricing" className="underline hover:text-orange-300">Upgrade your plan</Link>
-    </span>
-  </div>
-)}
-
-          
+          {!limitReached ? (
+            <button
+              onClick={onNewAnalysis}
+              className="inline-flex items-center justify-center cursor-pointer w-full sm:w-auto px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
+            >
+              Analyze New Document
+              <SparklesIcon className="ml-2 h-5 w-5" />
+            </button>
+          ) : (
+            <div className="flex flex-col items-stretch sm:items-end gap-1">
+              <button
+                disabled
+                className="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 font-semibold text-gray-400 bg-gray-700 border border-gray-600 rounded-md cursor-not-allowed text-sm shadow-lg opacity-60"
+              >
+                Analyze New Document
+                <SparklesIcon className="ml-2 h-5 w-5" />
+              </button>
+              <span className="text-xs text-orange-400 text-center sm:text-right">
+                Daily limit reached ({dailyCount}/{dailyLimit ?? "∞"}).{" "}
+                <Link
+                  href="/pricing"
+                  className="underline hover:text-orange-300"
+                >
+                  Upgrade your plan
+                </Link>
+              </span>
+            </div>
+          )}
         </div>
 
         {analyses.length > 0 ? (
@@ -204,12 +219,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <div
                 key={analysis.id}
                 onClick={() => onSelectAnalysis(analysis)}
-                className="group flex items-center justify-between p-4 rounded-lg bg-white/5 hover:bg-indigo-500/10 border border-transparent hover:border-indigo-500/30 cursor-pointer transition-all duration-300 shadow-md hover:shadow-xl hover:shadow-indigo-500/10"
+                className="group flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg bg-white/5 hover:bg-indigo-500/10 border border-transparent hover:border-indigo-500/30 cursor-pointer transition-all duration-300 shadow-md hover:shadow-xl hover:shadow-indigo-500/10"
               >
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
                   <FileTextIcon className="h-8 w-8 text-indigo-400 shrink-0" />
-                  <div>
-                    <p className="font-semibold text-gray-100 group-hover:text-white">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-100 group-hover:text-white truncate">
                       {analysis.fileName}
                     </p>
                     <p className="text-sm text-gray-400 group-hover:text-gray-300">
@@ -218,26 +233,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center justify-between sm:justify-end gap-4 flex-wrap pl-11 sm:pl-0">
                   <RiskSummary analysis={analysis} />
-                  <button
-                    type="button"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      const confirmed = window.confirm(
-                        "Delete this analysis? This action cannot be undone.",
-                      );
-                      if (!confirmed) return;
-                      await onDeleteAnalysis(analysis.id);
-                      // analyses.length = analyses.length - 
-                    }}
-                    className="text-xs text-red-400 hover:text-red-300 underline cursor-pointer"
-                  >
-                    Delete
-                  </button>
-                  <span className="text-indigo-400 text-lg font-semibold transform group-hover:translate-x-1 transition-transform">
-                    &rarr;
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPendingDelete(analysis);
+                      }}
+                      className="text-xs text-red-400 hover:text-red-300 underline cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                    <span className="hidden sm:inline text-indigo-400 text-lg font-semibold transform group-hover:translate-x-1 transition-transform">
+                      &rarr;
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -284,6 +296,22 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title="Delete this analysis?"
+        message={
+          pendingDelete
+            ? `“${pendingDelete.fileName}” will be permanently removed. This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        loading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          if (!isDeleting) setPendingDelete(null);
+        }}
+      />
     </div>
   );
 };

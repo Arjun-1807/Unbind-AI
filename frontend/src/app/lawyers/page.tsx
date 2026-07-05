@@ -268,18 +268,18 @@ const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onContact }) => (
   <div className="glass-card rounded-xl p-5 sm:p-6 flex flex-col gap-4 hover:border-indigo-500/50 transition-all duration-300 hover:shadow-indigo-500/10 hover:shadow-xl">
     {/* Header row */}
     <div className="flex items-start justify-between gap-3">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         {/* Avatar initial */}
         <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-lg">
           {lawyer.name.charAt(0)}
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h3 className="font-semibold text-white text-lg leading-tight">
+            <h3 className="font-semibold text-white text-lg leading-tight break-words">
               {lawyer.name}
             </h3>
             {lawyer.verified && (
-              <span title="Verified lawyer">
+              <span title="Verified lawyer" className="shrink-0">
                 <BadgeCheckIcon />
               </span>
             )}
@@ -311,7 +311,7 @@ const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onContact }) => (
     </p>
 
     {/* Footer: rating + contact */}
-    <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-800">
+    <div className="flex items-center justify-between gap-3 mt-auto pt-2 border-t border-gray-800">
       {lawyer.rating && lawyer.rating > 0 ? (
         <StarRating rating={lawyer.rating} />
       ) : (
@@ -319,7 +319,7 @@ const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onContact }) => (
       )}
       <button
         onClick={() => onContact(lawyer)}
-        className="inline-flex cursor-pointer items-center px-4 py-1.5 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-md"
+        className="inline-flex cursor-pointer items-center shrink-0 px-4 py-1.5 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-md"
       >
         Contact
       </button>
@@ -471,7 +471,7 @@ export default function LawyersPage() {
   return (
     <div className="min-h-screen font-sans">
       <Header />
-      <main className="container mx-auto px-4 py-10 max-w-7xl">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 max-w-7xl">
         <div className="space-y-8 fade-in">
           {/* Back nav */}
           <div>
@@ -485,10 +485,10 @@ export default function LawyersPage() {
 
           {/* Page header */}
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
               Lawyer Referral Network
             </h1>
-            <p className="mt-3 text-lg text-gray-400 max-w-2xl">
+            <p className="mt-3 text-base sm:text-lg text-gray-400 max-w-2xl">
               Connect with vetted legal professionals who specialise in the same
               contract types our AI helps you analyse.
             </p>
@@ -557,7 +557,7 @@ export default function LawyersPage() {
                 {lawyers.length} lawyer{lawyers.length !== 1 ? "s" : ""}{" "}
                 {activeFilter ? `specialising in ${activeFilter}` : "available"}
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {lawyers.map((lawyer) => (
                   <LawyerCard
                     key={lawyer.id}

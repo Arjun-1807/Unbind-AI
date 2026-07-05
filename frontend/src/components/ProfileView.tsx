@@ -134,20 +134,20 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             &larr; Back to Dashboard
           </button></Link>
         </div>
-        <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+        <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
           Your Profile
         </h2>
-        <p className="mt-4 text-lg leading-8 text-gray-400">
+        <p className="mt-4 text-base sm:text-lg leading-8 text-gray-400">
           Manage your account information and view your activity.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
         {/* Main Profile Card */}
-        <div className="relative lg:col-span-2 glass-card p-6 sm:p-8 rounded-xl">
+        <div className="relative lg:col-span-2 glass-card p-5 sm:p-8 rounded-xl">
           <button
             onClick={handleLogout}
-            className="absolute top-6 right-6 inline-flex items-center px-4 py-2 font-semibold cursor-pointer text-white bg-red-600 border border-transparent rounded-md hover:bg-red-500 transition-colors text-sm shadow-lg"
+            className="w-full sm:w-auto mb-4 sm:mb-0 justify-center sm:justify-start sm:absolute sm:top-6 sm:right-6 inline-flex items-center px-4 py-2 font-semibold cursor-pointer text-white bg-red-600 border border-transparent rounded-md hover:bg-red-500 transition-colors text-sm shadow-lg"
           >
             <LogOutIcon className="mr-2 h-4 w-4" />
             Logout
@@ -155,14 +155,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
 
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
             {/* Left Section */}
-            <div className="flex items-start space-x-4">
+            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left gap-4 sm:space-x-4 sm:gap-0 w-full min-w-0">
               {/* Avatar */}
               <div className="h-20 w-20 rounded-full bg-linear-to-br from-indigo-600 to-indigo-400 flex items-center justify-center text-white text-3xl font-bold shadow-lg shrink-0">
                 {user.username.charAt(0).toUpperCase()}
               </div>
               {/* User Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2">
+              <div className="flex-1 min-w-0 w-full">
+                <div className="flex items-center justify-center sm:justify-start space-x-2 min-w-0">
                   <UserIcon className="h-5 w-5 text-indigo-400" />
                   <h3 className="text-2xl font-semibold text-white truncate">
                     {user.username}
@@ -171,10 +171,10 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                 <p className="mt-1 text-gray-400 text-sm truncate">
                   {user.email}
                 </p>
-                <div className="mt-3 flex items-center space-x-2 text-xs">
+                <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-2 space-x-0 text-xs">
                   <ShieldCheckIcon className={`h-4 w-4 ${isPro ? 'text-green-400' : 'text-gray-400'}`} />
                   {isPro && plan ? (
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3">
                       <span className="text-green-400 font-semibold">
                         Active Plan: {plan}
                       </span>
@@ -206,7 +206,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
 
           {/* Password Update Section */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <h4 className="text-lg font-semibold text-white flex items-center">
                 <ShieldCheckIcon className="h-5 w-5 mr-2 text-indigo-400" />
                 Security
@@ -214,7 +214,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
               {!showPasswordForm && (
                 <button
                   onClick={() => setShowPasswordForm(true)}
-                  className="inline-flex cursor-pointer items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
+                  className="w-full sm:w-auto justify-center inline-flex cursor-pointer items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
                 >
                   Update Password
                   <SparklesIcon className="ml-2 h-4 w-4" />
@@ -280,11 +280,11 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                   </div>
                 )}
 
-                <div className="flex space-x-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:flex-1 inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Updating...' : 'Update Password'}
                   </button>
@@ -297,7 +297,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                       setNewPassword("");
                       setConfirmPassword("");
                     }}
-                    className="px-4 py-2 font-semibold text-gray-300 bg-gray-700 border border-transparent rounded-md hover:bg-gray-600 transition-colors text-sm"
+                    className="w-full sm:w-auto px-4 py-2 font-semibold text-gray-300 bg-gray-700 border border-transparent rounded-md hover:bg-gray-600 transition-colors text-sm"
                   >
                     Cancel
                   </button>
@@ -313,7 +313,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
 
         {/* Statistics Card */}
         <div className="space-y-6">
-          <div className="glass-card p-6 rounded-xl">
+          <div className="glass-card p-5 sm:p-6 rounded-xl">
             <h4 className="text-lg font-semibold text-white mb-4">Activity Stats</h4>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -340,7 +340,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             </div>
           </div>
 
-          <div className="glass-card p-6 rounded-xl">
+          <div className="glass-card p-5 sm:p-6 rounded-xl">
             <h4 className="text-lg font-semibold text-white mb-3">Quick Info</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
@@ -366,7 +366,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
 
           {/* Get Pro Button for Free Users (wait for plan status to avoid flicker) */}
           {planLoaded && !isPro && (
-            <div className="glass-card p-6 rounded-xl bg-linear-to-br from-indigo-600/10 to-purple-600/10 border border-indigo-500/20">
+            <div className="glass-card p-5 sm:p-6 rounded-xl bg-linear-to-br from-indigo-600/10 to-purple-600/10 border border-indigo-500/20">
               <div className="text-center space-y-3">
                 <SparklesIcon className="h-8 w-8 text-indigo-400 mx-auto" />
                 <h4 className="text-lg font-semibold text-white">Upgrade to Pro</h4>

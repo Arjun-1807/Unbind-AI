@@ -58,20 +58,20 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 
   return (
     <div className="w-full fade-in">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <button
           onClick={onBackToDashboard}
-          className="text-sm cursor-pointer text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="text-sm cursor-pointer text-indigo-400 hover:text-indigo-300 transition-colors self-start"
         >
           &larr; Back to Dashboard
         </button>
         <ExportButton analysisResult={analysisResult} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
         {/* Left Panel: Document View */}
-        <div className="lg:col-span-2 lg:sticky top-28 self-start h-fit">
-          <h3 className="text-xl font-bold text-white mb-4">
+        <div className="lg:col-span-2 lg:sticky top-28 self-start h-fit min-w-0">
+          <h3 className="text-lg sm:text-xl font-bold text-white mb-4">
             Original Document
           </h3>
           <DocumentView
@@ -83,8 +83,8 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         </div>
 
         {/* Right Panel: Analysis Tabs */}
-        <div className="lg:col-span-3">
-          <div className="mb-6 p-1.5 bg-gray-900/60 border border-gray-700/50 rounded-lg inline-flex items-center space-x-1 flex-wrap">
+        <div className="lg:col-span-3 min-w-0">
+          <div className="mb-6 p-1.5 bg-gray-900/60 border border-gray-700/50 rounded-lg flex items-center space-x-1 overflow-x-auto">
             {Object.values(TABS).map((tab) => (
               <button
                 key={tab}
@@ -101,7 +101,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
             ))}
           </div>
 
-          <div className="glass-card p-6 sm:p-8 rounded-xl min-h-[400px]">
+          <div className="glass-card p-4 sm:p-6 md:p-8 rounded-xl min-h-[400px]">
             {renderTabContent()}
           </div>
         </div>
