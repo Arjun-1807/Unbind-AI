@@ -12,6 +12,7 @@ import {
   AlertTriangleIcon,
 } from "./Icons";
 import HeroProductMockup from "./HeroProductMockup";
+import HowItWorksFlow from "./HowItWorksFlow";
 import {
   UploadMockup,
   ClauseMockup,
@@ -408,16 +409,17 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* How it works — a connected flow: an SVG path draws itself in as you
+          scroll, lighting up each step in turn rather than a static grid. */}
       <section className="py-12 sm:py-24 border-t border-hairline">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="reveal text-center mb-12 sm:mb-16">
+          <div className="reveal text-center mb-16 sm:mb-24">
             <h2 className="text-2xl sm:text-4xl font-semibold text-ink tracking-tight">How it works</h2>
             <p className="mt-4 text-base sm:text-lg text-ink-subtle">Three steps to contract clarity</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
+          <HowItWorksFlow
+            steps={[
               {
                 step: "01",
                 title: "Upload your contract",
@@ -436,15 +438,8 @@ const LandingPage: React.FC = () => {
                 desc: "Explore risks, get alternative clauses, simulate scenarios, and export a full report as PDF.",
                 mockup: <NegotiationMockup />,
               },
-            ].map((step, i) => (
-              <div key={i} className="reveal text-center" style={{ ["--i" as string]: i }}>
-                <div className="text-5xl font-semibold mb-4" style={{ color: "var(--ln-hairline-tertiary)" }}>{step.step}</div>
-                <div className="lift mb-6 flex justify-center">{step.mockup}</div>
-                <h3 className="text-lg font-medium text-ink mb-2">{step.title}</h3>
-                <p className="text-ink-subtle text-sm leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
         </div>
       </section>
 
