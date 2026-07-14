@@ -52,7 +52,7 @@ const ScreenshotFrame = ({
         }}
       >
         <div
-          className="bg-[#151821] px-4 py-3"
+          className="bg-surface-1 px-4 py-3"
           style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}
         >
           <div className="flex items-center gap-3">
@@ -67,14 +67,14 @@ const ScreenshotFrame = ({
                   ))
                 : null}
             </div>
-            <div className="min-w-0 flex-1 text-center text-xs font-medium tracking-[0.01em] text-[#c3cad5]">
+            <div className="min-w-0 flex-1 text-center text-xs font-medium tracking-[0.01em] text-ink-muted">
               <span className="block truncate">{title}</span>
             </div>
             <div className="w-[42px] shrink-0" aria-hidden="true" />
           </div>
           {showUrlBar ? (
             <div
-              className="mt-3 rounded-full bg-[#1d2230] px-3 py-2 text-xs text-[#9ea8b7]"
+              className="mt-3 rounded-full bg-surface-2 px-3 py-2 text-xs text-ink-subtle"
               style={{ border: "1px solid rgba(255, 255, 255, 0.08)" }}
             >
               <span className="block truncate">{url ?? "app.unbind.ai/analysis"}</span>

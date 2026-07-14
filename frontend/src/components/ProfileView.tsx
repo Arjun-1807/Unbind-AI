@@ -129,25 +129,25 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
         <div className="w-full max-w-3xl mb-4 text-left">
          <Link href="/dashboard"><button
             // onClick={onBack}
-            className="text-sm cursor-pointer text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="text-sm cursor-pointer text-primary hover:text-primary-hover transition-colors"
           >
             &larr; Back to Dashboard
           </button></Link>
         </div>
-        <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
+        <h2 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl md:text-5xl">
           Your Profile
         </h2>
-        <p className="mt-4 text-base sm:text-lg leading-8 text-gray-400">
+        <p className="mt-4 text-base sm:text-lg leading-8 text-ink-subtle">
           Manage your account information and view your activity.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
         {/* Main Profile Card */}
-        <div className="relative lg:col-span-2 glass-card p-5 sm:p-8 rounded-xl">
+        <div className="relative lg:col-span-2 ln-card p-5 sm:p-8">
           <button
             onClick={handleLogout}
-            className="w-full sm:w-auto mb-4 sm:mb-0 justify-center sm:justify-start sm:absolute sm:top-6 sm:right-6 inline-flex items-center px-4 py-2 font-semibold cursor-pointer text-white bg-red-600 border border-transparent rounded-md hover:bg-red-500 transition-colors text-sm shadow-lg"
+            className="w-full sm:w-auto mb-4 sm:mb-0 justify-center sm:justify-start sm:absolute sm:top-6 sm:right-6 inline-flex items-center px-4 py-2 font-medium cursor-pointer text-white bg-danger border border-transparent rounded-lg hover:bg-danger/90 transition-colors text-sm"
           >
             <LogOutIcon className="mr-2 h-4 w-4" />
             Logout
@@ -157,42 +157,42 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             {/* Left Section */}
             <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left gap-4 sm:space-x-4 sm:gap-0 w-full min-w-0">
               {/* Avatar */}
-              <div className="h-20 w-20 rounded-full bg-linear-to-br from-indigo-600 to-indigo-400 flex items-center justify-center text-white text-3xl font-bold shadow-lg shrink-0">
+              <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-white text-3xl font-semibold shrink-0">
                 {user.username.charAt(0).toUpperCase()}
               </div>
               {/* User Info */}
               <div className="flex-1 min-w-0 w-full">
                 <div className="flex items-center justify-center sm:justify-start space-x-2 min-w-0">
-                  <UserIcon className="h-5 w-5 text-indigo-400" />
-                  <h3 className="text-2xl font-semibold text-white truncate">
+                  <UserIcon className="h-5 w-5 text-primary" />
+                  <h3 className="text-2xl font-semibold text-ink truncate">
                     {user.username}
                   </h3>
                 </div>
-                <p className="mt-1 text-gray-400 text-sm truncate">
+                <p className="mt-1 text-ink-subtle text-sm truncate">
                   {user.email}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-2 space-x-0 text-xs">
-                  <ShieldCheckIcon className={`h-4 w-4 ${isPro ? 'text-green-400' : 'text-gray-400'}`} />
+                  <ShieldCheckIcon className={`h-4 w-4 ${isPro ? 'text-success' : 'text-ink-subtle'}`} />
                   {isPro && plan ? (
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3">
-                      <span className="text-green-400 font-semibold">
+                      <span className="text-success font-semibold">
                         Active Plan: {plan}
                       </span>
-                      <button 
-                        className="inline-flex cursor-pointer items-center px-3 py-1 font-semibold text-white  border border-red-400 rounded-md  transition-colors text-xs shadow-lg" 
+                      <button
+                        className="inline-flex cursor-pointer items-center px-3 py-1 font-medium text-ink-muted border border-hairline rounded-lg hover:bg-surface-2 transition-colors text-xs"
                         onClick={handleCancel}
                       >
                         Cancel Plan
                       </button>
-                      <button 
-                        className="inline-flex cursor-pointer items-center px-3 py-1 font-semibold text-white  border border-yellow-400 rounded-md  transition-colors text-xs shadow-lg" 
+                      <button
+                        className="inline-flex cursor-pointer items-center px-3 py-1 font-medium text-ink-muted border border-hairline rounded-lg hover:bg-surface-2 transition-colors text-xs"
                         onClick={handlePlandUpdate}
                       >
                         Update Plan
                       </button>
                     </div>
                   ) : (
-                    <span className="text-gray-400">
+                    <span className="text-ink-subtle">
                       Active Plan: Free
                     </span>
                   )}
@@ -202,19 +202,19 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
           </div>
 
           {/* Divider */}
-          <div className="my-6 border-t border-gray-700"></div>
+          <div className="my-6 border-t border-hairline"></div>
 
           {/* Password Update Section */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h4 className="text-lg font-semibold text-white flex items-center">
-                <ShieldCheckIcon className="h-5 w-5 mr-2 text-indigo-400" />
+              <h4 className="text-lg font-semibold text-ink flex items-center">
+                <ShieldCheckIcon className="h-5 w-5 mr-2 text-primary" />
                 Security
               </h4>
               {!showPasswordForm && (
                 <button
                   onClick={() => setShowPasswordForm(true)}
-                  className="w-full sm:w-auto justify-center inline-flex cursor-pointer items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
+                  className="ln-btn-primary w-full sm:w-auto justify-center inline-flex cursor-pointer items-center px-4 py-2 text-sm"
                 >
                   Update Password
                   <SparklesIcon className="ml-2 h-4 w-4" />
@@ -225,7 +225,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             {showPasswordForm ? (
               <form onSubmit={handlePasswordUpdate} className="space-y-4">
                 <div>
-                  <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-300 mb-1">
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-ink-muted mb-1">
                     Current Password
                   </label>
                   <input
@@ -234,12 +234,12 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     required
-                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="ln-input w-full px-4 py-2"
                     placeholder="Enter current password"
                   />
                 </div>
                 <div>
-                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-300 mb-1">
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-ink-muted mb-1">
                     New Password
                   </label>
                   <input
@@ -248,12 +248,12 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
-                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="ln-input w-full px-4 py-2"
                     placeholder="Enter new password"
                   />
                 </div>
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-ink-muted mb-1">
                     Confirm New Password
                   </label>
                   <input
@@ -262,14 +262,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="ln-input w-full px-4 py-2"
                     placeholder="Confirm new password"
                   />
                 </div>
 
                 {message && (
-                  <div className={`flex items-center space-x-2 p-3 rounded-md ${
-                    message.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                  <div className={`flex items-center space-x-2 p-3 rounded-lg ${
+                    message.type === 'success' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
                   }`}>
                     {message.type === 'success' ? (
                       <CheckCircleIcon className="h-5 w-5" />
@@ -284,7 +284,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full sm:flex-1 inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="ln-btn-primary w-full sm:flex-1 inline-flex justify-center items-center px-4 py-2 text-sm"
                   >
                     {loading ? 'Updating...' : 'Update Password'}
                   </button>
@@ -297,14 +297,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                       setNewPassword("");
                       setConfirmPassword("");
                     }}
-                    className="w-full sm:w-auto px-4 py-2 font-semibold text-gray-300 bg-gray-700 border border-transparent rounded-md hover:bg-gray-600 transition-colors text-sm"
+                    className="ln-btn-secondary w-full sm:w-auto px-4 py-2 text-sm"
                   >
                     Cancel
                   </button>
                 </div>
               </form>
             ) : (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-subtle">
                 Keep your account secure by updating your password regularly. We recommend using a strong, unique password.
               </p>
             )}
@@ -313,69 +313,69 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
 
         {/* Statistics Card */}
         <div className="space-y-6">
-          <div className="glass-card p-5 sm:p-6 rounded-xl">
-            <h4 className="text-lg font-semibold text-white mb-4">Activity Stats</h4>
+          <div className="ln-card p-5 sm:p-6">
+            <h4 className="text-lg font-semibold text-ink mb-4">Activity Stats</h4>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <FileTextIcon className="h-5 w-5 text-indigo-400" />
-                  <span className="text-sm text-gray-400">Total Analyses</span>
+                  <FileTextIcon className="h-5 w-5 text-primary" />
+                  <span className="text-sm text-ink-subtle">Total Analyses</span>
                 </div>
-                <span className="text-2xl font-bold text-white">{totalAnalyses}</span>
+                <span className="text-2xl font-semibold text-ink">{totalAnalyses}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <ShieldCheckIcon className="h-5 w-5 text-blue-400" />
-                  <span className="text-sm text-gray-400">Clauses Reviewed</span>
+                  <ShieldCheckIcon className="h-5 w-5 text-primary" />
+                  <span className="text-sm text-ink-subtle">Clauses Reviewed</span>
                 </div>
-                <span className="text-2xl font-bold text-white">{totalClauses}</span>
+                <span className="text-2xl font-semibold text-ink">{totalClauses}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <AlertCircleIcon className="h-5 w-5 text-red-400" />
-                  <span className="text-sm text-gray-400">High Risks Found</span>
+                  <AlertCircleIcon className="h-5 w-5 text-danger" />
+                  <span className="text-sm text-ink-subtle">High Risks Found</span>
                 </div>
-                <span className="text-2xl font-bold text-white">{highRiskCount}</span>
+                <span className="text-2xl font-semibold text-ink">{highRiskCount}</span>
               </div>
             </div>
           </div>
 
-          <div className="glass-card p-5 sm:p-6 rounded-xl">
-            <h4 className="text-lg font-semibold text-white mb-3">Quick Info</h4>
+          <div className="ln-card p-5 sm:p-6">
+            <h4 className="text-lg font-semibold text-ink mb-3">Quick Info</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Member Since</span>
-                <span className="text-gray-300">N/A</span>
+                <span className="text-ink-subtle">Member Since</span>
+                <span className="text-ink-muted">N/A</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Last Login</span>
-                <span className="text-gray-300">Today</span>
+                <span className="text-ink-subtle">Last Login</span>
+                <span className="text-ink-muted">Today</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Account Type</span>
-                <span className={isPro ? 'text-green-400 font-semibold' : 'text-indigo-400 font-semibold'}>
+                <span className="text-ink-subtle">Account Type</span>
+                <span className={isPro ? 'text-success font-semibold' : 'text-primary font-semibold'}>
                   {plan || 'Free'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">AI Model</span>
-                <span className="text-gray-300">{aiModel}</span>
+                <span className="text-ink-subtle">AI Model</span>
+                <span className="text-ink-muted">{aiModel}</span>
               </div>
             </div>
           </div>
 
           {/* Get Pro Button for Free Users (wait for plan status to avoid flicker) */}
           {planLoaded && !isPro && (
-            <div className="glass-card p-5 sm:p-6 rounded-xl bg-linear-to-br from-indigo-600/10 to-purple-600/10 border border-indigo-500/20">
+            <div className="ln-card p-5 sm:p-6">
               <div className="text-center space-y-3">
-                <SparklesIcon className="h-8 w-8 text-indigo-400 mx-auto" />
-                <h4 className="text-lg font-semibold text-white">Upgrade to Pro</h4>
-                <p className="text-sm text-gray-400">
+                <SparklesIcon className="h-8 w-8 text-primary mx-auto" />
+                <h4 className="text-lg font-semibold text-ink">Upgrade to Pro</h4>
+                <p className="text-sm text-ink-subtle">
                   Unlock unlimited analyses and advanced features
                 </p>
                <Link href="/pricing"><button
                   // onClick={handleGetPro}
-                  className="w-full  cursor-pointer inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-linear-to-r from-indigo-600 to-purple-600 border border-transparent rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg"
+                  className="ln-btn-primary w-full cursor-pointer inline-flex justify-center items-center px-4 py-2 text-sm"
                 >
                   Get Pro
                   <SparklesIcon className="ml-2 h-4 w-4" />

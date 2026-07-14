@@ -53,20 +53,20 @@ export default function Pricing() {
   const isDisabled = (btnPlan: string) => btnPlan === currentPlan || activating !== null;
   const btnClass = (btnPlan: string) =>
     isDisabled(btnPlan)
-      ? "w-full bg-gray-700 text-gray-400 font-semibold py-2.5 rounded-lg cursor-not-allowed opacity-60"
-      : "w-full cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-colors";
+      ? "w-full bg-surface-2 text-ink-subtle font-semibold py-2.5 rounded-lg cursor-not-allowed opacity-60"
+      : "w-full cursor-pointer ln-btn-primary justify-center py-2.5 rounded-lg";
   const btnLabel = (btnPlan: string, label: string) =>
     btnPlan === currentPlan ? "Current Plan" : activating === btnPlan ? "Activating…" : label;
   return (
     <>
           <Header />
           
-      <div className="min-h-screen bg-gradient-to-br pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 fade-in font-sans">
+      <div className="min-h-screen bg-canvas pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 fade-in font-sans">
         <div className="max-w-7xl mx-auto">
             <div className="w-full max-w-3xl mb-4 text-left">
         <Link href="/profile"><button
           onClick={onBack}
-          className="text-sm cursor-pointer text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="text-sm cursor-pointer text-primary hover:text-primary-hover transition-colors"
         >
           &larr; Back
         </button></Link>
@@ -75,10 +75,10 @@ export default function Pricing() {
             {/* Left Section - Information */}
             <div className="space-y-8">
               <div>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-ink mb-4">
                   Unlock Pro Features
                 </h1>
-                <p className="text-lg sm:text-xl">
+                <p className="text-lg sm:text-xl text-ink-muted">
                   Upgrade to UnBind Pro and supercharge your contract analysis
                   experience.
                 </p>
@@ -88,10 +88,10 @@ export default function Pricing() {
                 <div className="flex gap-4">
                   <div className="text-3xl">⚡</div>
                   <div>
-                    <h3 className="text-xl font-semibold mb-2">
+                    <h3 className="text-xl font-semibold text-ink mb-2">
                       Advanced AI Analysis
                     </h3>
-                    <p className="">
+                    <p className="text-ink-muted">
                       Access higher-end AI models for more accurate and nuanced
                       contract analysis.
                     </p>
@@ -101,10 +101,10 @@ export default function Pricing() {
                 <div className="flex gap-4">
                   <div className="text-3xl">🔍</div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-2">
+                    <h3 className="text-xl font-semibold text-ink mb-2">
                       Deeper Insights
                     </h3>
-                    <p className="">
+                    <p className="text-ink-muted">
                       Unlock more detailed risk analysis, negotiation
                       suggestions, and key term extraction.
                     </p>
@@ -114,10 +114,10 @@ export default function Pricing() {
                 <div className="flex gap-4">
                   <div className="text-3xl">👨‍⚖️</div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-2">
+                    <h3 className="text-xl font-semibold text-ink mb-2">
                       Curated Lawyer Assistance
                     </h3>
-                    <p className="">
+                    <p className="text-ink-muted">
                       Get access to a network of expert lawyers for further
                       enquiry and personalized help.
                     </p>
@@ -125,12 +125,12 @@ export default function Pricing() {
                 </div>
               </div>
 
-              <div className=" backdrop-blur-sm rounded-lg p-6">
+              <div className="ln-card p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-2xl">✓</span>
-                  <p className="text-white font-semibold">Cancel Anytime</p>
+                  <p className="text-ink font-semibold">Cancel Anytime</p>
                 </div>
-                <p className="text-purple-200 text-sm">
+                <p className="text-ink-muted text-sm">
                   No risk, no long-term commitment. Cancel your subscription
                   whenever you want.
                 </p>
@@ -139,38 +139,38 @@ export default function Pricing() {
 
             {/* Right Section - Pricing Cards */}
             <div className="space-y-6">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8">
+              <h2 className="text-2xl sm:text-3xl font-semibold text-ink text-center mb-8">
                 Choose Your Plan
               </h2>
 
               {/* Top Row - Pro 1 and Pro 2 side by side */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Pro 1 Card */}
-                <div className="backdrop-blur-md rounded-2xl p-6 border border-indigo-500/30 hover:border-purple-400/60 transition-all hover:shadow-2xl hover:shadow-purple-500/20 flex flex-col">
+                <div className="ln-card p-6 hover:bg-surface-2 transition-colors flex flex-col">
                   <div className="flex flex-col mb-4">
-                    <h3 className="text-xl font-bold text-white mb-2">Brief</h3>
+                    <h3 className="text-xl font-semibold text-ink mb-2">Brief</h3>
                     <div>
-                      <div className="text-2xl font-bold text-purple-300">
+                      <div className="text-2xl font-semibold text-ink">
                         ₹100
                       </div>
-                      <div className="text-sm text-purple-200">1 Month</div>
+                      <div className="text-sm text-ink-subtle">1 Month</div>
                     </div>
                   </div>
                   <ul className="space-y-2 mb-6 flex-grow">
-                    <li className="flex items-start gap-2 text-purple-100 text-sm">
-                      <span className="text-green-400 mt-0.5">✓</span>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <span className="text-success mt-0.5">✓</span>
                       <span>Top-end AI models</span>
                     </li>
-                    <li className="flex items-start gap-2 text-purple-100 text-sm">
-                      <span className="text-green-400 mt-0.5">✓</span>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <span className="text-success mt-0.5">✓</span>
                       <span>Faster analysis</span>
                     </li>
-                    <li className="flex items-start gap-2 text-purple-100 text-sm">
-                      <span className="text-green-400 mt-0.5">✓</span>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <span className="text-success mt-0.5">✓</span>
                       <span>Valid for 1 month</span>
                     </li>
-                    <li className="flex items-start gap-2 text-purple-100 text-sm">
-                      <span className="text-green-400 mt-0.5">✓</span>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <span className="text-success mt-0.5">✓</span>
                       <span>3 analysis per day</span>
                     </li>
                   </ul>
@@ -182,40 +182,40 @@ export default function Pricing() {
                 </div>
 
                 {/* Pro 2 Card - Popular */}
-                <div className=" backdrop-blur-md rounded-2xl p-6 border-2 border-purple-400 hover:border-purple-300 transition-all hover:shadow-2xl hover:shadow-purple-400/30 relative flex flex-col">
+                <div className="ln-card-raised rounded-2xl p-6 relative flex flex-col">
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-0.5 rounded-full text-xs font-semibold">
+                    <span className="bg-primary text-white px-3 py-0.5 rounded-full text-xs font-semibold">
                       POPULAR
                     </span>
                   </div>
                   <div className="flex flex-col mb-4">
-                    <h3 className="text-xl font-bold text-white mb-2">Motion</h3>
+                    <h3 className="text-xl font-semibold text-ink mb-2">Motion</h3>
                     <div>
-                      <div className="text-2xl font-bold text-purple-300">
+                      <div className="text-2xl font-semibold text-ink">
                         ₹450
                       </div>
-                      <div className="text-sm text-purple-200">3 Months</div>
+                      <div className="text-sm text-ink-subtle">3 Months</div>
                     </div>
                   </div>
                   <ul className="space-y-2 mb-6 flex-grow">
-                    <li className="flex items-start gap-2 text-purple-100 text-sm">
-                      <span className="text-green-400 mt-0.5">✓</span>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <span className="text-success mt-0.5">✓</span>
                       <span>Top-end AI models</span>
                     </li>
-                    <li className="flex items-start gap-2 text-purple-100 text-sm">
-                      <span className="text-green-400 mt-0.5">✓</span>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <span className="text-success mt-0.5">✓</span>
                       <span>Faster analysis</span>
                     </li>
-                    <li className="flex items-start gap-2 text-purple-100 text-sm">
-                      <span className="text-green-400 mt-0.5">✓</span>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <span className="text-success mt-0.5">✓</span>
                       <span className="font-semibold">Deeper analysis</span>
                     </li>
-                    <li className="flex items-start gap-2 text-purple-100 text-sm">
-                      <span className="text-green-400 mt-0.5">✓</span>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <span className="text-success mt-0.5">✓</span>
                       <span>Valid for 3 months</span>
                     </li>
-                    <li className="flex items-start gap-2 text-purple-100 text-sm">
-                      <span className="text-green-400 mt-0.5">✓</span>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <span className="text-success mt-0.5">✓</span>
                       <span>5 analyses per day</span>
                     </li>
                   </ul>
@@ -229,46 +229,46 @@ export default function Pricing() {
               </div>
 
               {/* Bottom Row - Pro 3 full width */}
-              <div className="backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-purple-500/30 hover:border-purple-400/60 transition-all hover:shadow-2xl hover:shadow-purple-500/20">
+              <div className="ln-card p-6 sm:p-8 hover:bg-surface-2 transition-colors">
                 <div className="flex justify-between items-start gap-3 mb-4">
-                  <h3 className="text-xl sm:text-2xl font-bold text-white min-w-0 break-words">Verdict</h3>
+                  <h3 className="text-xl sm:text-2xl font-semibold text-ink min-w-0 break-words">Verdict</h3>
                   <div className="text-right shrink-0">
-                    <div className="text-2xl sm:text-3xl font-bold text-purple-300">
+                    <div className="text-2xl sm:text-3xl font-semibold text-ink">
                       ₹1500
                     </div>
-                    <div className="text-sm text-purple-200">Lifetime</div>
+                    <div className="text-sm text-ink-subtle">Lifetime</div>
                   </div>
                 </div>
                 <ul className="space-y-3 mb-6">
-                  <li className="flex items-start gap-2 text-purple-100">
-                    <span className="text-green-400 mt-1">✓</span>
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <span className="text-success mt-1">✓</span>
                     <span>Top-end AI models</span>
                   </li>
-                  <li className="flex items-start gap-2 text-purple-100">
-                    <span className="text-green-400 mt-1">✓</span>
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <span className="text-success mt-1">✓</span>
                     <span>Faster analysis</span>
                   </li>
-                  <li className="flex items-start gap-2 text-purple-100">
-                    <span className="text-green-400 mt-1">✓</span>
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <span className="text-success mt-1">✓</span>
                     <span>Deeper analysis</span>
                   </li>
-                  <li className="flex items-start gap-2 text-purple-100">
-                    <span className="text-green-400 mt-1">✓</span>
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <span className="text-success mt-1">✓</span>
                     <span className="font-semibold">
                       Curated lawyer assistance
                     </span>
                   </li>
-                  <li className="flex items-start gap-2 text-purple-100">
-                    <span className="text-green-400 mt-1">✓</span>
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <span className="text-success mt-1">✓</span>
                     <span className="font-semibold">Lifetime access</span>
                   </li>
-                   <li className="flex items-start gap-2 text-purple-100">
-                    <span className="text-green-400 mt-1">✓</span>
+                   <li className="flex items-start gap-2 text-ink-muted">
+                    <span className="text-success mt-1">✓</span>
                     <span className="font-semibold">Unlimited Analysis</span>
                   </li>
                    <li className="flex items-start gap-2 text-sm">
-                  <TerminalIcon className="h-4 w-4 text-indigo-400 mt-0.5 shrink-0" />
-                  <span className="text-indigo-300 font-semibold">CLI tool access (exclusive)</span>
+                  <TerminalIcon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <span className="text-primary font-semibold">CLI tool access (exclusive)</span>
                 </li>
                 </ul>
                 {/* <Link href="/checkout?plan=pro3"> */}
@@ -283,9 +283,9 @@ export default function Pricing() {
       </div>
 
       {/* Footer */}
-      <footer className="text-center py-8 text-sm text-gray-500">
+      <footer className="text-center py-8 text-sm text-ink-subtle">
         <div className="flex items-center justify-center space-x-2">
-          <LogoIcon className="h-6 w-6 text-indigo-500" />
+          <LogoIcon className="h-6 w-6 text-primary" />
           <p>UnBind: AI Legal Contract Analyzer</p>
         </div>
       </footer>

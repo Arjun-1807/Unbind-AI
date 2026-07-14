@@ -207,11 +207,11 @@ const OverlayRephrasedPdf: React.FC<OverlayRephrasedPdfProps> = ({
   };
 
   return (
-    <div className="p-4 rounded-lg border border-indigo-500/20 bg-gray-800/30 space-y-3">
-      <h4 className="font-semibold text-indigo-300">
+    <div className="ln-card p-4 space-y-3">
+      <h4 className="font-semibold text-primary">
         Overlay Rephrased PDF (Beta)
       </h4>
-      <p className="text-sm text-gray-300">
+      <p className="text-sm text-ink-muted">
         Upload the original PDF to export a rephrased PDF that mirrors the
         original page sizes while inserting the balanced text.
       </p>
@@ -219,13 +219,13 @@ const OverlayRephrasedPdf: React.FC<OverlayRephrasedPdfProps> = ({
         type="file"
         accept="application/pdf"
         onChange={handleFile}
-        className="text-sm text-gray-200"
+        className="text-sm text-ink-muted"
       />
       <button
         type="button"
         onClick={exportOverlay}
         disabled={!sourceFile || isBuilding}
-        className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-300 bg-indigo-900/40 border border-indigo-500/50 rounded-md hover:bg-indigo-900/70 disabled:opacity-50 transition-colors"
+        className="inline-flex items-center px-4 py-2 text-sm ln-btn-secondary disabled:opacity-50"
       >
         {isBuilding ? "Generating…" : "Export Rephrased (Overlay)"}
       </button>

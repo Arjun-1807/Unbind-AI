@@ -174,7 +174,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({
   };
 
   return (
-    <div className="glass-card p-4 sm:p-6 h-[75vh] overflow-y-auto rounded-xl">
+    <div className="ln-card p-4 sm:p-6 h-[75vh] overflow-y-auto">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white text-gray-900 shadow-lg rounded-lg p-4 sm:p-8 min-h-full">
           <div className="prose prose-base sm:prose-lg max-w-none break-words">
@@ -198,7 +198,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({
                       return (
                         <h3
                           key={lineIndex}
-                          className="text-lg sm:text-xl font-bold text-gray-800 mt-8 mb-4 first:mt-0 bg-gray-100 px-3 sm:px-4 py-2 rounded-lg border-l-4 border-indigo-500 break-words"
+                          className="text-lg sm:text-xl font-semibold text-gray-800 mt-8 mb-4 first:mt-0 bg-gray-100 px-3 sm:px-4 py-2 rounded-lg border-l-4 border-primary break-words"
                         >
                           {line}
                         </h3>
@@ -262,7 +262,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({
         </div>
       </div>
       {(!documentText || documentText.trim().length === 0) && (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-ink-subtle">
           <p>No document content available</p>
         </div>
       )}

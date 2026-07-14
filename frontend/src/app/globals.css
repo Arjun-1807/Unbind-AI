@@ -25,22 +25,111 @@
   --ln-primary: #5e6ad2;
   --ln-primary-hover: #828fff;
   --ln-primary-focus: #5e69d1;
-  /* Semantic (used sparingly for risk badges in product mockups) */
+  /* Semantic — used sparingly for risk/status only */
   --ln-success: #27a644;
+  --ln-danger: #f87171;
+  --ln-warning: #fbbf24;
+}
+
+/* Expose Linear tokens to Tailwind v4 as utility colors:
+   bg-canvas, bg-surface-1..4, text-ink / text-ink-muted / text-ink-subtle /
+   text-ink-tertiary, border-hairline / border-hairline-strong, text-primary /
+   bg-primary, text-success / text-danger / text-warning, etc. */
+@theme inline {
+  --color-canvas: var(--ln-canvas);
+  --color-surface-1: var(--ln-surface-1);
+  --color-surface-2: var(--ln-surface-2);
+  --color-surface-3: var(--ln-surface-3);
+  --color-surface-4: var(--ln-surface-4);
+  --color-hairline: var(--ln-hairline);
+  --color-hairline-strong: var(--ln-hairline-strong);
+  --color-hairline-tertiary: var(--ln-hairline-tertiary);
+  --color-ink: var(--ln-ink);
+  --color-ink-muted: var(--ln-ink-muted);
+  --color-ink-subtle: var(--ln-ink-subtle);
+  --color-ink-tertiary: var(--ln-ink-tertiary);
+  --color-primary: var(--ln-primary);
+  --color-primary-hover: var(--ln-primary-hover);
+  --color-primary-focus: var(--ln-primary-focus);
+  --color-success: var(--ln-success);
+  --color-danger: var(--ln-danger);
+  --color-warning: var(--ln-warning);
 }
 
 body {
   font-family: "Inter", sans-serif;
-  background-color: #030712;
-  background-image:
-    radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.1) 0px, transparent 50%),
-    radial-gradient(at 97% 21%, hsla(125, 98%, 72%, 0.1) 0px, transparent 50%),
-    radial-gradient(at 52% 99%, hsla(355, 98%, 61%, 0.1) 0px, transparent 50%),
-    radial-gradient(at 10% 29%, hsla(256, 96%, 61%, 0.1) 0px, transparent 50%),
-    radial-gradient(at 97% 96%, hsla(38, 60%, 74%, 0.1) 0px, transparent 50%),
-    radial-gradient(at 33% 50%, hsla(222, 67%, 73%, 0.1) 0px, transparent 50%),
-    radial-gradient(at 79% 53%, hsla(343, 68%, 79%, 0.1) 0px, transparent 50%);
-  color: #e5e7eb;
+  background-color: var(--ln-canvas);
+  color: var(--ln-ink);
+}
+
+/* ── Linear component primitives ──
+   Reusable classes so components share one visual vocabulary. */
+
+/* Surface-1 charcoal card with hairline border — the default panel. */
+.ln-card {
+  background: var(--ln-surface-1);
+  border: 1px solid var(--ln-hairline);
+  border-radius: 12px;
+}
+
+/* Slightly lifted card (surface-2) for featured/hovered states. */
+.ln-card-raised {
+  background: var(--ln-surface-2);
+  border: 1px solid var(--ln-hairline-strong);
+  border-radius: 12px;
+}
+
+/* Primary lavender CTA. */
+.ln-btn-primary {
+  background: var(--ln-primary);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+.ln-btn-primary:hover { background: var(--ln-primary-hover); }
+.ln-btn-primary:active { background: var(--ln-primary-focus); }
+.ln-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Secondary charcoal button. */
+.ln-btn-secondary {
+  background: var(--ln-surface-1);
+  color: var(--ln-ink);
+  border: 1px solid var(--ln-hairline);
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.ln-btn-secondary:hover {
+  background: var(--ln-surface-2);
+  border-color: var(--ln-hairline-strong);
+}
+
+/* Text input / textarea. */
+.ln-input {
+  background: var(--ln-surface-1);
+  color: var(--ln-ink);
+  border: 1px solid var(--ln-hairline);
+  border-radius: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ln-input::placeholder { color: var(--ln-ink-tertiary); }
+.ln-input:focus {
+  outline: none;
+  border-color: var(--ln-primary-focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ln-primary-focus) 50%, transparent);
+}
+
+/* Pill status badge. */
+.ln-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  background: var(--ln-surface-2);
+  color: var(--ln-ink-muted);
 }
 
 .glass-card {

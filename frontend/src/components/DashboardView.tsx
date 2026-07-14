@@ -87,8 +87,8 @@ const PLAN_BENEFITS: Record<string, string[]> = {
 const PlanTooltip: React.FC<{ plan: string }> = ({ plan }) => {
   if (!plan || !PLAN_BENEFITS[plan]) return null;
   return (
-    <div className="absolute z-50 right-0 mt-2 w-64 bg-gray-900 text-white text-sm rounded-lg shadow-lg p-4 border border-indigo-500">
-      <div className="font-bold mb-2">{plan} Plan Benefits</div>
+    <div className="absolute z-50 right-0 mt-2 w-64 bg-surface-2 text-ink text-sm rounded-lg shadow-lg p-4 border border-hairline">
+      <div className="font-semibold mb-2">{plan} Plan Benefits</div>
       <ul className="list-disc pl-5 space-y-1">
         {PLAN_BENEFITS[plan].map((benefit) => (
           <li key={benefit}>{benefit}</li>
@@ -155,38 +155,38 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-8 sm:space-y-10 fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl break-words">
+          <h2 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl md:text-5xl break-words">
             Welcome back, {user.username}
           </h2>
-          <p className="mt-3 sm:mt-4 text-base sm:text-lg leading-7 sm:leading-8 text-gray-400">
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg leading-7 sm:leading-8 text-ink-subtle">
             Review your past analyses or upload a new document to begin.
           </p>
         </div>
         <span
-          className="relative self-start shrink-0 text-sm text-white cursor-pointer"
+          className="relative self-start shrink-0 text-sm text-ink cursor-pointer"
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
           onClick={() => setShowTooltip((v) => !v)}
         >
           Active Plan:
           {isProUser ? (
-            <span className="ml-1 text-green-400">{plan}</span>
+            <span className="ml-1 text-success">{plan}</span>
           ) : (
-            <span className="ml-1 text-red-400">Free</span>
+            <span className="ml-1 text-danger">Free</span>
           )}
           {showTooltip && plan && <PlanTooltip plan={plan} />}
         </span>
       </div>
 
-      <div className="glass-card p-5 sm:p-8 rounded-xl">
+      <div className="ln-card p-5 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
-          <h3 className="text-lg sm:text-xl font-semibold text-white">
+          <h3 className="text-lg sm:text-xl font-semibold text-ink">
             Your Document History
           </h3>
           {!limitReached ? (
             <button
               onClick={onNewAnalysis}
-              className="inline-flex items-center justify-center cursor-pointer w-full sm:w-auto px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
+              className="ln-btn-primary inline-flex items-center justify-center cursor-pointer w-full sm:w-auto px-4 py-2 text-sm"
             >
               Analyze New Document
               <SparklesIcon className="ml-2 h-5 w-5" />
@@ -195,16 +195,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex flex-col items-stretch sm:items-end gap-1">
               <button
                 disabled
-                className="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 font-semibold text-gray-400 bg-gray-700 border border-gray-600 rounded-md cursor-not-allowed text-sm shadow-lg opacity-60"
+                className="inline-flex items-center justify-center w-full sm:w-auto px-4 py-2 font-medium text-ink-subtle bg-surface-2 border border-hairline rounded-lg cursor-not-allowed text-sm opacity-60"
               >
                 Analyze New Document
                 <SparklesIcon className="ml-2 h-5 w-5" />
               </button>
-              <span className="text-xs text-orange-400 text-center sm:text-right">
+              <span className="text-xs text-warning text-center sm:text-right">
                 Daily limit reached ({dailyCount}/{dailyLimit ?? "∞"}).{" "}
                 <Link
                   href="/pricing"
-                  className="underline hover:text-orange-300"
+                  className="underline hover:text-ink"
                 >
                   Upgrade your plan
                 </Link>
@@ -219,15 +219,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               <div
                 key={analysis.id}
                 onClick={() => onSelectAnalysis(analysis)}
-                className="group flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg bg-white/5 hover:bg-indigo-500/10 border border-transparent hover:border-indigo-500/30 cursor-pointer transition-all duration-300 shadow-md hover:shadow-xl hover:shadow-indigo-500/10"
+                className="group flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg bg-surface-1 hover:bg-surface-2 border border-hairline cursor-pointer transition-colors duration-200"
               >
                 <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
-                  <FileTextIcon className="h-8 w-8 text-indigo-400 shrink-0" />
+                  <FileTextIcon className="h-8 w-8 text-primary shrink-0" />
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-100 group-hover:text-white truncate">
+                    <p className="font-medium text-ink truncate">
                       {analysis.fileName}
                     </p>
-                    <p className="text-sm text-gray-400 group-hover:text-gray-300">
+                    <p className="text-sm text-ink-subtle group-hover:text-ink-muted">
                       Analyzed on{" "}
                       {new Date(analysis.analysisDate).toLocaleDateString()}
                     </p>
@@ -242,11 +242,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                         e.stopPropagation();
                         setPendingDelete(analysis);
                       }}
-                      className="text-xs text-red-400 hover:text-red-300 underline cursor-pointer"
+                      className="text-xs text-danger hover:text-danger underline cursor-pointer"
                     >
                       Delete
                     </button>
-                    <span className="hidden sm:inline text-indigo-400 text-lg font-semibold transform group-hover:translate-x-1 transition-transform">
+                    <span className="hidden sm:inline text-primary text-lg font-semibold transform group-hover:translate-x-1 transition-transform">
                       &rarr;
                     </span>
                   </div>
@@ -255,12 +255,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 border-2 border-dashed border-gray-800 rounded-lg">
-            <FileTextIcon className="mx-auto h-12 w-12 text-gray-600" />
-            <h3 className="mt-2 text-sm font-semibold text-gray-300">
+          <div className="text-center py-12 border border-dashed border-hairline rounded-lg">
+            <FileTextIcon className="mx-auto h-12 w-12 text-ink-tertiary" />
+            <h3 className="mt-2 text-sm font-semibold text-ink-muted">
               No documents analyzed
             </h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-ink-subtle">
               Click &apos;Analyze New Document&apos; to get started.
             </p>
           </div>
@@ -269,18 +269,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Verdict-only: Find a Lawyer banner */}
       {plan === "Verdict" && (
-        <div className="glass-card p-6 sm:p-8 rounded-xl bg-gradient-to-r from-indigo-600/10 to-purple-600/10 border border-indigo-500/30">
+        <div className="ln-card p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 rounded-full">
+                <span className="ln-badge text-xs font-medium text-ink-muted bg-surface-2 border border-hairline px-2.5 py-0.5 rounded-full">
                   Verdict Exclusive
                 </span>
               </div>
-              <h3 className="text-xl font-semibold text-white">
+              <h3 className="text-xl font-semibold text-ink">
                 Curated Lawyer Assistance
               </h3>
-              <p className="mt-1 text-sm text-gray-400">
+              <p className="mt-1 text-sm text-ink-subtle">
                 Connect with vetted legal professionals who specialise in the
                 same contract types our AI analyses — employment, SaaS, real
                 estate, NDAs, and more.
@@ -288,7 +288,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <Link
               href="/lawyers"
-              className="shrink-0 inline-flex items-center px-5 py-2.5 font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg"
+              className="ln-btn-primary shrink-0 inline-flex items-center px-5 py-2.5 text-sm"
             >
               Find a Lawyer
               <span className="ml-2">→</span>

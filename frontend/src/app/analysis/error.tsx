@@ -39,7 +39,7 @@ export default function AnalysisError({
         <div className="flex justify-center mt-4">
           <button
             onClick={() => router.push("/dashboard")}
-            className="px-6 py-2 font-medium text-gray-200 bg-white/10 rounded-md hover:bg-white/20 transition-colors"
+            className="px-6 py-2 ln-btn-secondary rounded-md"
           >
             Back to dashboard
           </button>

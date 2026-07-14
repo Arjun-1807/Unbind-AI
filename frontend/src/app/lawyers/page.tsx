@@ -32,7 +32,7 @@ const BadgeCheckIcon = () => (
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
     fill="currentColor"
-    className="h-4 w-4 text-indigo-400"
+    className="h-4 w-4 text-primary"
   >
     <path
       fillRule="evenodd"
@@ -62,7 +62,7 @@ const CheckIcon = () => (
     viewBox="0 0 24 24"
     strokeWidth={2}
     stroke="currentColor"
-    className="h-12 w-12 text-green-400"
+    className="h-12 w-12 text-success"
   >
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
   </svg>
@@ -92,7 +92,7 @@ const StarRating = ({ rating }: { rating: number }) => {
       {[1, 2, 3, 4, 5].map((i) => (
         <StarIcon key={i} filled={i <= full} />
       ))}
-      <span className="ml-1 text-xs text-gray-400">{rating.toFixed(1)}</span>
+      <span className="ml-1 text-xs text-ink-subtle">{rating.toFixed(1)}</span>
     </div>
   );
 };
@@ -149,20 +149,20 @@ const ContactModal: React.FC<ContactModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-lg glass-card rounded-2xl p-6 sm:p-8 relative fade-in">
+      <div className="w-full max-w-lg ln-card rounded-2xl p-6 sm:p-8 relative fade-in">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 text-ink-subtle hover:text-ink transition-colors"
           aria-label="Close modal"
         >
           <XIcon />
         </button>
 
-        <h3 className="text-xl font-bold text-white mb-1">
+        <h3 className="text-xl font-semibold text-ink mb-1">
           Contact {lawyer.name}
         </h3>
-        <p className="text-sm text-gray-400 mb-6">
+        <p className="text-sm text-ink-subtle mb-6">
           {lawyer.specializations.join(" · ")} · {lawyer.city}
         </p>
 
@@ -170,7 +170,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
           <div>
             <label
               htmlFor="contact-email"
-              className="block text-sm font-medium text-gray-300 mb-1"
+              className="block text-sm font-medium text-ink-muted mb-1"
             >
               Your Email
             </label>
@@ -180,14 +180,14 @@ const ContactModal: React.FC<ContactModalProps> = ({
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-2 ln-input"
             />
           </div>
 
           <div>
             <label
               htmlFor="contact-message"
-              className="block text-sm font-medium text-gray-300 mb-1"
+              className="block text-sm font-medium text-ink-muted mb-1"
             >
               Your Message
             </label>
@@ -198,12 +198,12 @@ const ContactModal: React.FC<ContactModalProps> = ({
               onChange={(e) => setMessage(e.target.value)}
               required
               placeholder="Describe your legal matter briefly. Include any relevant contract details or specific questions."
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+              className="w-full px-4 py-2 ln-input resize-none"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded-md">
+            <p className="text-sm text-danger bg-danger/10 px-3 py-2 rounded-md">
               {error}
             </p>
           )}
@@ -212,14 +212,14 @@ const ContactModal: React.FC<ContactModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 inline-flex cursor-pointer justify-center items-center px-4 py-2 font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 inline-flex cursor-pointer justify-center items-center px-4 py-2 text-sm ln-btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Sending…" : "Send Request"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="cursor-pointer px-4 py-2 font-semibold text-gray-300 bg-gray-700 border border-transparent rounded-md hover:bg-gray-600 transition-colors text-sm"
+              className="cursor-pointer px-4 py-2 text-sm ln-btn-secondary"
             >
               Cancel
             </button>
@@ -237,19 +237,19 @@ const SuccessOverlay: React.FC<{ lawyerName: string; onDone: () => void }> = ({
   onDone,
 }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-    <div className="w-full max-w-sm glass-card rounded-2xl p-8 text-center fade-in">
+    <div className="w-full max-w-sm ln-card rounded-2xl p-8 text-center fade-in">
       <div className="flex justify-center mb-4">
         <CheckIcon />
       </div>
-      <h3 className="text-xl font-bold text-white mb-2">Request Sent!</h3>
-      <p className="text-sm text-gray-400 mb-6">
+      <h3 className="text-xl font-semibold text-ink mb-2">Request Sent!</h3>
+      <p className="text-sm text-ink-subtle mb-6">
         Your message has been forwarded to{" "}
-        <span className="text-indigo-300 font-medium">{lawyerName}</span>. They
+        <span className="text-primary font-medium">{lawyerName}</span>. They
         will reach out to you shortly.
       </p>
       <button
         onClick={onDone}
-        className="w-full inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg"
+        className="w-full inline-flex justify-center items-center px-4 py-2 text-sm ln-btn-primary"
       >
         Done
       </button>
@@ -265,17 +265,17 @@ interface LawyerCardProps {
 }
 
 const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onContact }) => (
-  <div className="glass-card rounded-xl p-5 sm:p-6 flex flex-col gap-4 hover:border-indigo-500/50 transition-all duration-300 hover:shadow-indigo-500/10 hover:shadow-xl">
+  <div className="ln-card rounded-xl p-5 sm:p-6 flex flex-col gap-4 hover:bg-surface-2 transition-colors duration-300">
     {/* Header row */}
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
         {/* Avatar initial */}
-        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-lg">
+        <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-white text-xl font-semibold shrink-0">
           {lawyer.name.charAt(0)}
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <h3 className="font-semibold text-white text-lg leading-tight break-words">
+            <h3 className="font-semibold text-ink text-lg leading-tight break-words">
               {lawyer.name}
             </h3>
             {lawyer.verified && (
@@ -284,11 +284,11 @@ const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onContact }) => (
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">{lawyer.city}</p>
+          <p className="text-xs text-ink-subtle mt-0.5">{lawyer.city}</p>
         </div>
       </div>
       {/* Experience badge */}
-      <span className="shrink-0 text-xs font-medium text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full">
+      <span className="shrink-0 text-xs font-medium text-primary bg-surface-2 border border-hairline px-2.5 py-1 rounded-full">
         {lawyer.experienceYears}y exp
       </span>
     </div>
@@ -298,7 +298,7 @@ const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onContact }) => (
       {lawyer.specializations.map((s) => (
         <span
           key={s}
-          className="text-sm cursor-pointer font-medium text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 rounded-full"
+          className="text-sm cursor-pointer font-medium text-ink-muted bg-surface-2 border border-hairline px-2.5 py-0.5 rounded-full"
         >
           {s}
         </span>
@@ -306,20 +306,20 @@ const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onContact }) => (
     </div>
 
     {/* Bio */}
-    <p className="text-md text-gray-400 leading-relaxed line-clamp-3">
+    <p className="text-md text-ink-subtle leading-relaxed line-clamp-3">
       {lawyer.bio}
     </p>
 
     {/* Footer: rating + contact */}
-    <div className="flex items-center justify-between gap-3 mt-auto pt-2 border-t border-gray-800">
+    <div className="flex items-center justify-between gap-3 mt-auto pt-2 border-t border-hairline">
       {lawyer.rating && lawyer.rating > 0 ? (
         <StarRating rating={lawyer.rating} />
       ) : (
-        <span className="text-xs text-gray-600">No rating yet</span>
+        <span className="text-xs text-ink-tertiary">No rating yet</span>
       )}
       <button
         onClick={() => onContact(lawyer)}
-        className="inline-flex cursor-pointer items-center shrink-0 px-4 py-1.5 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-md"
+        className="inline-flex cursor-pointer items-center shrink-0 px-4 py-1.5 text-sm ln-btn-primary"
       >
         Contact
       </button>
@@ -409,7 +409,7 @@ export default function LawyersPage() {
       <div className="min-h-screen font-sans">
         <Header />
         <main className="container mx-auto px-4 py-10 max-w-7xl flex items-center justify-center" style={{ minHeight: "calc(100vh - 140px)" }}>
-          <div className="h-10 w-10 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+          <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         </main>
         <Footer />
       </div>
@@ -422,8 +422,8 @@ export default function LawyersPage() {
       <div className="min-h-screen font-sans">
         <Header />
         <main className="container mx-auto px-4 py-10 max-w-7xl flex items-center justify-center" style={{ minHeight: "calc(100vh - 140px)" }}>
-          <div className="w-full max-w-md glass-card rounded-2xl p-8 text-center fade-in">
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <div className="w-full max-w-md ln-card rounded-2xl p-8 text-center fade-in">
+            <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center mx-auto mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -439,23 +439,23 @@ export default function LawyersPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">
+            <h2 className="text-2xl font-semibold text-ink mb-2">
               Verdict Plan Required
             </h2>
-            <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+            <p className="text-ink-subtle text-sm mb-6 leading-relaxed">
               The Lawyer Referral Network is an exclusive feature for{" "}
-              <span className="text-indigo-300 font-medium">Verdict</span> plan
+              <span className="text-primary font-medium">Verdict</span> plan
               subscribers. Upgrade to get curated lawyer assistance alongside
               your AI contract analysis.
             </p>
             <div className="flex gap-3 flex-col sm:flex-row">
               <Link href="/pricing" className="flex-1">
-                <button className="w-full cursor-pointer inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md hover:from-indigo-500 hover:to-purple-500 transition-all text-sm shadow-lg">
+                <button className="w-full cursor-pointer inline-flex justify-center items-center px-4 py-2 text-sm ln-btn-primary">
                   View Pricing
                 </button>
               </Link>
               <Link href="/dashboard" className="flex-1">
-                <button className="w-full cursor-pointer px-4 py-2 font-semibold text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 transition-colors text-sm">
+                <button className="w-full cursor-pointer px-4 py-2 text-sm ln-btn-secondary">
                   Back to Dashboard
                 </button>
               </Link>
@@ -477,7 +477,7 @@ export default function LawyersPage() {
           <div>
             <Link
               href="/dashboard"
-              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+              className="text-sm text-primary hover:text-primary-hover transition-colors"
             >
               ← Back to Dashboard
             </Link>
@@ -485,14 +485,14 @@ export default function LawyersPage() {
 
           {/* Page header */}
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
+            <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl md:text-5xl">
               Lawyer Referral Network
             </h1>
-            <p className="mt-3 text-base sm:text-lg text-gray-400 max-w-2xl">
+            <p className="mt-3 text-base sm:text-lg text-ink-subtle max-w-2xl">
               Connect with vetted legal professionals who specialise in the same
               contract types our AI helps you analyse.
             </p>
-            <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
+            <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-surface-2 border border-hairline px-3 py-1 rounded-full">
               <BadgeCheckIcon />
               Verdict Plan · Curated Lawyer Assistance
             </div>
@@ -500,7 +500,7 @@ export default function LawyersPage() {
 
           {/* Specialization filter pills */}
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">
+            <p className="text-xs text-ink-subtle uppercase tracking-widest mb-3">
               Filter by Specialization
             </p>
             <div className="flex flex-wrap gap-2">
@@ -508,10 +508,10 @@ export default function LawyersPage() {
                 <button
                   key={spec}
                   onClick={() => handleFilterClick(spec)}
-                  className={`text-md cursor-pointer font-medium px-3 py-1.5 rounded-full border transition-all duration-200 ${
+                  className={`text-md cursor-pointer font-medium px-3 py-1.5 rounded-full border transition-colors duration-200 ${
                     activeFilter === spec
-                      ? "bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-500/20"
-                      : "bg-white/5 border-gray-700 text-gray-300 hover:border-indigo-500/50 hover:text-white"
+                      ? "bg-primary border-primary text-white"
+                      : "bg-surface-1 border-hairline text-ink-muted hover:bg-surface-2 hover:text-ink"
                   }`}
                 >
                   {spec}
@@ -520,7 +520,7 @@ export default function LawyersPage() {
               {activeFilter && (
                 <button
                   onClick={() => setActiveFilter(null)}
-                  className="text-md cursor-pointer font-medium px-3 py-1.5 rounded-full border border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all duration-200"
+                  className="text-md cursor-pointer font-medium px-3 py-1.5 rounded-full border border-danger/30 text-danger bg-danger/10 hover:bg-danger/20 transition-colors duration-200"
                 >
                   Clear filter ×
                 </button>
@@ -531,21 +531,21 @@ export default function LawyersPage() {
           {/* Results */}
           {loading ? (
             <div className="flex justify-center py-20">
-              <div className="h-10 w-10 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+              <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
             </div>
           ) : fetchError ? (
-            <div className="glass-card rounded-xl p-8 text-center">
-              <p className="text-red-400 text-sm mb-4">{fetchError}</p>
+            <div className="ln-card rounded-xl p-8 text-center">
+              <p className="text-danger text-sm mb-4">{fetchError}</p>
               <button
                 onClick={() => fetchLawyers(activeFilter ?? undefined)}
-                className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-500 transition-colors"
+                className="px-4 py-2 text-sm ln-btn-primary"
               >
                 Retry
               </button>
             </div>
           ) : lawyers.length === 0 ? (
-            <div className="glass-card rounded-xl p-12 text-center border-2 border-dashed border-gray-800">
-              <p className="text-gray-500 text-sm">
+            <div className="ln-card rounded-xl p-12 text-center border-2 border-dashed border-hairline">
+              <p className="text-ink-subtle text-sm">
                 {activeFilter
                   ? `No lawyers found for "${activeFilter}".`
                   : "No lawyers in the directory yet."}
@@ -553,7 +553,7 @@ export default function LawyersPage() {
             </div>
           ) : (
             <>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-subtle">
                 {lawyers.length} lawyer{lawyers.length !== 1 ? "s" : ""}{" "}
                 {activeFilter ? `specialising in ${activeFilter}` : "available"}
               </p>

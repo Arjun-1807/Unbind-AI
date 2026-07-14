@@ -61,7 +61,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <button
           onClick={onBackToDashboard}
-          className="text-sm cursor-pointer text-indigo-400 hover:text-indigo-300 transition-colors self-start"
+          className="text-sm cursor-pointer text-primary hover:text-primary-hover transition-colors self-start"
         >
           &larr; Back to Dashboard
         </button>
@@ -71,7 +71,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
         {/* Left Panel: Document View */}
         <div className="lg:col-span-2 lg:sticky top-28 self-start h-fit min-w-0">
-          <h3 className="text-lg sm:text-xl font-bold text-white mb-4">
+          <h3 className="text-lg sm:text-xl font-semibold text-ink mb-4">
             Original Document
           </h3>
           <DocumentView
@@ -84,7 +84,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 
         {/* Right Panel: Analysis Tabs */}
         <div className="lg:col-span-3 min-w-0">
-          <div className="mb-6 p-1.5 bg-gray-900/60 border border-gray-700/50 rounded-lg flex items-center space-x-1 overflow-x-auto">
+          <div className="mb-6 p-1.5 bg-surface-1 border border-hairline rounded-lg flex items-center space-x-1 overflow-x-auto">
             {Object.values(TABS).map((tab) => (
               <button
                 key={tab}
@@ -92,8 +92,8 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
                 className={`whitespace-nowrap py-2 px-4 cursor-pointer rounded-md font-medium text-sm transition-colors duration-200
                   ${
                     activeTab === tab
-                      ? "bg-indigo-600 text-white shadow-md"
-                      : "text-gray-300 hover:bg-white/5 hover:text-white"
+                      ? "bg-primary text-white"
+                      : "text-ink-muted hover:bg-surface-2 hover:text-ink"
                   }`}
               >
                 {tab}
@@ -101,7 +101,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
             ))}
           </div>
 
-          <div className="glass-card p-4 sm:p-6 md:p-8 rounded-xl min-h-[400px]">
+          <div className="ln-card p-4 sm:p-6 md:p-8 min-h-[400px]">
             {renderTabContent()}
           </div>
         </div>

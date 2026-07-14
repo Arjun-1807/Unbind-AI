@@ -24,7 +24,7 @@ const DocumentWarningIcon = () => (
     viewBox="0 0 24 24"
     strokeWidth={1.5}
     stroke="currentColor"
-    className="h-10 w-10 text-amber-400"
+    className="h-10 w-10 text-warning"
   >
     <path
       strokeLinecap="round"
@@ -89,12 +89,12 @@ const Toast: React.FC<ToastProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      {/* Card — identical glass-card + rounded-2xl sizing from ContactModal */}
-      <div className="w-full max-w-sm glass-card rounded-2xl p-8 text-center relative fade-in">
+      {/* Card — identical ln-card + rounded-2xl sizing from ContactModal */}
+      <div className="w-full max-w-sm ln-card rounded-2xl p-8 text-center relative fade-in">
         {/* Close button — top-right, same as ContactModal */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-ink-subtle hover:text-ink transition-colors cursor-pointer"
           aria-label="Close"
         >
           <XIcon />
@@ -102,21 +102,21 @@ const Toast: React.FC<ToastProps> = ({
 
         {/* Icon */}
         <div className="flex justify-center mb-4">
-          <div className="h-16 w-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+          <div className="h-16 w-16 rounded-full bg-warning/10 border border-warning/20 flex items-center justify-center">
             <DocumentWarningIcon />
           </div>
         </div>
 
         {/* Title */}
-        <h3 className="text-xl font-bold text-white mb-2">Not a Legal Document</h3>
+        <h3 className="text-xl font-semibold text-ink mb-2">Not a Legal Document</h3>
 
         {/* Message */}
-        <p className="text-sm text-gray-400 mb-6 leading-relaxed">{message}</p>
+        <p className="text-sm text-ink-subtle mb-6 leading-relaxed">{message}</p>
 
         {/* Retry button — same style as ContactModal's primary action */}
         <button
           onClick={handleClose}
-          className="w-full inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-500 transition-colors text-sm shadow-lg cursor-pointer"
+          className="w-full inline-flex justify-center items-center px-4 py-2 text-sm cursor-pointer ln-btn-primary"
         >
           Retry
         </button>

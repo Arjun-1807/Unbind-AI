@@ -95,10 +95,10 @@ const KeyDatesView: React.FC<KeyDatesViewProps> = ({ analysisResult }) => {
   if (!analysisResult.keyDates || analysisResult.keyDates.length === 0) {
     return (
       <div>
-        <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+        <h3 className="text-xl sm:text-2xl font-semibold text-ink mb-2">
           Key Dates
         </h3>
-        <p className="text-gray-400">
+        <p className="text-ink-subtle">
           No specific dates or deadlines were identified in this document.
         </p>
       </div>
@@ -108,10 +108,10 @@ const KeyDatesView: React.FC<KeyDatesViewProps> = ({ analysisResult }) => {
   return (
     <div className="space-y-8">
       <div>
-        <h3 className="text-xl sm:text-2xl font-bold text-white">
+        <h3 className="text-xl sm:text-2xl font-semibold text-ink">
           Key Dates &amp; Deadlines
         </h3>
-        <p className="text-gray-300 mt-2 max-w-3xl">
+        <p className="text-ink-muted mt-2 max-w-3xl">
           The AI has identified the following important dates and deadlines. You
           can add them to your calendar for reminders.
         </p>
@@ -120,20 +120,20 @@ const KeyDatesView: React.FC<KeyDatesViewProps> = ({ analysisResult }) => {
         {analysisResult.keyDates.map((item, index) => (
           <div
             key={index}
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-gray-900/50 hover:bg-gray-900/80 border border-gray-700 transition-colors"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-surface-1 hover:bg-surface-2 border border-hairline transition-colors"
           >
             <div className="min-w-0">
-              <p className="font-semibold text-indigo-300 break-words">
+              <p className="font-semibold text-primary break-words">
                 {item.date}
               </p>
-              <p className="text-sm text-gray-300 break-words">
+              <p className="text-sm text-ink-muted break-words">
                 {item.description}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => generateIcsFile(item.date, item.description)}
-                className="inline-flex cursor-pointer items-center px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-500 transition-colors"
+                className="inline-flex cursor-pointer items-center px-3 py-1.5 text-xs ln-btn-primary"
                 title="Download .ics file"
               >
                 <CalendarIcon className="mr-1.5 h-4 w-4" />
@@ -143,7 +143,7 @@ const KeyDatesView: React.FC<KeyDatesViewProps> = ({ analysisResult }) => {
                 href={generateGoogleCalendarUrl(item.date, item.description)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-white/10 border border-white/20 rounded-md hover:bg-white/20 transition-colors"
+                className="inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-xs ln-btn-secondary"
                 title="Add to Google Calendar"
               >
                 <GoogleCalendarIcon className="h-4 w-4 flex-shrink-0" />

@@ -26,13 +26,13 @@ interface NegotiationHelperViewProps {
 const RiskIcon = ({ riskLevel }: { riskLevel: RiskLevel }) => {
   switch (riskLevel) {
     case "High":
-      return <AlertCircleIcon className="h-5 w-5 text-red-300" />;
+      return <AlertCircleIcon className="h-5 w-5 text-danger" />;
     case "Medium":
-      return <AlertTriangleIcon className="h-5 w-5 text-yellow-300" />;
+      return <AlertTriangleIcon className="h-5 w-5 text-warning" />;
     case "Low":
-      return <ShieldCheckIcon className="h-5 w-5 text-green-300" />;
+      return <ShieldCheckIcon className="h-5 w-5 text-success" />;
     case "Negligible":
-      return <CheckCircleIcon className="h-5 w-5 text-blue-300" />;
+      return <CheckCircleIcon className="h-5 w-5 text-primary" />;
     default:
       return null;
   }
@@ -104,7 +104,7 @@ const ClauseModificationCard: React.FC<{
       onMouseEnter={() => onHover(index)}
       onMouseLeave={() => onHover(null)}
       onClick={() => onClick(index)}
-      className={`p-4 sm:p-5 rounded-lg border bg-gradient-to-br transition-all duration-300 cursor-pointer ${colors.border} ${colors.gradientFrom} ${colors.gradientTo} ${isActive ? "ring-2 ring-indigo-400 shadow-lg shadow-indigo-500/20" : ""}`}
+      className={`p-4 sm:p-5 rounded-lg border bg-surface-1 transition-all duration-300 cursor-pointer ${colors.border} ${isActive ? "ring-2 ring-primary" : ""}`}
     >
       {/* Header with Risk Level */}
       <div className="flex justify-between items-start gap-2 mb-4">
@@ -122,10 +122,10 @@ const ClauseModificationCard: React.FC<{
           <span
             className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap flex-shrink-0 ${
               modifiedClause.userChoice === "keep_original"
-                ? "bg-blue-100 text-blue-800"
+                ? "bg-surface-2 text-ink-muted"
                 : modifiedClause.userChoice === "use_ai"
-                  ? "bg-green-100 text-green-800"
-                  : "bg-purple-100 text-purple-800"
+                  ? "bg-success/10 text-success"
+                  : "bg-primary/10 text-primary"
             }`}
           >
             {modifiedClause.userChoice === "keep_original"
@@ -139,8 +139,8 @@ const ClauseModificationCard: React.FC<{
 
       {/* Original Clause */}
       <div className="mb-4">
-        <h4 className="font-semibold text-gray-300 mb-2">Original Clause</h4>
-        <p className="text-sm text-gray-400 font-mono break-words bg-black/30 p-3 rounded-md">
+        <h4 className="font-semibold text-ink-muted mb-2">Original Clause</h4>
+        <p className="text-sm text-ink-subtle font-mono break-words bg-surface-2 p-3 rounded-md">
           {clause.clauseText}
         </p>
       </div>
@@ -148,24 +148,24 @@ const ClauseModificationCard: React.FC<{
       {/* AI Suggestion */}
       <div className="mb-4">
         <div className="flex justify-between items-center gap-2 mb-2">
-          <h4 className="font-semibold text-yellow-300 min-w-0">AI Suggestion</h4>
+          <h4 className="font-semibold text-ink min-w-0">AI Suggestion</h4>
           <button
             onClick={handleCopy}
-            className="inline-flex items-center flex-shrink-0 px-3 py-1.5 text-xs font-medium text-indigo-200 bg-indigo-500/20 rounded-md hover:bg-indigo-500/40 transition-colors"
+            className="inline-flex items-center flex-shrink-0 px-3 py-1.5 text-xs ln-btn-secondary"
           >
             {copied ? (
-              <CheckCircleIcon className="mr-1.5 h-4 w-4 text-green-400" />
+              <CheckCircleIcon className="mr-1.5 h-4 w-4 text-success" />
             ) : (
               <CopyIcon className="mr-1.5 h-4 w-4" />
             )}
             {copied ? "Copied!" : "Copy"}
           </button>
         </div>
-        <p className="text-sm text-gray-200 break-words mb-2">
+        <p className="text-sm text-ink-muted break-words mb-2">
           {clause.negotiationSuggestion}
         </p>
         {clause.suggestedRewrite && (
-          <div className="text-sm text-gray-300 font-mono break-words bg-gray-800/50 p-3 rounded-md">
+          <div className="text-sm text-ink-muted font-mono break-words bg-surface-2 p-3 rounded-md">
             <strong>Suggested Rewrite:</strong>
             <br />
             {clause.suggestedRewrite}
@@ -175,7 +175,7 @@ const ClauseModificationCard: React.FC<{
 
       {/* Choice Options */}
       <div className="mb-4">
-        <h4 className="font-semibold text-gray-300 mb-3">
+        <h4 className="font-semibold text-ink-muted mb-3">
           Choose Your Option:
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -186,12 +186,12 @@ const ClauseModificationCard: React.FC<{
             }}
             className={`p-3 rounded-lg border transition-all ${
               currentChoice === "keep_original"
-                ? "border-green-500 bg-green-900/20 text-green-300"
-                : "border-gray-600 bg-gray-800/50 text-gray-300 hover:border-gray-500"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-hairline bg-surface-1 text-ink-muted hover:border-hairline-strong"
             }`}
           >
             <div className="font-medium">Keep Original</div>
-            <div className="text-xs text-gray-400 mt-1">
+            <div className="text-xs text-ink-subtle mt-1">
               Use the original clause as-is
             </div>
           </button>
@@ -203,12 +203,12 @@ const ClauseModificationCard: React.FC<{
             }}
             className={`p-3 rounded-lg border transition-all ${
               currentChoice === "use_ai"
-                ? "border-blue-500 bg-blue-900/20 text-blue-300"
-                : "border-gray-600 bg-gray-800/50 text-gray-300 hover:border-gray-500"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-hairline bg-surface-1 text-ink-muted hover:border-hairline-strong"
             }`}
           >
             <div className="font-medium">Use AI Generated</div>
-            <div className="text-xs text-gray-400 mt-1">
+            <div className="text-xs text-ink-subtle mt-1">
               Use the AI&apos;s suggested rewrite
             </div>
           </button>
@@ -220,12 +220,12 @@ const ClauseModificationCard: React.FC<{
             }}
             className={`p-3 rounded-lg border transition-all ${
               currentChoice === "use_custom"
-                ? "border-purple-500 bg-purple-900/20 text-purple-300"
-                : "border-gray-600 bg-gray-800/50 text-gray-300 hover:border-gray-500"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-hairline bg-surface-1 text-ink-muted hover:border-hairline-strong"
             }`}
           >
             <div className="font-medium">Use Custom</div>
-            <div className="text-xs text-gray-400 mt-1">
+            <div className="text-xs text-ink-subtle mt-1">
               Write your own version
             </div>
           </button>
@@ -234,15 +234,15 @@ const ClauseModificationCard: React.FC<{
 
       {/* Custom Input */}
       {showCustomInput && (
-        <div className="mb-4 p-4 bg-gray-800/50 rounded-lg border border-purple-500/50">
-          <h5 className="font-semibold text-purple-300 mb-2">
+        <div className="mb-4 p-4 bg-surface-1 rounded-lg border border-hairline-strong">
+          <h5 className="font-semibold text-primary mb-2">
             Write Your Custom Clause:
           </h5>
           <textarea
             value={customText}
             onChange={(e) => setCustomText(e.target.value)}
             placeholder="Enter your custom clause text here..."
-            className="w-full h-32 p-3 bg-gray-900/50 border border-gray-600 rounded-md text-gray-200 placeholder-gray-400 focus:border-purple-500 focus:outline-none"
+            className="w-full h-32 p-3 ln-input"
             onClick={(e) => e.stopPropagation()}
           />
           <div className="flex gap-2 mt-3">
@@ -251,7 +251,7 @@ const ClauseModificationCard: React.FC<{
                 e.stopPropagation();
                 handleCustomSubmit();
               }}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+              className="px-4 py-2 ln-btn-primary"
             >
               OK
             </button>
@@ -260,7 +260,7 @@ const ClauseModificationCard: React.FC<{
                 e.stopPropagation();
                 handleCustomCancel();
               }}
-              className="px-4 py-2 bg-gray-600 text-gray-200 rounded-md hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 ln-btn-secondary"
             >
               Cancel
             </button>
@@ -270,8 +270,8 @@ const ClauseModificationCard: React.FC<{
 
       {/* Current Selection Display */}
       {modifiedClause && (
-        <div className="mt-4 p-3 bg-gray-800/30 rounded-lg border border-gray-600">
-          <h5 className="font-semibold text-gray-300 mb-2">
+        <div className="mt-4 p-3 bg-surface-1 rounded-lg border border-hairline">
+          <h5 className="font-semibold text-ink-muted mb-2">
             Selected Text (
             {modifiedClause.userChoice === "keep_original"
               ? "Keep Original"
@@ -280,7 +280,7 @@ const ClauseModificationCard: React.FC<{
                 : "Custom Text"}
             ):
           </h5>
-          <p className="text-sm text-gray-200 font-mono break-words bg-gray-900/50 p-2 rounded">
+          <p className="text-sm text-ink-muted font-mono break-words bg-surface-2 p-2 rounded">
             {finalText}
           </p>
         </div>
@@ -484,10 +484,10 @@ const NegotiationHelperView: React.FC<NegotiationHelperViewProps> = ({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-xl sm:text-2xl font-bold text-white">
+          <h3 className="text-xl sm:text-2xl font-semibold text-ink">
             Negotiation Helper
           </h3>
-          <p className="text-gray-300 max-w-3xl">
+          <p className="text-ink-muted max-w-3xl">
             Review and modify risky clauses. Choose to keep the original, use AI
             suggestions, or write your own custom text.
           </p>
@@ -496,14 +496,14 @@ const NegotiationHelperView: React.FC<NegotiationHelperViewProps> = ({
           <button
             type="button"
             onClick={() => setShowPreview((s) => !s)}
-            className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 text-sm font-medium text-indigo-300 bg-indigo-900/40 border border-indigo-500/50 rounded-md hover:bg-indigo-900/70 transition-colors"
+            className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 text-sm ln-btn-secondary"
           >
             {showPreview ? "Hide Preview" : "Preview Modified Draft"}
           </button>
           <button
             type="button"
             onClick={exportRephrasedPdf}
-            className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 text-sm font-medium text-indigo-300 bg-indigo-900/40 border border-indigo-500/50 rounded-md hover:bg-indigo-900/70 transition-colors"
+            className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 text-sm ln-btn-secondary"
           >
             Export Modified PDF
           </button>
@@ -511,11 +511,11 @@ const NegotiationHelperView: React.FC<NegotiationHelperViewProps> = ({
       </div>
 
       {showPreview && (
-        <div className="p-4 rounded-lg border border-indigo-500/20 bg-gray-800/30">
-          <h4 className="font-semibold text-indigo-300 mb-2">
+        <div className="ln-card p-4">
+          <h4 className="font-semibold text-primary mb-2">
             Modified Contract Preview
           </h4>
-          <pre className="whitespace-pre-wrap break-words text-sm text-gray-200 leading-relaxed">
+          <pre className="whitespace-pre-wrap break-words text-sm text-ink-muted leading-relaxed">
             {buildRephrasedDraft()}
           </pre>
         </div>

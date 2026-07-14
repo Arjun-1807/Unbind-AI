@@ -16,9 +16,9 @@ const RISK_WEIGHTS: { [key in RiskLevel]: number } = {
 };
 
 const getScoreColor = (score: number) => {
-  if (score > 66) return "text-red-400";
-  if (score > 33) return "text-yellow-400";
-  return "text-green-400";
+  if (score > 66) return "text-danger";
+  if (score > 33) return "text-warning";
+  return "text-success";
 };
 
 const getScoreLabel = (score: number) => {
@@ -81,7 +81,7 @@ const RiskMeter: React.FC<RiskMeterProps> = ({ clauses }) => {
           <path
             d="M 10 50 A 40 40 0 0 1 90 50"
             fill="none"
-            stroke="#374151"
+            stroke="var(--color-hairline-strong, #374151)"
             strokeWidth="12"
             strokeLinecap="round"
           />
@@ -90,16 +90,16 @@ const RiskMeter: React.FC<RiskMeterProps> = ({ clauses }) => {
           className="absolute bottom-0 left-1/2 w-px h-[40%] origin-bottom transition-transform duration-1000 ease-in-out"
           style={{ transform: `translateX(-50%) rotate(${rotation}deg)` }}
         >
-          <div className="w-1 h-full bg-gray-100 rounded-t-full" />
+          <div className="w-1 h-full bg-ink rounded-t-full" />
         </div>
-        <div className="absolute bottom-0 left-1/2 w-4 h-4 bg-gray-100 border-2 border-gray-900 rounded-full transform -translate-x-1/2 translate-y-1/2" />
+        <div className="absolute bottom-0 left-1/2 w-4 h-4 bg-ink border-2 border-canvas rounded-full transform -translate-x-1/2 translate-y-1/2" />
       </div>
       <div className="text-center mt-2">
-        <div className={`text-3xl font-bold ${getScoreColor(overallScore)}`}>
+        <div className={`text-3xl font-semibold ${getScoreColor(overallScore)}`}>
           {Math.round(overallScore)}
-          <span className="text-xl text-gray-400">/100</span>
+          <span className="text-xl text-ink-subtle">/100</span>
         </div>
-        <div className="text-sm font-semibold text-gray-300 tracking-wider">
+        <div className="text-sm font-semibold text-ink-muted tracking-wider">
           {getScoreLabel(overallScore)}
         </div>
       </div>

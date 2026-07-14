@@ -25,7 +25,7 @@ const TrashIcon = () => (
     viewBox="0 0 24 24"
     strokeWidth={1.5}
     stroke="currentColor"
-    className="h-9 w-9 text-red-400"
+    className="h-9 w-9 text-danger"
   >
     <path
       strokeLinecap="round"
@@ -93,12 +93,12 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         if (e.target === e.currentTarget && !loading) onCancel();
       }}
     >
-      <div className="w-full max-w-sm glass-card rounded-2xl p-6 sm:p-8 text-center relative fade-in">
+      <div className="w-full max-w-sm ln-card rounded-2xl p-6 sm:p-8 text-center relative fade-in">
         {/* Close button */}
         <button
           onClick={onCancel}
           disabled={loading}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="absolute top-4 right-4 text-ink-subtle hover:text-ink transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Close"
         >
           <XIcon />
@@ -106,30 +106,30 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
         {/* Icon */}
         <div className="flex justify-center mb-4">
-          <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+          <div className="h-16 w-16 rounded-full bg-danger/10 border border-danger/20 flex items-center justify-center">
             <TrashIcon />
           </div>
         </div>
 
         {/* Title */}
-        <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{title}</h3>
+        <h3 className="text-lg sm:text-xl font-semibold text-ink mb-2">{title}</h3>
 
         {/* Message */}
-        <p className="text-sm text-gray-400 mb-6 leading-relaxed">{message}</p>
+        <p className="text-sm text-ink-subtle mb-6 leading-relaxed">{message}</p>
 
         {/* Actions — stack on mobile, side-by-side on larger screens */}
         <div className="flex flex-col-reverse sm:flex-row gap-3">
           <button
             onClick={onCancel}
             disabled={loading}
-            className="w-full inline-flex justify-center items-center px-4 py-2 font-semibold text-gray-200 bg-white/5 border border-white/10 rounded-md hover:bg-white/10 transition-colors text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full inline-flex justify-center items-center px-4 py-2 text-sm cursor-pointer ln-btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="w-full inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-red-600 rounded-md hover:bg-red-500 transition-colors text-sm shadow-lg cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-danger rounded-md hover:bg-danger/90 transition-colors text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? "Deleting…" : confirmLabel}
           </button>

@@ -13,7 +13,7 @@ export default function Loading() {
             viewBox="0 0 64 64"
             fill="none"
             stroke="currentColor"
-            className="w-full h-full text-indigo-400"
+            className="w-full h-full text-primary"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -34,7 +34,7 @@ export default function Loading() {
           </svg>
         </div>
 
-        <p className="text-sm text-gray-400 tracking-wide">
+        <p className="text-sm text-ink-subtle tracking-wide">
           Analyzing contract...
         </p>
       </div>

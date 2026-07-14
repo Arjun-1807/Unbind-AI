@@ -28,7 +28,7 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="py-4 px-4 sm:px-6 lg:px-8 bg-gray-900/60 backdrop-blur-lg border-b border-indigo-500/10 sticky top-0 z-10">
+    <header className="py-3 px-4 sm:px-6 lg:px-8 bg-canvas/80 backdrop-blur-lg border-b border-hairline sticky top-0 z-10">
       <div className="container mx-auto flex justify-between items-center max-w-7xl">
 
         {/* ── Zone 1: Brand (left) ── */}
@@ -37,8 +37,8 @@ const Header: React.FC = () => {
           onClick={handleReset}
           title="Go to Dashboard"
         >
-          <LogoIcon className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 text-indigo-500 group-hover:text-indigo-400 transition-colors" />
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-100 tracking-tight truncate">
+          <LogoIcon className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 text-primary group-hover:text-primary-hover transition-colors" />
+          <h1 className="text-xl sm:text-2xl font-semibold text-ink tracking-tight truncate">
             {APP_NAME}
           </h1>
         </div>
@@ -48,23 +48,7 @@ const Header: React.FC = () => {
           <nav className="hidden sm:flex absolute left-1/2 -translate-x-1/2">
             <Link
               href="/lawyers"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border transition-all duration-200"
-              style={{
-                color: "#f59e0b",
-                borderColor: "rgba(245,158,11,0.4)",
-                background: "rgba(245,158,11,0.08)",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background =
-                  "rgba(245,158,11,0.18)";
-                (e.currentTarget as HTMLAnchorElement).style.boxShadow =
-                  "0 0 14px rgba(245,158,11,0.2)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.background =
-                  "rgba(245,158,11,0.08)";
-                (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none";
-              }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-full border border-hairline bg-surface-1 text-ink-muted hover:bg-surface-2 hover:text-ink transition-colors duration-200"
             >
               {/* Scales of justice icon */}
               <svg
@@ -75,7 +59,7 @@ const Header: React.FC = () => {
                 strokeWidth={1.8}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-4 w-4 shrink-0"
+                className="h-4 w-4 shrink-0 text-primary"
               >
                 <path d="M12 3v18M5 6l7-3 7 3M3 9l4 8H1l4-8zM17 9l4 8h-8l4-8z" />
               </svg>
@@ -88,7 +72,7 @@ const Header: React.FC = () => {
         {user ? (
           <div className="flex items-center space-x-3">
             <Link href="/profile">
-              <div className="flex items-center space-x-2 text-sm text-gray-300 hover:text-white transition-colors">
+              <div className="flex items-center space-x-2 text-sm text-ink-muted hover:text-ink transition-colors">
                 {user.picture ? (
                   <img
                     src={user.picture}
@@ -96,14 +80,14 @@ const Header: React.FC = () => {
                     className="h-6 w-6 rounded-full"
                   />
                 ) : (
-                  <UserIcon className="h-5 w-5 text-indigo-400" />
+                  <UserIcon className="h-5 w-5 text-primary" />
                 )}
                 <span className="hidden sm:inline">{user.username}</span>
               </div>
             </Link>
             <button
               onClick={handleLogout}
-              className="inline-flex items-center justify-center h-9 w-9 text-sm font-medium text-indigo-300 bg-white/5 border border-indigo-500/20 rounded-full hover:bg-indigo-500/20 transition-colors"
+              className="inline-flex items-center justify-center h-9 w-9 text-sm font-medium text-ink-muted bg-surface-1 border border-hairline rounded-full hover:bg-surface-2 transition-colors"
               title="Logout"
             >
               <LogOutIcon className="h-4 w-4" />
@@ -111,7 +95,7 @@ const Header: React.FC = () => {
             {/* Mobile menu toggle — surfaces the nav links hidden on small screens */}
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="sm:hidden inline-flex items-center justify-center h-9 w-9 text-gray-200 bg-white/5 border border-white/10 rounded-md hover:bg-white/10 transition-colors"
+              className="sm:hidden inline-flex items-center justify-center h-9 w-9 text-ink-muted bg-surface-1 border border-hairline rounded-md hover:bg-surface-2 transition-colors"
               aria-label="Menu"
               aria-expanded={menuOpen}
             >
@@ -135,13 +119,13 @@ const Header: React.FC = () => {
           <div className="flex items-center space-x-3">
             <Link
               href="/login"
-              className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-indigo-300 bg-white/5 border border-indigo-500/20 rounded-md hover:bg-indigo-500/10 transition-colors"
+              className="hidden sm:inline-flex items-center justify-center px-3.5 py-1.5 text-sm ln-btn-secondary"
             >
               Sign in
             </Link>
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-500 transition-colors"
+              className="inline-flex items-center justify-center px-3.5 py-1.5 text-sm ln-btn-primary"
             >
               Get started
             </Link>
@@ -152,11 +136,11 @@ const Header: React.FC = () => {
 
       {/* ── Mobile dropdown menu (logged-in only) ── */}
       {user && menuOpen && (
-        <nav className="sm:hidden mt-3 pt-3 border-t border-white/10 flex flex-col gap-2 fade-in">
+        <nav className="sm:hidden mt-3 pt-3 border-t border-hairline flex flex-col gap-2 fade-in">
           <Link
             href="/lawyers"
             onClick={() => setMenuOpen(false)}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md text-ink-muted bg-surface-1 border border-hairline hover:bg-surface-2 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -166,7 +150,7 @@ const Header: React.FC = () => {
               strokeWidth={1.8}
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-4 w-4 shrink-0"
+              className="h-4 w-4 shrink-0 text-primary"
             >
               <path d="M12 3v18M5 6l7-3 7 3M3 9l4 8H1l4-8zM17 9l4 8h-8l4-8z" />
             </svg>
@@ -175,9 +159,9 @@ const Header: React.FC = () => {
           <Link
             href="/profile"
             onClick={() => setMenuOpen(false)}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md text-gray-200 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md text-ink-muted bg-surface-1 border border-hairline hover:bg-surface-2 transition-colors"
           >
-            <UserIcon className="h-4 w-4 text-indigo-400 shrink-0" />
+            <UserIcon className="h-4 w-4 text-primary shrink-0" />
             Profile
           </Link>
         </nav>

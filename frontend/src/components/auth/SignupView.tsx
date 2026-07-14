@@ -61,18 +61,18 @@ const SignupView: React.FC = () => {
       <div className="w-full max-w-3xl mb-4 text-left">
          <Link href="/"><button
             // onClick={onBack}
-            className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="text-sm text-primary hover:text-primary-hover transition-colors"
           >
             &larr; Back
           </button></Link>
         </div>
-      <div className="w-full max-w-md p-6 sm:p-8 space-y-6 bg-gray-800/40 rounded-lg shadow-xl border border-indigo-500/20">
+      <div className="w-full max-w-md p-6 sm:p-8 space-y-6 ln-card">
         <div className="flex flex-col items-center space-y-2">
-          <LogoIcon className="h-12 w-12 text-indigo-400" />
-          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white">
+          <LogoIcon className="h-12 w-12 text-primary" />
+          <h2 className="text-2xl sm:text-3xl font-semibold text-center text-ink">
             Create an Account
           </h2>
-          <p className="text-center text-gray-400">
+          <p className="text-center text-ink-subtle">
             Join UnBind to save and manage your analyses
           </p>
         </div>
@@ -81,7 +81,7 @@ const SignupView: React.FC = () => {
           <div>
             <label
               htmlFor="username-signup"
-              className="block text-sm font-medium text-gray-300"
+              className="block text-sm font-medium text-ink-muted"
             >
               Username
             </label>
@@ -94,14 +94,14 @@ const SignupView: React.FC = () => {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full p-3 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-white placeholder-gray-500"
+                className="ln-input w-full p-3"
               />
             </div>
           </div>
           <div>
             <label
               htmlFor="email-signup"
-              className="block text-sm font-medium text-gray-300"
+              className="block text-sm font-medium text-ink-muted"
             >
               Email address
             </label>
@@ -114,14 +114,14 @@ const SignupView: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-white placeholder-gray-500"
+                className="ln-input w-full p-3"
               />
             </div>
           </div>
           <div>
             <label
               htmlFor="password-signup"
-              className="block text-sm font-medium text-gray-300"
+              className="block text-sm font-medium text-ink-muted"
             >
               Password
             </label>
@@ -134,14 +134,14 @@ const SignupView: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-white placeholder-gray-500"
+                className="ln-input w-full p-3"
               />
             </div>
           </div>
           <div>
             <label
               htmlFor="confirm-password-signup"
-              className="block text-sm font-medium text-gray-300"
+              className="block text-sm font-medium text-ink-muted"
             >
               Confirm Password
             </label>
@@ -154,17 +154,17 @@ const SignupView: React.FC = () => {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full p-3 bg-gray-900 border border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-white placeholder-gray-500"
+                className="ln-input w-full p-3"
               />
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
 
           <div>
             <button
               type="submit"
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
+              className="w-full flex justify-center py-3 px-4 text-sm ln-btn-primary cursor-pointer"
             >
               Sign up
             </button>
@@ -174,10 +174,10 @@ const SignupView: React.FC = () => {
         {/* Divider */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-600" />
+            <div className="w-full border-t border-hairline" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-gray-800/40 text-gray-400">or</span>
+            <span className="px-2 bg-surface-1 text-ink-subtle">or</span>
           </div>
         </div>
 
@@ -193,11 +193,11 @@ const SignupView: React.FC = () => {
           />
         </div>
 
-        <p className="text-sm text-center text-gray-400">
+        <p className="text-sm text-center text-ink-subtle">
           Already have an account?{" "}
           <button
             onClick={() => router.push("/login")}
-            className="font-medium text-indigo-400 hover:text-indigo-300"
+            className="font-medium text-primary hover:text-primary-hover"
           >
             Sign in
           </button>

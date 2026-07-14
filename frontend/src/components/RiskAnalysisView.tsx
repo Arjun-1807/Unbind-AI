@@ -26,15 +26,15 @@ interface RiskAnalysisViewProps {
 const RiskIcon = ({ riskLevel }: { riskLevel: RiskLevel }) => {
   switch (riskLevel) {
     case "High":
-      return <AlertCircleIcon className="h-5 w-5 text-red-300" />;
+      return <AlertCircleIcon className="h-5 w-5 text-danger" />;
     case "Medium":
-      return <AlertTriangleIcon className="h-5 w-5 text-yellow-300" />;
+      return <AlertTriangleIcon className="h-5 w-5 text-warning" />;
     case "Low":
-      return <ShieldCheckIcon className="h-5 w-5 text-green-300" />;
+      return <ShieldCheckIcon className="h-5 w-5 text-success" />;
     case "Negligible":
       return <CheckCircleIcon className="h-5 w-5 text-blue-300" />;
     case "No Risk":
-      return <CheckCircleIcon className="h-5 w-5 text-gray-300" />;
+      return <CheckCircleIcon className="h-5 w-5 text-ink-subtle" />;
     default:
       return null;
   }
@@ -54,7 +54,7 @@ const ClauseCard: React.FC<{
       onMouseEnter={() => onHover(index)}
       onMouseLeave={() => onHover(null)}
       onClick={() => onClick(index)}
-      className={`p-4 sm:p-5 rounded-lg border bg-gradient-to-br transition-all duration-300 cursor-pointer ${colors.border} ${colors.gradientFrom} ${colors.gradientTo} ${isActive ? "ring-2 ring-indigo-400 shadow-lg shadow-indigo-500/20" : ""}`}
+      className={`p-4 sm:p-5 rounded-lg border bg-surface-1 transition-all duration-300 cursor-pointer ${colors.border} ${isActive ? "ring-2 ring-primary" : "hover:bg-surface-2"}`}
     >
       <div className="flex justify-between items-start mb-3">
         <div
@@ -70,22 +70,22 @@ const ClauseCard: React.FC<{
       </div>
       <div className="space-y-4">
         <div>
-          <h4 className="font-semibold text-gray-300 mb-1">Original Clause</h4>
-          <p className="text-sm text-gray-400 font-mono bg-black/30 p-3 rounded-md break-words">
+          <h4 className="font-semibold text-ink-muted mb-1">Original Clause</h4>
+          <p className="text-sm text-ink-subtle font-mono bg-canvas p-3 rounded-md border border-hairline break-words">
             {clause.clauseText}
           </p>
         </div>
         <div>
-          <h4 className="font-semibold text-gray-300 mb-1">
+          <h4 className="font-semibold text-ink-muted mb-1">
             Simplified Explanation
           </h4>
-          <p className="text-sm text-gray-200">
+          <p className="text-sm text-ink-muted">
             {clause.simplifiedExplanation}
           </p>
         </div>
         <div>
-          <h4 className="font-semibold text-gray-300 mb-1">Potential Risk</h4>
-          <p className="text-sm text-gray-200">{clause.riskReason}</p>
+          <h4 className="font-semibold text-ink-muted mb-1">Potential Risk</h4>
+          <p className="text-sm text-ink-muted">{clause.riskReason}</p>
         </div>
       </div>
     </div>
@@ -96,12 +96,12 @@ const MissingClauseCard: React.FC<{ clause: MissingClause }> = ({ clause }) => {
   const colors = RISK_COLORS.Medium;
   return (
     <div
-      className={`p-4 rounded-lg bg-gradient-to-br ${colors.gradientFrom} ${colors.gradientTo} border ${colors.border}`}
+      className={`p-4 rounded-lg bg-warning/10 border ${colors.border}`}
     >
-      <h4 className="font-semibold text-yellow-300 mb-1">
+      <h4 className="font-semibold text-warning mb-1">
         {clause.clauseName}
       </h4>
-      <p className="text-sm text-gray-200">{clause.reason}</p>
+      <p className="text-sm text-ink-muted">{clause.reason}</p>
     </div>
   );
 };
@@ -127,10 +127,10 @@ const RiskAnalysisView: React.FC<RiskAnalysisViewProps> = ({
           <RiskMeter clauses={analysisResult.clauses} />
         </div>
         <div className="md:col-span-2 min-w-0">
-          <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">
+          <h3 className="text-xl sm:text-2xl font-semibold text-ink mb-4">
             Contract Summary
           </h3>
-          <p className="text-gray-300 leading-relaxed break-words">
+          <p className="text-ink-muted leading-relaxed break-words">
             {analysisResult.summary}
           </p>
         </div>
@@ -139,12 +139,12 @@ const RiskAnalysisView: React.FC<RiskAnalysisViewProps> = ({
       {hasMissingClauses && (
         <div>
           <div className="flex items-center space-x-3 mb-4">
-            <FileSearchIcon className="h-7 w-7 shrink-0 text-yellow-400" />
-            <h3 className="text-xl sm:text-2xl font-bold text-white">
+            <FileSearchIcon className="h-7 w-7 shrink-0 text-warning" />
+            <h3 className="text-xl sm:text-2xl font-semibold text-ink">
               Potentially Missing Clauses
             </h3>
           </div>
-          <p className="text-gray-300 mb-6 max-w-3xl">
+          <p className="text-ink-muted mb-6 max-w-3xl">
             The AI has identified standard clauses that are often found in this
             type of document but seem to be missing.
           </p>
@@ -158,7 +158,7 @@ const RiskAnalysisView: React.FC<RiskAnalysisViewProps> = ({
 
       <div>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl sm:text-2xl font-bold text-white">
+          <h3 className="text-xl sm:text-2xl font-semibold text-ink">
             Clause-by-Clause Breakdown
           </h3>
         </div>
