@@ -25,6 +25,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        {/* Site-wide ambient lavender light below the navbar */}
+        <div className="page-glow" aria-hidden="true" />
         <Providers>{children}</Providers>
         <Analytics/>
         <SpeedInsights/>

@@ -132,6 +132,27 @@ body {
   color: var(--ln-ink-muted);
 }
 
+/* Site-wide ambient lavender light anchored just below the sticky navbar.
+   Fixed so it stays put on scroll; sits behind all content and ignores
+   pointer events. Present on every page via the root layout. */
+.page-glow {
+  position: fixed;
+  top: 56px; /* just under the sticky header */
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(90vw, 60rem);
+  height: 20rem;
+  border-radius: 9999px;
+  filter: blur(90px);
+  background: radial-gradient(
+    closest-side,
+    rgba(94, 106, 210, 0.22),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
 .glass-card {
   background: var(--bg-glass);
   backdrop-filter: blur(12px);

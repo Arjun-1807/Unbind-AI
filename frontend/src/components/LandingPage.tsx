@@ -174,20 +174,7 @@ const LandingPage: React.FC = () => {
       {/* User Tab */}
       {activeTab === 'users' && (<>
       {/* Hero — Linear-style: near-black canvas, lavender accent, product UI as protagonist */}
-      <section
-        className="relative overflow-hidden rounded-3xl pt-16 sm:pt-24 lg:pt-28 pb-12 sm:pb-16"
-        style={{
-          background:
-            "radial-gradient(120% 80% at 50% -10%, rgba(94,106,210,0.10), transparent 60%), var(--ln-canvas)",
-          boxShadow: "0 0 0 1px var(--ln-hairline)",
-        }}
-      >
-        {/* Ambient lavender halo behind the headline */}
-        <div
-          aria-hidden="true"
-          className="glow-pulse pointer-events-none absolute left-1/2 top-24 h-72 w-[42rem] max-w-[90vw] -translate-x-1/2 rounded-full blur-[90px]"
-          style={{ background: "radial-gradient(closest-side, rgba(94,106,210,0.28), transparent)" }}
-        />
+      <section className="relative pt-16 sm:pt-24 lg:pt-28 pb-12 sm:pb-16">
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             {/* Eyebrow badge */}
