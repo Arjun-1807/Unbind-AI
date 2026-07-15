@@ -103,7 +103,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
                 or drag and drop
               </p>
               <p className="text-xs text-ink-subtle">
-                PDF, TXT, MD, or other plain text files
+                PDF, DOCX, TXT, MD, or other plain text files
               </p>
               {file && (
                 <div className="mt-4 flex max-w-full min-w-0 items-center space-x-2 text-sm text-success bg-success/10 px-3 py-1.5 rounded-full ring-1 ring-inset ring-success/20">
@@ -117,7 +117,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
               type="file"
               className="hidden"
               onChange={handleChange}
-              accept=".txt,.md,text/plain,application/pdf"
+              accept=".txt,.md,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             />
           </label>
         </div>

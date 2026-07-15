@@ -31,6 +31,60 @@
   --ln-warning: #fbbf24;
 }
 
+/* ── Light theme override ──
+   Applied when the user explicitly opts into light mode (data-theme="light"
+   on <html>). Dark (the block above) remains the default whenever no
+   data-theme attribute is set, preserving today's look for existing users. */
+:root[data-theme="light"] {
+  --ln-canvas: #ffffff;
+  --ln-surface-1: #f7f7f8;
+  --ln-surface-2: #f0f0f2;
+  --ln-surface-3: #e9e9ec;
+  --ln-surface-4: #e2e2e6;
+  /* Hairline borders */
+  --ln-hairline: #e2e2e6;
+  --ln-hairline-strong: #cfcfd6;
+  --ln-hairline-tertiary: #b9b9c2;
+  /* Ink (text) ramp */
+  --ln-ink: #101113;
+  --ln-ink-muted: #3a3d45;
+  --ln-ink-subtle: #6b6f78;
+  --ln-ink-tertiary: #8a8f98;
+  /* Lavender-blue accent — darkened slightly for AA contrast on white */
+  --ln-primary: #4550c8;
+  --ln-primary-hover: #5e6ad2;
+  --ln-primary-focus: #4550c8;
+  /* Semantic — used sparingly for risk/status only */
+  --ln-success: #16803d;
+  --ln-danger: #dc2626;
+  --ln-warning: #b45309;
+}
+
+/* OS-level fallback: only honored when the user hasn't made an explicit
+   choice (no data-theme attribute present at all). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --ln-canvas: #ffffff;
+    --ln-surface-1: #f7f7f8;
+    --ln-surface-2: #f0f0f2;
+    --ln-surface-3: #e9e9ec;
+    --ln-surface-4: #e2e2e6;
+    --ln-hairline: #e2e2e6;
+    --ln-hairline-strong: #cfcfd6;
+    --ln-hairline-tertiary: #b9b9c2;
+    --ln-ink: #101113;
+    --ln-ink-muted: #3a3d45;
+    --ln-ink-subtle: #6b6f78;
+    --ln-ink-tertiary: #8a8f98;
+    --ln-primary: #4550c8;
+    --ln-primary-hover: #5e6ad2;
+    --ln-primary-focus: #4550c8;
+    --ln-success: #16803d;
+    --ln-danger: #dc2626;
+    --ln-warning: #b45309;
+  }
+}
+
 /* Expose Linear tokens to Tailwind v4 as utility colors:
    bg-canvas, bg-surface-1..4, text-ink / text-ink-muted / text-ink-subtle /
    text-ink-tertiary, border-hairline / border-hairline-strong, text-primary /

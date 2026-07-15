@@ -14,6 +14,119 @@ import { RISK_COLORS } from "@/constants";
 import ConfirmModal from "./ConfirmModal";
 import Link from "next/link";
 
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "riskiest", label: "Most high-risk clauses" },
+] as const;
+
+type SortOption = (typeof SORT_OPTIONS)[number]["value"];
+
+const RISK_FILTERS: Array<{ value: "All" | RiskLevel; label: string }> = [
+  { value: "All", label: "All risk levels" },
+  { value: "High" as RiskLevel, label: "High risk" },
+  { value: "Medium" as RiskLevel, label: "Medium risk" },
+  { value: "Low" as RiskLevel, label: "Low risk" },
+  { value: "Negligible" as RiskLevel, label: "Negligible risk" },
+];
+
+const countByRisk = (analysis: StoredAnalysis) =>
+  analysis.analysisResult.clauses.reduce(
+    (acc, clause) => {
+      acc[clause.riskLevel] = (acc[clause.riskLevel] || 0) + 1;
+      return acc;
+    },
+    {} as Record<RiskLevel, number>,
+  );
+
+/** Aggregate risk-level counts across every analysis, for the trend summary. */
+const RiskTrendSummary: React.FC<{ analyses: StoredAnalysis[] }> = ({
+  analyses,
+}) => {
+  if (analyses.length === 0) return null;
+
+  const totals = analyses.reduce(
+    (acc, analysis) => {
+      const counts = countByRisk(analysis);
+      (Object.keys(counts) as RiskLevel[]).forEach((level) => {
+        acc[level] = (acc[level] || 0) + (counts[level] || 0);
+      });
+      return acc;
+    },
+    {} as Record<RiskLevel, number>,
+  );
+
+  const order: RiskLevel[] = [
+    "High" as RiskLevel,
+    "Medium" as RiskLevel,
+    "Low" as RiskLevel,
+    "Negligible" as RiskLevel,
+  ];
+  const grandTotal = order.reduce((sum, level) => sum + (totals[level] || 0), 0);
+
+  return (
+    <div className="ln-card p-5 sm:p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-ink">Risk Trend</h3>
+        <span className="text-xs text-ink-subtle">
+          Across {analyses.length} document{analyses.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {grandTotal === 0 ? (
+        <p className="text-xs text-ink-subtle">No clauses recorded yet.</p>
+      ) : (
+        <>
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
+            {order.map((level) => {
+              const count = totals[level] || 0;
+              if (count === 0) return null;
+              const pct = (count / grandTotal) * 100;
+              const barColor =
+                level === "High"
+                  ? "bg-danger"
+                  : level === "Medium"
+                    ? "bg-warning"
+                    : level === "Low"
+                      ? "bg-success"
+                      : "bg-primary";
+              return (
+                <div
+                  key={level}
+                  className={barColor}
+                  style={{ width: `${pct}%` }}
+                  title={`${level}: ${count}`}
+                />
+              );
+            })}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs">
+            {order.map((level) => (
+              <div
+                key={level}
+                className={`flex items-center gap-1.5 ${RISK_COLORS[level].text}`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    level === "High"
+                      ? "bg-danger"
+                      : level === "Medium"
+                        ? "bg-warning"
+                        : level === "Low"
+                          ? "bg-success"
+                          : "bg-primary"
+                  }`}
+                />
+                {level}: {totals[level] || 0}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 interface DashboardViewProps {
   user: User;
   analyses: StoredAnalysis[];
@@ -112,6 +225,41 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [pendingDelete, setPendingDelete] =
     React.useState<StoredAnalysis | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [riskFilter, setRiskFilter] = React.useState<"All" | RiskLevel>("All");
+  const [sortBy, setSortBy] = React.useState<SortOption>("newest");
+
+  const visibleAnalyses = React.useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const filtered = analyses.filter((analysis) => {
+      if (query && !analysis.fileName.toLowerCase().includes(query)) {
+        return false;
+      }
+      if (riskFilter !== "All") {
+        const counts = countByRisk(analysis);
+        if (!counts[riskFilter]) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === "oldest") {
+        return (
+          new Date(a.analysisDate).getTime() - new Date(b.analysisDate).getTime()
+        );
+      }
+      if (sortBy === "riskiest") {
+        const highA = countByRisk(a).High || 0;
+        const highB = countByRisk(b).High || 0;
+        return highB - highA;
+      }
+      return (
+        new Date(b.analysisDate).getTime() - new Date(a.analysisDate).getTime()
+      );
+    });
+
+    return sorted;
+  }, [analyses, searchQuery, riskFilter, sortBy]);
 
   const handleConfirmDelete = async () => {
     if (!pendingDelete) return;
@@ -178,6 +326,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         </span>
       </div>
 
+      <RiskTrendSummary analyses={analyses} />
+
       <div className="ln-card p-5 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-6">
           <h3 className="text-lg sm:text-xl font-semibold text-ink">
@@ -213,9 +363,65 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
 
-        {analyses.length > 0 ? (
+        {analyses.length > 0 && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center mb-5">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by file name…"
+              className="w-full sm:flex-1 sm:max-w-xs px-3 py-2 text-sm rounded-lg bg-surface-1 border border-hairline text-ink placeholder:text-ink-subtle focus:outline-none focus:border-hairline-strong"
+            />
+            <select
+              value={riskFilter}
+              onChange={(e) =>
+                setRiskFilter(e.target.value as "All" | RiskLevel)
+              }
+              className="px-3 py-2 text-sm rounded-lg bg-surface-1 border border-hairline text-ink focus:outline-none focus:border-hairline-strong cursor-pointer"
+            >
+              {RISK_FILTERS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-3 py-2 text-sm rounded-lg bg-surface-1 border border-hairline text-ink focus:outline-none focus:border-hairline-strong cursor-pointer"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {analyses.length === 0 ? (
+          <div className="text-center py-12 border border-dashed border-hairline rounded-lg">
+            <FileTextIcon className="mx-auto h-12 w-12 text-ink-tertiary" />
+            <h3 className="mt-2 text-sm font-semibold text-ink-muted">
+              No documents analyzed
+            </h3>
+            <p className="mt-1 text-sm text-ink-subtle">
+              Click &apos;Analyze New Document&apos; to get started.
+            </p>
+          </div>
+        ) : visibleAnalyses.length === 0 ? (
+          <div className="text-center py-12 border border-dashed border-hairline rounded-lg">
+            <FileTextIcon className="mx-auto h-12 w-12 text-ink-tertiary" />
+            <h3 className="mt-2 text-sm font-semibold text-ink-muted">
+              No matching analyses
+            </h3>
+            <p className="mt-1 text-sm text-ink-subtle">
+              Try a different search term or risk filter.
+            </p>
+          </div>
+        ) : (
           <div className="space-y-3">
-            {analyses.map((analysis) => (
+            {visibleAnalyses.map((analysis) => (
               <div
                 key={analysis.id}
                 onClick={() => onSelectAnalysis(analysis)}
@@ -253,16 +459,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               </div>
             ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 border border-dashed border-hairline rounded-lg">
-            <FileTextIcon className="mx-auto h-12 w-12 text-ink-tertiary" />
-            <h3 className="mt-2 text-sm font-semibold text-ink-muted">
-              No documents analyzed
-            </h3>
-            <p className="mt-1 text-sm text-ink-subtle">
-              Click &apos;Analyze New Document&apos; to get started.
-            </p>
           </div>
         )}
       </div>

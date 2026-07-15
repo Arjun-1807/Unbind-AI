@@ -3,12 +3,14 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { APP_NAME } from "@/constants";
-import { LogoIcon, UserIcon, LogOutIcon } from "./Icons";
+import { LogoIcon, UserIcon, LogOutIcon, SunIcon, MoonIcon } from "./Icons";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import Link from "next/link";
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = React.useState(false);
 
@@ -86,6 +88,18 @@ const Header: React.FC = () => {
               </div>
             </Link>
             <button
+              onClick={toggleTheme}
+              className="inline-flex items-center justify-center h-9 w-9 text-sm font-medium text-ink-muted bg-surface-1 border border-hairline rounded-full hover:bg-surface-2 transition-colors"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <SunIcon className="h-4 w-4" />
+              ) : (
+                <MoonIcon className="h-4 w-4" />
+              )}
+            </button>
+            <button
               onClick={handleLogout}
               className="inline-flex items-center justify-center h-9 w-9 text-sm font-medium text-ink-muted bg-surface-1 border border-hairline rounded-full hover:bg-surface-2 transition-colors"
               title="Logout"
@@ -117,6 +131,18 @@ const Header: React.FC = () => {
           </div>
         ) : (
           <div className="flex items-center space-x-3">
+            <button
+              onClick={toggleTheme}
+              className="inline-flex items-center justify-center h-9 w-9 text-sm font-medium text-ink-muted bg-surface-1 border border-hairline rounded-full hover:bg-surface-2 transition-colors"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <SunIcon className="h-4 w-4" />
+              ) : (
+                <MoonIcon className="h-4 w-4" />
+              )}
+            </button>
             <Link
               href="/login"
               className="hidden sm:inline-flex items-center justify-center px-3.5 py-1.5 text-sm ln-btn-secondary"
@@ -164,6 +190,20 @@ const Header: React.FC = () => {
             <UserIcon className="h-4 w-4 text-primary shrink-0" />
             Profile
           </Link>
+          <button
+            onClick={() => {
+              toggleTheme();
+              setMenuOpen(false);
+            }}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md text-ink-muted bg-surface-1 border border-hairline hover:bg-surface-2 transition-colors"
+          >
+            {theme === "dark" ? (
+              <SunIcon className="h-4 w-4 text-primary shrink-0" />
+            ) : (
+              <MoonIcon className="h-4 w-4 text-primary shrink-0" />
+            )}
+            {theme === "dark" ? "Light mode" : "Dark mode"}
+          </button>
         </nav>
       )}
     </header>

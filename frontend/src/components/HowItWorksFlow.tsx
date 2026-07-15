@@ -2,6 +2,8 @@
 
 import React from "react";
 import { useScrollJack } from "@/hooks/useScrollJack";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 interface Step {
   step: string;
@@ -24,15 +26,65 @@ interface HowItWorksFlowProps {
  * skip past the section before all three steps have revealed. Native
  * scrolling resumes automatically the instant the flow completes.
  *
+ * A single-viewport pin only fits when the 3-column grid is active. Below
+ * `md`, the steps stack in one column and are far taller than any phone or
+ * small-tablet viewport, so pinning there just clips/overlaps content
+ * instead of revealing it. Below `md` we render a plain stacked layout with
+ * a simple scroll-in reveal per step instead of pinning at all.
+ *
  * The mockups passed in via `steps` are rendered unchanged; only the
  * surrounding reveal mechanism is new.
  */
 export default function HowItWorksFlow({ steps }: HowItWorksFlowProps) {
-  const { containerRef, progress: drawT, locked } = useScrollJack();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const { containerRef, progress: drawT, locked } = useScrollJack(0.0016, !isDesktop);
+  const revealRef = React.useRef<HTMLDivElement | null>(null);
+  useScrollReveal(revealRef, [isDesktop]);
 
   // Each step "arrives" at an even fraction along the drawn path.
   const stepThresholds = steps.map((_, i) => (i + 0.5) / steps.length);
   const allArrived = drawT >= stepThresholds[stepThresholds.length - 1] - 0.02;
+
+  if (!isDesktop) {
+    return (
+      <div ref={revealRef} className="py-4">
+        <div className="mb-12 text-center">
+          <h2 className="text-2xl font-semibold text-ink tracking-tight">How it works</h2>
+          <p className="mt-4 text-base text-ink-subtle">Three steps to contract clarity</p>
+        </div>
+
+        <div className="relative flex flex-col gap-14">
+          <div
+            className="pointer-events-none absolute left-1/2 top-9 -z-10 w-0.5"
+            style={{
+              height: "calc(100% - 72px)",
+              background: "var(--ln-hairline-strong)",
+              transform: "translateX(-50%)",
+            }}
+            aria-hidden="true"
+          />
+
+          {steps.map((s, i) => (
+            <div key={i} className="reveal text-center" style={{ ["--i" as string]: i }}>
+              <div
+                className="mx-auto mb-4 flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold"
+                style={{
+                  background: "var(--ln-primary)",
+                  color: "#fff",
+                  border: "1px solid var(--ln-primary)",
+                }}
+              >
+                {i + 1}
+              </div>
+              <div className="lift mb-6 flex justify-center">{s.mockup}</div>
+              <h3 className="text-lg font-medium text-ink mb-2">{s.title}</h3>
+              <p className="text-ink-subtle text-sm leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     // Tall spacer so there's room in the document flow for the pinned
@@ -51,7 +103,7 @@ export default function HowItWorksFlow({ steps }: HowItWorksFlowProps) {
 
         <div className="relative">
           {/* ── Desktop: zigzag path connecting three nodes left/center/right ── */}
-          <div className="relative hidden md:block" aria-hidden="true">
+          <div className="relative" aria-hidden="true">
             <svg
               viewBox="0 0 1200 160"
               preserveAspectRatio="none"
@@ -100,7 +152,7 @@ export default function HowItWorksFlow({ steps }: HowItWorksFlowProps) {
             </svg>
           </div>
 
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-8">
+          <div className="grid grid-cols-3 gap-8">
             {steps.map((s, i) => {
               const arrived = drawT >= stepThresholds[i] - 0.05;
               return (
@@ -128,26 +180,6 @@ export default function HowItWorksFlow({ steps }: HowItWorksFlowProps) {
                 </div>
               );
             })}
-          </div>
-
-          {/* ── Mobile: simple vertical connector between stacked steps ── */}
-          <div
-            className="pointer-events-none absolute left-1/2 top-9 -z-10 block w-[2px] md:hidden"
-            style={{
-              height: "calc(100% - 36px)",
-              background: "var(--ln-hairline-strong)",
-              transform: "translateX(-50%)",
-            }}
-            aria-hidden="true"
-          >
-            <div
-              className="w-full"
-              style={{
-                height: `${drawT * 100}%`,
-                background: "var(--ln-primary)",
-                boxShadow: "0 0 8px rgba(94,106,210,0.6)",
-              }}
-            />
           </div>
         </div>
 

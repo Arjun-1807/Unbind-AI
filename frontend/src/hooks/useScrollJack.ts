@@ -36,7 +36,7 @@ const SETTLE_MS = 550;
 // whole flow, keeping the "reveal all 3 steps" feel even from a fast flick.
 const MAX_STEP_DELTA = 0.35;
 
-export function useScrollJack(sensitivity = 0.0016): ScrollJackResult {
+export function useScrollJack(sensitivity = 0.0016, disabled = false): ScrollJackResult {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [progress, setProgress] = useState(0);
   const [locked, setLocked] = useState(false);
@@ -51,6 +51,22 @@ export function useScrollJack(sensitivity = 0.0016): ScrollJackResult {
   }, []);
 
   useEffect(() => {
+    // When disabled (e.g. below the breakpoint where the pinned layout no
+    // longer fits one viewport), skip wiring up any interception entirely
+    // and report the flow as fully revealed so callers render everything.
+    if (disabled) {
+      setProgressBoth(1);
+      setLocked(false);
+      return;
+    }
+
+    // Coming from a disabled pass (see above) leaves progress stuck at 1 —
+    // reset it so the flow actually starts from the beginning once enabled,
+    // instead of rendering every step already "arrived" on first paint.
+    if (progressRef.current >= 1) {
+      setProgressBoth(0);
+    }
+
     const el = containerRef.current;
     if (!el) return;
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -195,7 +211,7 @@ export function useScrollJack(sensitivity = 0.0016): ScrollJackResult {
       window.removeEventListener("scroll", onScroll);
       if (settleTimer) clearTimeout(settleTimer);
     };
-  }, [sensitivity, setProgressBoth]);
+  }, [sensitivity, disabled, setProgressBoth]);
 
   return { containerRef, progress, locked };
 }

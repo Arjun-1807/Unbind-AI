@@ -11,6 +11,7 @@ import ImpactSimulatorView from "./ImpactSimulatorView";
 import ExportButton from "./ExportButton";
 import DocumentView from "./DocumentView";
 import BackLink from "./BackLink";
+import CompareDocumentsModal from "./CompareDocumentsModal";
 
 interface AnalysisDisplayProps {
   analysisResult: AnalysisResponse;
@@ -29,6 +30,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   const [activeClauseIndex, setActiveClauseIndex] = useState<number | null>(
     null,
   );
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const renderTabContent = () => {
     const commonProps = {
@@ -63,8 +65,23 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         <BackLink onClick={onBackToDashboard} className="self-start">
           Back to Dashboard
         </BackLink>
-        <ExportButton analysisResult={analysisResult} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setCompareOpen(true)}
+            className="ln-btn-secondary text-sm px-4 py-2 cursor-pointer"
+          >
+            Compare Documents
+          </button>
+          <ExportButton analysisResult={analysisResult} />
+        </div>
       </div>
+
+      <CompareDocumentsModal
+        open={compareOpen}
+        documentText={documentText}
+        clauses={analysisResult.clauses}
+        onClose={() => setCompareOpen(false)}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
         {/* Left Panel: Document View */}

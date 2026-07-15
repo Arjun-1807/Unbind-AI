@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         {/* Site-wide ambient lavender light below the navbar */}
         <div className="page-glow" aria-hidden="true" />
