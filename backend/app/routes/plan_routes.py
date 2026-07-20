@@ -74,7 +74,9 @@ async def _rzp_request(
                 resp = await client.request(method, url, json=json_body)
             except httpx.HTTPError as e:  # timeout / connection / transport
                 last_detail = f"transport error: {e!r}"
-                logger.warning("Razorpay %s %s failed (attempt %d): %s", method, path, attempt + 1, last_detail)
+                logger.warning(
+                    "Razorpay %s %s failed (attempt %d): %s", method, path, attempt + 1, last_detail
+                )
             else:
                 # 2xx with a JSON body → success.
                 if resp.is_success:
@@ -93,7 +95,11 @@ async def _rzp_request(
                 else:  # 5xx — Razorpay-side, worth retrying
                     last_detail = f"HTTP {resp.status_code}: {resp.text[:200]!r}"
                 logger.warning(
-                    "Razorpay %s %s transient (attempt %d): %s", method, path, attempt + 1, last_detail
+                    "Razorpay %s %s transient (attempt %d): %s",
+                    method,
+                    path,
+                    attempt + 1,
+                    last_detail,
                 )
 
             if attempt < attempts - 1:
@@ -216,7 +222,11 @@ async def verify_payment(request: Request, body: VerifyPaymentRequest):
         }
     )
 
-    return {"success": True, "plan": plan, "expiresAt": expires_at.isoformat() if expires_at else None}
+    return {
+        "success": True,
+        "plan": plan,
+        "expiresAt": expires_at.isoformat() if expires_at else None,
+    }
 
 
 @router.post("/cancel")
