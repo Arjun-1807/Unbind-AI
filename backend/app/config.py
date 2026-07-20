@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     )
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
+    # ── Razorpay (payments) ───────────────────────────────────────────────────
+    # Test keys (rzp_test_…) hit Razorpay's sandbox; swap for live keys
+    # (rzp_live_…) in production. KEY_ID is public (sent to the browser),
+    # KEY_SECRET is private (used server-side to create orders and verify
+    # payment signatures — must never reach the frontend).
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
     FRONTEND_URL: str = "http://localhost:3000"
     # Optional opt-in regex for Vercel preview deployments (e.g.
     # r"https://myproject-.*\.vercel\.app"). Left as None so the broad

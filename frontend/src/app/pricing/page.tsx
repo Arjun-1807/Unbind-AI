@@ -4,7 +4,8 @@ import Header from "@/components/Header";
 import { LogoIcon } from "@/components/Icons";
 import BackLink from "@/components/BackLink";
 import { useRouter } from "next/navigation";
-import { activateUserPlan } from "@/services/api";
+import { createPlanOrder, verifyPlanPayment } from "@/services/api";
+import { loadRazorpay } from "@/lib/razorpay";
 import { useAuth } from "@/context/AuthContext";
 
 const TerminalIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -41,10 +42,50 @@ export default function Pricing() {
 
   const handleSelectPlan = async (selectedPlan: string) => {
     if (selectedPlan === currentPlan || activating) return;
+
+    // Must be signed in to attach a plan to an account.
+    if (!user) {
+      router.push("/login?next=/pricing");
+      return;
+    }
+
     setActivating(selectedPlan);
     try {
-      await activateUserPlan(selectedPlan);
-      router.push("/profile");
+      // 1) Create the order server-side (server decides the price).
+      const order = await createPlanOrder(selectedPlan);
+      // 2) Load Razorpay Checkout.
+      const Razorpay = await loadRazorpay();
+
+      // 3) Open the payment sheet. Verification happens in the handler.
+      const rzp = new Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: "UnBind AI",
+        description: order.description,
+        order_id: order.orderId,
+        prefill: { email: user.email, name: user.username },
+        theme: { color: "#6366f1" },
+        handler: async (response) => {
+          try {
+            // 4) Verify signature server-side, which grants the plan.
+            const result = await verifyPlanPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            setCurrentPlan(result.plan);
+            router.push("/profile");
+          } catch {
+            setActivating(null);
+          }
+        },
+        modal: {
+          // User closed the sheet without paying — re-enable the buttons.
+          ondismiss: () => setActivating(null),
+        },
+      });
+      rzp.open();
     } catch {
       setActivating(null);
     }
@@ -56,7 +97,7 @@ export default function Pricing() {
       ? "w-full bg-surface-2 text-ink-subtle font-semibold py-2.5 rounded-lg cursor-not-allowed opacity-60"
       : "w-full cursor-pointer ln-btn-primary justify-center py-2.5 rounded-lg";
   const btnLabel = (btnPlan: string, label: string) =>
-    btnPlan === currentPlan ? "Current Plan" : activating === btnPlan ? "Activating…" : label;
+    btnPlan === currentPlan ? "Current Plan" : activating === btnPlan ? "Processing…" : label;
   return (
     <>
           <Header />

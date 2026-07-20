@@ -12,6 +12,7 @@ from app.auth import get_current_user_id
 from app.database import get_db
 from app.schemas import AnalyzeRequest, SimulateRequest
 from app.services.analysis_service import analyze_contract, simulate_impact
+from app.services.plan_service import effective_plan
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
@@ -122,7 +123,8 @@ async def _enforce_rate_limit(user_id: str) -> None:
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    plan: str | None = user.get("plan")
+    # effective_plan treats an expired paid plan as the free tier.
+    plan: str | None = effective_plan(user)
     limit = PLAN_LIMITS.get(plan, 1)  # default to 1 if plan key is unknown
 
     # Unlimited plan — skip all checks

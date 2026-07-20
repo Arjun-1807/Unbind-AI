@@ -317,11 +317,38 @@ export const getUserPlan = async (): Promise<{ plan: string | null; isPro: boole
   }
 };
 
-export const activateUserPlan = async (plan: string): Promise<{ success: boolean; plan: string }> => {
-  return apiFetch<{ success: boolean; plan: string }>("/user/plan/activate", {
+export interface PlanOrder {
+  orderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  plan: string;
+  description: string;
+}
+
+/** Ask the backend to create a Razorpay order for the chosen plan. The price
+ * is decided server-side from the plan name — the client never sends an amount. */
+export const createPlanOrder = async (plan: string): Promise<PlanOrder> => {
+  return apiFetch<PlanOrder>("/user/plan/create-order", {
     method: "POST",
     body: JSON.stringify({ plan }),
   });
+};
+
+/** Send the Razorpay callback back to the backend for signature verification.
+ * The plan is only granted server-side once the signature checks out. */
+export const verifyPlanPayment = async (payload: {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}): Promise<{ success: boolean; plan: string; expiresAt: string | null }> => {
+  return apiFetch<{ success: boolean; plan: string; expiresAt: string | null }>(
+    "/user/plan/verify",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
 };
 
 export const cancelUserPlan = async (): Promise<{ success: boolean }> => {
