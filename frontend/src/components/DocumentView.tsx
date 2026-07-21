@@ -1,18 +1,33 @@
 "use client";
 
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import type { ClauseAnalysis } from "@/types";
 import { RISK_COLORS } from "@/constants";
 
-type DocumentPart =
-  | string
-  | (ClauseAnalysis & { originalIndex: number; start: number; end: number });
+type ClausePart = ClauseAnalysis & {
+  originalIndex: number;
+  start: number;
+  end: number;
+};
+type CitationPart = {
+  isCitation: true;
+  start: number;
+  end: number;
+  key: number;
+};
+type DocumentPart = string | ClausePart | CitationPart;
 
 interface DocumentViewProps {
   documentText: string;
   clauses: ClauseAnalysis[];
   activeClauseIndex: number | null;
   setActiveClauseIndex: (index: number | null) => void;
+  /**
+   * Passage the impact simulator asked to highlight, as exact character offsets
+   * into `documentText` (the same string the backend computed them against).
+   * `key` changes on every request so re-citing the same span still re-scrolls.
+   */
+  activeCitation?: { start: number; end: number; key: number } | null;
 }
 
 const DocumentView: React.FC<DocumentViewProps> = ({
@@ -20,8 +35,21 @@ const DocumentView: React.FC<DocumentViewProps> = ({
   clauses,
   activeClauseIndex,
   setActiveClauseIndex,
+  activeCitation = null,
 }) => {
   const activeClauseRef = useRef<HTMLSpanElement>(null);
+  const activeCitationRef = useRef<HTMLSpanElement>(null);
+
+  // Scroll the cited passage into view whenever a new citation is clicked.
+  useEffect(() => {
+    if (activeCitation && activeCitationRef.current) {
+      activeCitationRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCitation?.key]);
 
   const normalizeText = (text: string) =>
     text
@@ -112,17 +140,44 @@ const DocumentView: React.FC<DocumentViewProps> = ({
       }
     });
 
-    const sorted = matchedClauses.sort((a, b) => a.start - b.start);
+    let segments: Array<ClausePart | CitationPart> = matchedClauses;
+
+    // Fold in the cited passage (if any). Offsets are exact, so we clamp them
+    // to the document and drop any clause highlights that overlap the citation
+    // — otherwise the same text would be wrapped twice and the walk below,
+    // which assumes non-overlapping segments, would misalign.
+    if (
+      activeCitation &&
+      activeCitation.start >= 0 &&
+      activeCitation.end > activeCitation.start
+    ) {
+      const cs = Math.max(
+        0,
+        Math.min(activeCitation.start, documentText.length),
+      );
+      const ce = Math.max(cs, Math.min(activeCitation.end, documentText.length));
+      if (ce > cs) {
+        const nonOverlapping = matchedClauses.filter(
+          (c) => c.end <= cs || c.start >= ce,
+        );
+        segments = [
+          ...nonOverlapping,
+          { isCitation: true, start: cs, end: ce, key: activeCitation.key },
+        ];
+      }
+    }
+
+    const sorted = segments.sort((a, b) => a.start - b.start);
     const result: DocumentPart[] = [];
     let lastIndex = 0;
 
-    sorted.forEach((clause) => {
-      if (clause.start > lastIndex) {
-        const between = documentText.substring(lastIndex, clause.start);
+    sorted.forEach((segment) => {
+      if (segment.start > lastIndex) {
+        const between = documentText.substring(lastIndex, segment.start);
         if (between.trim()) result.push(between);
       }
-      result.push(clause);
-      lastIndex = clause.end;
+      result.push(segment);
+      lastIndex = segment.end;
     });
 
     if (lastIndex < documentText.length) {
@@ -132,7 +187,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({
 
     return result.length > 0 ? result : [documentText];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documentText, clauses]);
+  }, [documentText, clauses, activeCitation]);
 
   const safeParts =
     parts && parts.length > 0
@@ -173,6 +228,38 @@ const DocumentView: React.FC<DocumentViewProps> = ({
     }
   };
 
+  // Shared line formatter so plain text and the cited-passage highlight render
+  // headings/paragraphs identically.
+  const formatLines = (text: string) =>
+    text.split("\n").map((line, lineIndex) => {
+      const isHeading =
+        line.length < 80 &&
+        line.length > 3 &&
+        (line === line.toUpperCase() ||
+          /^\d+\.\s/.test(line) ||
+          /^[A-Z]\.\s/.test(line) ||
+          /^(SECTION|CHAPTER|PART|ARTICLE|CLAUSE)/i.test(line));
+
+      if (isHeading) {
+        return (
+          <h3
+            key={lineIndex}
+            className="text-lg sm:text-xl font-semibold text-gray-800 mt-8 mb-4 first:mt-0 bg-gray-100 px-3 sm:px-4 py-2 rounded-lg border-l-4 border-primary break-words"
+          >
+            {line}
+          </h3>
+        );
+      }
+      if (line.trim()) {
+        return (
+          <p key={lineIndex} className="text-gray-700 leading-relaxed mb-3">
+            {line}
+          </p>
+        );
+      }
+      return <br key={lineIndex} />;
+    });
+
   return (
     <div className="ln-card p-4 sm:p-6 h-[75vh] overflow-y-auto">
       <div className="max-w-4xl mx-auto">
@@ -183,40 +270,21 @@ const DocumentView: React.FC<DocumentViewProps> = ({
                 if (!part || part.trim().length === 0) {
                   return <span key={index}></span>;
                 }
-                const formattedText = part
-                  .split("\n")
-                  .map((line, lineIndex) => {
-                    const isHeading =
-                      line.length < 80 &&
-                      line.length > 3 &&
-                      (line === line.toUpperCase() ||
-                        /^\d+\.\s/.test(line) ||
-                        /^[A-Z]\.\s/.test(line) ||
-                        /^(SECTION|CHAPTER|PART|ARTICLE|CLAUSE)/i.test(line));
+                return <span key={index}>{formatLines(part)}</span>;
+              }
 
-                    if (isHeading) {
-                      return (
-                        <h3
-                          key={lineIndex}
-                          className="text-lg sm:text-xl font-semibold text-gray-800 mt-8 mb-4 first:mt-0 bg-gray-100 px-3 sm:px-4 py-2 rounded-lg border-l-4 border-primary break-words"
-                        >
-                          {line}
-                        </h3>
-                      );
-                    }
-                    if (line.trim()) {
-                      return (
-                        <p
-                          key={lineIndex}
-                          className="text-gray-700 leading-relaxed mb-3"
-                        >
-                          {line}
-                        </p>
-                      );
-                    }
-                    return <br key={lineIndex} />;
-                  });
-                return <span key={index}>{formattedText}</span>;
+              if ("isCitation" in part) {
+                return (
+                  <span
+                    key={index}
+                    ref={activeCitationRef}
+                    id="doc-citation"
+                    className="block rounded-md bg-primary/10 ring-2 ring-primary/50 px-2 py-1 my-1 transition-all duration-300"
+                    title="Source cited by the Impact Simulator"
+                  >
+                    {formatLines(documentText.substring(part.start, part.end))}
+                  </span>
+                );
               }
 
               const clause = part;

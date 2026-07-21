@@ -10,6 +10,15 @@ class Settings(BaseSettings):
     MONGODB_URI: str = "mongodb://localhost:27017/unbindai"
     JWT_SECRET: str = "dev_secret_change_me"
     GROQ_API_KEY: str = ""
+    # Separate Groq API key used only for HyDE (hypothetical document generation
+    # during retrieval). Kept distinct from GROQ_API_KEY so HyDE calls draw on
+    # their own per-key rate limit instead of eating into the main analysis
+    # quota. Accepts either HYDE_API_KEY or HYDE_KEY in the env; falls back to
+    # GROQ_API_KEY at call time when left empty.
+    HYDE_API_KEY: str = Field(
+        default="",
+        validation_alias=AliasChoices("HYDE_API_KEY", "HYDE_KEY"),
+    )
     HUGGINGFACEHUB_API_TOKEN: str = ""  # Free token from huggingface.co/settings/tokens
     LANGCHAIN_TRACING_V2: bool = Field(
         default=False,
@@ -36,6 +45,10 @@ class Settings(BaseSettings):
     # payment signatures — must never reach the frontend).
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
+    # Secret configured on the Razorpay dashboard for the webhook endpoint. Used
+    # to verify the X-Razorpay-Signature on server-to-server payment callbacks —
+    # the reliable source of truth even if the browser never calls /verify.
+    RAZORPAY_WEBHOOK_SECRET: str = ""
     FRONTEND_URL: str = "http://localhost:3000"
     # Optional opt-in regex for Vercel preview deployments (e.g.
     # r"https://myproject-.*\.vercel\.app"). Left as None so the broad

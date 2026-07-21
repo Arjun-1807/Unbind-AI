@@ -20,6 +20,11 @@ TEST_SETTINGS_OVERRIDES = {
     "GROQ_API_KEY": "gsk_test_key",
     "FRONTEND_URL": "http://localhost:3000",  # local dev → skips prod validator
     "COOKIE_NAME": "unbind_token",
+    # Razorpay (payments) — deterministic test values so signatures/webhooks are
+    # reproducible and never depend on a populated .env.
+    "RAZORPAY_KEY_ID": "rzp_test_key",
+    "RAZORPAY_KEY_SECRET": "test_secret",
+    "RAZORPAY_WEBHOOK_SECRET": "test_webhook_secret",
 }
 
 
@@ -41,6 +46,12 @@ def override_settings(monkeypatch):
     from app import auth
 
     monkeypatch.setattr(auth, "get_settings", _get_settings)
+    # ``plan_routes`` also does ``from app.config import get_settings``, so its
+    # bound reference must be patched too (otherwise _rzp_auth/_verify_signature
+    # and the webhook secret would read the real lru_cached .env settings).
+    from app.routes import plan_routes
+
+    monkeypatch.setattr(plan_routes, "get_settings", _get_settings)
     yield test_settings
     # NB: don't touch config.get_settings here — monkeypatch reverts it after
     # this finalizer, and the patched stand-in has no cache_clear().
@@ -92,11 +103,41 @@ class FakeCollection:
 
         return _Result()
 
+    def find(self, query=None):
+        """Return a cursor over docs matching every field in ``query``.
+
+        Supports the read path used by ``list_payments``: a chained
+        ``.sort(field, direction)`` and ``async for`` iteration.
+        """
+        query = query or {}
+        matched = [
+            copy.deepcopy(doc)
+            for doc in self._docs.values()
+            if all(doc.get(k) == v for k, v in query.items())
+        ]
+        return _FakeCursor(matched)
+
+
+class _FakeCursor:
+    """Minimal async cursor: chainable ``.sort`` + async iteration."""
+
+    def __init__(self, docs):
+        self._docs = docs
+
+    def sort(self, field, direction=1):
+        self._docs.sort(key=lambda d: d.get(field), reverse=direction == -1)
+        return self
+
+    async def __aiter__(self):
+        for doc in self._docs:
+            yield doc
+
 
 class FakeDB:
-    def __init__(self, users=None, analyses=None):
+    def __init__(self, users=None, analyses=None, payments=None):
         self.users = FakeCollection(users)
         self.analyses = FakeCollection(analyses)
+        self.payments = FakeCollection(payments)
 
 
 @pytest.fixture

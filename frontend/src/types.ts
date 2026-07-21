@@ -51,6 +51,22 @@ export interface AnalysisResponse {
   chunkSummaries?: ChunkSummary[];
 }
 
+export interface Citation {
+  /** 1-based source label; matches the [S{id}] marker in the answer text. */
+  id: number;
+  /** Short single-line preview of the cited excerpt (for the Sources list). */
+  snippet: string;
+  /** Character offset of the excerpt in the document (-1 if not locatable). */
+  startIndex: number;
+  /** End character offset (exclusive) of the excerpt (-1 if not locatable). */
+  endIndex: number;
+}
+
+export interface SimulationResult {
+  answer: string;
+  citations: Citation[];
+}
+
 export interface User {
   id: string;
   username: string;

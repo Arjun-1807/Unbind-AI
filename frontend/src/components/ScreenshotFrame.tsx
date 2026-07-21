@@ -82,6 +82,10 @@ const ScreenshotFrame = ({
           ) : null}
         </div>
         <div className={contentClassName}>
+          {/* Generic reusable frame: src is dynamic with no known intrinsic
+              dimensions and renders fully responsive (w-full/h-auto), so
+              next/image's required width/height or fill+sizes don't fit here. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={src}
             alt={alt}

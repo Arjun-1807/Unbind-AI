@@ -59,6 +59,37 @@ def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 300) -> list[st
     return splitter.split_text(text)
 
 
+def chunk_text_with_offsets(
+    text: str, chunk_size: int = 4000, overlap: int = 300
+) -> list[dict]:
+    """Chunk text and record each chunk's character span in the original text.
+
+    Returns dicts with ``text``, ``start`` and ``end`` (character offsets into
+    ``text``). The offsets let callers map a retrieved chunk back to the exact
+    place in the source document — used for impact-simulator citations that jump
+    to the cited passage. ``start``/``end`` are -1 for the rare chunk that can't
+    be located verbatim (e.g. whitespace the splitter normalised away); callers
+    should treat those as non-locatable rather than mis-highlight.
+    """
+    chunks = chunk_text(text, chunk_size, overlap)
+    spans: list[dict] = []
+    cursor = 0
+    for chunk in chunks:
+        # Search forward from the last hit so repeated fragments resolve to the
+        # right occurrence; fall back to a full scan if overlap pushed us past.
+        idx = text.find(chunk, cursor)
+        if idx == -1:
+            idx = text.find(chunk)
+        if idx == -1:
+            spans.append({"text": chunk, "start": -1, "end": -1})
+            continue
+        spans.append({"text": chunk, "start": idx, "end": idx + len(chunk)})
+        # Advance just past this chunk's start so the next (overlapping) chunk
+        # is still findable further along the document.
+        cursor = idx + 1
+    return spans
+
+
 def convert_pdf_to_markdown(pdf_text: str) -> str:
     """
     Simple converter that normalises PDF text – same role as pdfToMarkdownService.ts.

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { TABS } from "@/constants";
-import type { AnalysisResponse } from "@/types";
+import type { AnalysisResponse, Citation } from "@/types";
 import RiskAnalysisView from "./RiskAnalysisView";
 import NegotiationHelperView from "./NegotiationHelperView";
 import KeyTermsView from "./KeyTermsView";
@@ -30,7 +30,25 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   const [activeClauseIndex, setActiveClauseIndex] = useState<number | null>(
     null,
   );
+  // Passage the impact simulator asked to highlight. `key` changes on every
+  // click (even for the same span) so DocumentView re-scrolls to it.
+  const [activeCitation, setActiveCitation] = useState<{
+    start: number;
+    end: number;
+    key: number;
+  } | null>(null);
   const [compareOpen, setCompareOpen] = useState(false);
+
+  const handleCitationJump = (citation: Citation) => {
+    if (citation.startIndex < 0 || citation.endIndex <= citation.startIndex) {
+      return; // Excerpt couldn't be located in the document — nothing to jump to.
+    }
+    setActiveCitation({
+      start: citation.startIndex,
+      end: citation.endIndex,
+      key: Date.now(),
+    });
+  };
 
   const renderTabContent = () => {
     const commonProps = {
@@ -52,6 +70,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
           <ImpactSimulatorView
             documentText={documentText}
             onError={(msg) => onError(msg)}
+            onCitationJump={handleCitationJump}
           />
         );
       default:
@@ -94,6 +113,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
             clauses={analysisResult.clauses}
             activeClauseIndex={activeClauseIndex}
             setActiveClauseIndex={setActiveClauseIndex}
+            activeCitation={activeCitation}
           />
         </div>
 

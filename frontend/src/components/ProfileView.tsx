@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import type { User, StoredAnalysis } from "@/types";
 import { UserIcon, SparklesIcon, FileTextIcon, ShieldCheckIcon, CheckCircleIcon, AlertCircleIcon, LogOutIcon } from "./Icons";
-import { updatePassword, getUserPlan, cancelUserPlan } from "@/services/api";
+import { updatePassword, getUserPlan, cancelUserPlan, getPaymentHistory, type PaymentRecord } from "@/services/api";
+import { formatMoney, formatDate } from "@/lib/formatMoney";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
@@ -102,6 +103,27 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
           setAiModel("llama-3.3-70b-versatile");
           setPlanLoaded(true);
         }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const [payments, setPayments] = React.useState<PaymentRecord[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getPaymentHistory();
+        if (!cancelled) setPayments(Array.isArray(data) ? data : []);
+      } catch {
+        // On any failure just fall back to an empty history — never crash.
+        if (!cancelled) setPayments([]);
+      } finally {
+        if (!cancelled) setPaymentsLoading(false);
       }
     })();
     return () => {
@@ -380,6 +402,43 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Billing history */}
+      <div className="ln-card p-5 sm:p-8">
+        <h4 className="text-lg font-semibold text-ink mb-4 flex items-center">
+          <FileTextIcon className="h-5 w-5 mr-2 text-primary" />
+          Billing history
+        </h4>
+
+        {paymentsLoading ? (
+          <p className="text-sm text-ink-subtle">Loading…</p>
+        ) : payments.length === 0 ? (
+          <p className="text-sm text-ink-subtle">No payments yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-hairline text-ink-muted">
+                  <th className="py-2 pr-4 font-medium">Plan</th>
+                  <th className="py-2 pr-4 font-medium">Amount</th>
+                  <th className="py-2 pr-4 font-medium">Date</th>
+                  <th className="py-2 font-medium">Payment ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p) => (
+                  <tr key={p.id} className="border-b border-hairline last:border-0">
+                    <td className="py-3 pr-4 text-ink font-medium whitespace-nowrap">{p.plan}</td>
+                    <td className="py-3 pr-4 text-ink whitespace-nowrap">{formatMoney(p.amount, p.currency)}</td>
+                    <td className="py-3 pr-4 text-ink-subtle whitespace-nowrap">{formatDate(p.createdAt)}</td>
+                    <td className="py-3 text-ink-muted text-xs break-all">{p.razorpayPaymentId ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

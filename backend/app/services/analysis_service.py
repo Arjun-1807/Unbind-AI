@@ -9,8 +9,12 @@ from typing import Any
 from langchain_core.embeddings import Embeddings
 from langsmith import traceable
 
-from app.services.groq_service import chat_complete
-from app.services.pdf_processing import chunk_text, convert_pdf_to_markdown
+from app.services.groq_service import chat_complete, generate_hypothetical_document
+from app.services.pdf_processing import (
+    chunk_text,
+    chunk_text_with_offsets,
+    convert_pdf_to_markdown,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -430,18 +434,29 @@ def _get_embeddings() -> Embeddings:
     return _HFInferenceEmbeddings(token=token, model=EMBEDDING_MODEL_NAME)
 
 
-def _run_vector_search(chunks: list[str], scenario: str, k: int) -> list[str]:
+def _run_vector_search(indexed_chunks: list[dict], query: str, k: int) -> list[dict]:
     """Build an ephemeral Chroma index and return the top-k relevant chunks.
 
+    ``indexed_chunks`` are ``{text, start, end}`` dicts (see
+    ``chunk_text_with_offsets``); the character offsets ride along as Chroma
+    metadata so retrieved chunks can be traced back to their exact spot in the
+    document for citations. ``query`` is the text embedded to score chunks —
+    with HyDE this is the hypothetical passage rather than the raw scenario.
     Synchronous and CPU-bound (model inference), so call it via
     ``asyncio.to_thread`` from async code to avoid blocking the event loop.
     """
     import chromadb
     from chromadb.config import Settings as ChromaSettings
-    from langchain.schema import Document
     from langchain_community.vectorstores import Chroma
+    from langchain_core.documents import Document
 
-    documents = [Document(page_content=chunk) for chunk in chunks]
+    documents = [
+        Document(
+            page_content=chunk["text"],
+            metadata={"start": chunk["start"], "end": chunk["end"]},
+        )
+        for chunk in indexed_chunks
+    ]
     # Disable Chroma's anonymized telemetry — it otherwise spams noisy
     # "Failed to send telemetry event" logs on every request.
     chroma_client = chromadb.EphemeralClient(settings=ChromaSettings(anonymized_telemetry=False))
@@ -452,8 +467,15 @@ def _run_vector_search(chunks: list[str], scenario: str, k: int) -> list[str]:
         collection_name="contract_analysis",
     )
     try:
-        relevant_docs = vectorstore.similarity_search(scenario, k=k)
-        return [doc.page_content for doc in relevant_docs]
+        relevant_docs = vectorstore.similarity_search(query, k=k)
+        return [
+            {
+                "text": doc.page_content,
+                "start": doc.metadata.get("start", -1),
+                "end": doc.metadata.get("end", -1),
+            }
+            for doc in relevant_docs
+        ]
     finally:
         # Drop the in-memory collection so repeated requests never collide.
         try:
@@ -462,91 +484,142 @@ def _run_vector_search(chunks: list[str], scenario: str, k: int) -> list[str]:
             pass
 
 
+# System prompt shared by the answer builder. The [n] citation contract is what
+# lets the frontend turn markers into clickable jumps to the exact source span.
+_SIMULATE_SYSTEM_PROMPT = (
+    "You help people with below-average literacy. Answer simply in plain words. "
+    "Use up to 5 bullet points, each 1–2 short sentences, no jargon. "
+    'If helpful, include 1 tiny example starting with "Example:". '
+    "The contract excerpts below are labelled [S1], [S2], and so on. When a "
+    "point is based on an excerpt, put that excerpt's label in square brackets "
+    'right after the point, e.g. "You could lose your deposit [S2]." Cite ONLY '
+    "labels that actually appear below (e.g. if only [S1] is shown, never write "
+    "[S2]). These [S#] labels are the ONLY citations — never turn a clause "
+    'number from the contract (like "2." or "Section 3") into a citation.'
+)
+
+
+def _citation_preview(text: str, limit: int = 180) -> str:
+    """Short single-line preview of a chunk for the citation's Sources list."""
+    collapsed = " ".join(text.split())
+    if len(collapsed) <= limit:
+        return collapsed
+    return collapsed[: limit - 1].rstrip() + "…"
+
+
+async def _answer_with_citations(
+    scenario: str,
+    chunks: list[dict],
+    user_id: str | None,
+) -> dict:
+    """Ask the LLM to answer the scenario, citing numbered excerpts inline.
+
+    Returns ``{"answer": str, "citations": [...]}`` where each citation carries
+    the character span (``startIndex``/``endIndex``) of the excerpt in the
+    original document so the UI can jump to the exact passage.
+    """
+    numbered_context = "\n\n".join(
+        f"[S{i + 1}] {chunk['text']}" for i, chunk in enumerate(chunks)
+    )
+    answer = await chat_complete(
+        [
+            {"role": "system", "content": _SIMULATE_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": (
+                    f"Scenario: {scenario}\n\nContract Excerpts:\n{numbered_context}\n\n"
+                    "Write the answer in very simple words. Keep it under 300 words. "
+                    "Add the [number] citations inline where they apply."
+                ),
+            },
+        ],
+        user_id=user_id,
+        temperature=0.2,
+    )
+    citations = [
+        {
+            "id": i + 1,
+            "snippet": _citation_preview(chunk["text"]),
+            "startIndex": chunk["start"],
+            "endIndex": chunk["end"],
+        }
+        for i, chunk in enumerate(chunks)
+    ]
+    return {"answer": answer, "citations": citations}
+
+
 @traceable(name="simulate_impact")
 async def simulate_impact(
     document_text: str,
     scenario: str,
     user_id: str | None = None,
-) -> str:
-    """Vector-based impact simulation using LangChain Chroma + local embeddings."""
+) -> dict:
+    """Vector-based impact simulation with clause-level citations.
+
+    Returns ``{"answer": str, "citations": [...]}``. Each citation carries the
+    character span of the source excerpt in ``document_text`` so the UI can jump
+    to the exact passage the answer relied on.
+    """
     if not scenario.strip():
-        return "Please enter a scenario to simulate."
+        return {"answer": "Please enter a scenario to simulate.", "citations": []}
 
     # ~1000-char chunks (~250 tokens) sit just under the embedding model's
     # 256-token limit, so each chunk is embedded in full — no truncation, which
-    # keeps retrieval accurate even for a 3–5 page document.
-    chunks = chunk_text(document_text, 1000, 150)
+    # keeps retrieval accurate even for a 3–5 page document. Offsets ride along
+    # so retrieved chunks map back to their exact place in the document.
+    indexed_chunks = chunk_text_with_offsets(document_text, 1000, 150)
 
-    if not chunks:
-        return "Document appears to be empty or unreadable."
+    if not indexed_chunks:
+        return {"answer": "Document appears to be empty or unreadable.", "citations": []}
 
     try:
         # Never ask for more neighbours than we have chunks (avoids edge errors
         # on short docs), but cap at 6 to keep the LLM context focused.
-        k = min(6, len(chunks))
-        relevant_chunks = await asyncio.to_thread(_run_vector_search, chunks, scenario, k)
+        k = min(6, len(indexed_chunks))
+
+        # HyDE: draft a hypothetical contract passage that would answer the
+        # scenario and embed that alongside the raw scenario. The clause-style
+        # wording sits closer to real contract text in embedding space, so
+        # retrieval finds the right chunks more often than embedding the short
+        # scenario alone. Runs on a dedicated Groq key (separate rate limit);
+        # if generation fails we fall back to embedding just the scenario.
+        try:
+            hypothetical = await generate_hypothetical_document(scenario)
+            search_query = f"{scenario}\n\n{hypothetical}"
+        except Exception as e:
+            logger.warning("HyDE generation failed, embedding raw scenario: %s", e)
+            search_query = scenario
+
+        relevant_chunks = await asyncio.to_thread(
+            _run_vector_search, indexed_chunks, search_query, k
+        )
 
         if not relevant_chunks:
-            return (
-                "Could not find any information in the document relevant to your scenario. "
-                "Please try rephrasing your question or check if the topic is covered in the contract."
-            )
+            return {
+                "answer": (
+                    "Could not find any information in the document relevant to your scenario. "
+                    "Please try rephrasing your question or check if the topic is covered in the "
+                    "contract."
+                ),
+                "citations": [],
+            }
 
-        context = "\n\n---\n\n".join(relevant_chunks)
-        output = await chat_complete(
-            [
-                {
-                    "role": "system",
-                    "content": (
-                        "You help people with below-average literacy. Answer simply in plain words. "
-                        "Use up to 5 bullet points, each 1–2 short sentences, no jargon. "
-                        'If helpful, include 1 tiny example starting with "Example:".'
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Scenario: {scenario}\n\nContract Excerpts:\n{context}\n\n"
-                        "Write the answer in very simple words. Keep it under 300 words."
-                    ),
-                },
-            ],
-            user_id=user_id,
-            temperature=0.2,
-        )
-        return output
+        return await _answer_with_citations(scenario, relevant_chunks, user_id)
 
     except Exception as e:
         logger.warning(
             "simulate_impact vector search failed, falling back to keyword matching: %s", e
         )
-        # Fallback to simple keyword matching if vector search fails
+        # Fallback to simple keyword matching if vector search fails. Offsets are
+        # preserved so citations still jump to the right place.
         scenario_lower = scenario.lower()
-        relevant = [c for c in chunks if any(word in c.lower() for word in scenario_lower.split())]
+        relevant = [
+            c
+            for c in indexed_chunks
+            if any(word in c["text"].lower() for word in scenario_lower.split())
+        ]
 
         if not relevant:
-            relevant = chunks[:6]  # Take first 6 chunks as fallback
+            relevant = indexed_chunks[:6]  # Take first 6 chunks as fallback
 
-        context = "\n\n---\n\n".join(relevant[:6])
-        output = await chat_complete(
-            [
-                {
-                    "role": "system",
-                    "content": (
-                        "You help people with below-average literacy. Answer simply in plain words. "
-                        "Use up to 5 bullet points, each 1–2 short sentences, no jargon. "
-                        'If helpful, include 1 tiny example starting with "Example:".'
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Scenario: {scenario}\n\nContract Excerpts:\n{context}\n\n"
-                        "Write the answer in very simple words. Keep it under 300 words."
-                    ),
-                },
-            ],
-            user_id=user_id,
-            temperature=0.2,
-        )
-        return output
+        return await _answer_with_citations(scenario, relevant[:6], user_id)

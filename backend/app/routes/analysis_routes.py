@@ -387,7 +387,9 @@ async def simulate(body: SimulateRequest, request: Request):
         tags=["analysis", "api", "simulate"],
     ):
         result = await simulate_impact(body.documentText, body.scenario, user_id=user_id)
-    return {"result": result}
+    # ``result`` (the answer string) is kept for backward compatibility; the UI
+    # additionally uses ``citations`` to link answer markers to the document.
+    return {"result": result["answer"], "citations": result["citations"]}
 
 
 # ──── File text extraction helpers ────

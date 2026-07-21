@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import hmac
+import json
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -8,10 +9,12 @@ import httpx
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+from pymongo.errors import DuplicateKeyError
 
 from app.auth import get_current_user_id
 from app.config import get_settings
 from app.database import get_db
+from app.services.email_service import send_payment_receipt_email
 from app.services.model_selector import select_model
 from app.services.plan_service import effective_plan
 
@@ -120,6 +123,102 @@ def _verify_signature(order_id: str, payment_id: str, signature: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
+async def _send_receipt(
+    db, user_id: str, plan: str, order: dict, payment_id: str, expires_at: datetime | None
+) -> None:
+    """Best-effort payment receipt email. A failure here must never fail the
+    payment grant, so all errors are swallowed (and logged)."""
+    try:
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        email = user.get("email") if user else None
+        if not email:
+            return
+        await send_payment_receipt_email(
+            to_email=email,
+            plan_label=PLAN_CATALOGUE[plan]["label"],
+            amount=order["amount"],
+            currency=order.get("currency", "INR"),
+            payment_id=payment_id,
+            order_id=order["id"],
+            expires_at=expires_at.isoformat() if expires_at else None,
+        )
+    except Exception:
+        logger.exception("Failed to send payment receipt for payment %s", payment_id)
+
+
+async def _grant_plan(db, user_id: str, plan: str, order: dict, payment_id: str) -> dict:
+    """Idempotently grant ``plan`` to ``user_id`` for a paid ``order``.
+
+    Keyed on the Razorpay payment id: if this payment was already recorded we
+    return the existing grant without re-applying it, so a replayed /verify call
+    or a duplicate webhook can't extend the plan or double-count a purchase. The
+    unique index on ``payments.razorpayPaymentId`` is the race-safe backstop for
+    two concurrent grants of the same payment.
+    """
+    existing = await db.payments.find_one({"razorpayPaymentId": payment_id})
+    if existing:
+        exp = existing.get("planExpiresAt")
+        return {
+            "success": True,
+            "plan": existing.get("plan", plan),
+            "expiresAt": exp.isoformat() if hasattr(exp, "isoformat") else exp,
+            "alreadyProcessed": True,
+        }
+
+    now = datetime.now(timezone.utc)
+    duration = PLAN_CATALOGUE[plan]["duration_days"]
+    expires_at = now + timedelta(days=duration) if duration is not None else None
+
+    # Grant the plan first. The $set is idempotent and this ordering guarantees a
+    # paying user is never left un-granted: if we crash before recording the
+    # payment below, a replay simply re-grants and records it (self-healing).
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "plan": plan,
+                "pro": True,
+                "planActivatedAt": now,
+                "planExpiresAt": expires_at,
+                "lastPaymentId": payment_id,
+            }
+        },
+    )
+
+    # Record the payment. The unique index on razorpayPaymentId is the race-safe
+    # backstop: if a concurrent grant already inserted it, we bail out without
+    # sending a second receipt.
+    try:
+        await db.payments.insert_one(
+            {
+                "userId": ObjectId(user_id),
+                "plan": plan,
+                "amount": order["amount"],
+                "currency": order.get("currency", "INR"),
+                "razorpayOrderId": order["id"],
+                "razorpayPaymentId": payment_id,
+                "planExpiresAt": expires_at,
+                "createdAt": now,
+            }
+        )
+    except DuplicateKeyError:
+        return {
+            "success": True,
+            "plan": plan,
+            "expiresAt": expires_at.isoformat() if expires_at else None,
+            "alreadyProcessed": True,
+        }
+
+    await _send_receipt(db, user_id, plan, order, payment_id, expires_at)
+
+    return {
+        "success": True,
+        "plan": plan,
+        "expiresAt": expires_at.isoformat() if expires_at else None,
+        "alreadyProcessed": False,
+    }
+
+
 class CreateOrderRequest(BaseModel):
     plan: str
 
@@ -179,54 +278,115 @@ async def verify_payment(request: Request, body: VerifyPaymentRequest):
     ):
         raise HTTPException(status_code=400, detail="Payment verification failed")
 
-    # 2) Re-fetch the order from Razorpay so the plan/amount come from a trusted
-    #    source, not the client. Guards against a verified payment for one plan
-    #    being replayed to unlock a more expensive one.
+    # 2) Re-fetch the order from Razorpay so the plan/amount/owner come from a
+    #    trusted source, not the client. Guards against a verified payment for
+    #    one plan being replayed to unlock a more expensive one.
     order = await _rzp_request("GET", f"/orders/{body.razorpay_order_id}")
 
-    plan = (order.get("notes") or {}).get("plan")
+    # 2a) The signature only proves the handshake is genuine — confirm the order
+    #     was actually paid before granting anything.
+    if order.get("status") != "paid":
+        raise HTTPException(status_code=400, detail="Payment not captured")
+
+    notes = order.get("notes") or {}
+    plan = notes.get("plan")
     if plan not in PLAN_CATALOGUE:
         raise HTTPException(status_code=400, detail="Unknown plan on order")
     if order.get("amount") != PLAN_CATALOGUE[plan]["amount"]:
         raise HTTPException(status_code=400, detail="Order amount mismatch")
 
-    # 3) Grant the plan.
-    now = datetime.now(timezone.utc)
-    duration = PLAN_CATALOGUE[plan]["duration_days"]
-    expires_at = now + timedelta(days=duration) if duration is not None else None
+    # 2b) The order must belong to the caller — a captured payment can only ever
+    #     unlock the account that created the order.
+    if notes.get("user_id") != user_id:
+        raise HTTPException(status_code=403, detail="Order does not belong to this user")
 
+    # 3) Grant the plan idempotently (records the payment, emails a receipt).
     db = get_db()
-    await db.users.update_one(
-        {"_id": ObjectId(user_id)},
-        {
-            "$set": {
-                "plan": plan,
-                "pro": True,
-                "planActivatedAt": now,
-                "planExpiresAt": expires_at,
-                "lastPaymentId": body.razorpay_payment_id,
-            }
-        },
-    )
-
-    # Keep an immutable record of the payment for reconciliation/audit.
-    await db.payments.insert_one(
-        {
-            "userId": ObjectId(user_id),
-            "plan": plan,
-            "amount": order["amount"],
-            "currency": order.get("currency", "INR"),
-            "razorpayOrderId": body.razorpay_order_id,
-            "razorpayPaymentId": body.razorpay_payment_id,
-            "createdAt": now,
-        }
-    )
+    result = await _grant_plan(db, user_id, plan, order, body.razorpay_payment_id)
 
     return {
         "success": True,
-        "plan": plan,
-        "expiresAt": expires_at.isoformat() if expires_at else None,
+        "plan": result["plan"],
+        "expiresAt": result["expiresAt"],
     }
+
+
+@router.post("/webhook")
+async def razorpay_webhook(request: Request):
+    """Server-to-server payment confirmation from Razorpay.
+
+    This is the reliable source of truth: even if the browser never calls
+    /verify (tab closed, network dropped after paying), Razorpay still delivers
+    the ``payment.captured`` / ``order.paid`` event here and the plan is
+    granted. The X-Razorpay-Signature header is an HMAC-SHA256 of the *raw*
+    request body keyed with the webhook secret — recomputing it proves the event
+    is genuine. Grants are idempotent, so overlap with /verify is harmless.
+    """
+    settings = get_settings()
+    secret = settings.RAZORPAY_WEBHOOK_SECRET
+    if not secret:
+        raise HTTPException(status_code=503, detail="Webhook is not configured")
+
+    raw = await request.body()
+    signature = request.headers.get("X-Razorpay-Signature", "")
+    expected = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
+
+    try:
+        event = json.loads(raw)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid webhook body") from None
+
+    if event.get("event") not in ("payment.captured", "order.paid"):
+        return {"status": "ignored"}
+
+    entity = (((event.get("payload") or {}).get("payment") or {}).get("entity")) or {}
+    payment_id = entity.get("id")
+    order_id = entity.get("order_id")
+    if not payment_id or not order_id:
+        return {"status": "ignored"}
+
+    # Re-fetch the order so plan/amount/owner come from Razorpay, not the payload.
+    order = await _rzp_request("GET", f"/orders/{order_id}")
+    notes = order.get("notes") or {}
+    plan = notes.get("plan")
+    notes_user_id = notes.get("user_id")
+
+    if (
+        plan in PLAN_CATALOGUE
+        and notes_user_id
+        and order.get("amount") == PLAN_CATALOGUE[plan]["amount"]
+    ):
+        db = get_db()
+        await _grant_plan(db, notes_user_id, plan, order, payment_id)
+
+    return {"status": "ok"}
+
+
+@router.get("/payments")
+async def list_payments(request: Request):
+    """Return the authenticated user's payment/billing history, newest first."""
+    user_id = await get_current_user_id(request)
+    db = get_db()
+    cursor = db.payments.find({"userId": ObjectId(user_id)}).sort("createdAt", -1)
+    payments = []
+    async for p in cursor:
+        created = p.get("createdAt")
+        expires = p.get("planExpiresAt")
+        payments.append(
+            {
+                "id": str(p["_id"]),
+                "plan": p.get("plan"),
+                "amount": p.get("amount"),
+                "currency": p.get("currency", "INR"),
+                "razorpayPaymentId": p.get("razorpayPaymentId"),
+                "razorpayOrderId": p.get("razorpayOrderId"),
+                "createdAt": created.isoformat() if hasattr(created, "isoformat") else created,
+                "expiresAt": expires.isoformat() if hasattr(expires, "isoformat") else expires,
+            }
+        )
+    return payments
 
 
 @router.post("/cancel")

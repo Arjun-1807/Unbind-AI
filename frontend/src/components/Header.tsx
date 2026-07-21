@@ -76,6 +76,11 @@ const Header: React.FC = () => {
             <Link href="/profile">
               <div className="flex items-center space-x-2 text-sm text-ink-muted hover:text-ink transition-colors">
                 {user.picture ? (
+                  // OAuth avatars come from arbitrary remote hosts; next/image
+                  // would need every provider domain whitelisted in
+                  // images.remotePatterns and throws at runtime on any that
+                  // isn't. A plain <img> is the safe choice for a 24px avatar.
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={user.picture}
                     alt={user.username}

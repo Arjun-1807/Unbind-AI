@@ -4,6 +4,8 @@ import type {
   AnalysisResponse,
   LawyerProfile,
   AnalysisProgressEvent,
+  Citation,
+  SimulationResult,
 } from "@/types";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api`;
@@ -281,12 +283,15 @@ export const getAnalysisById = async (id: string): Promise<StoredAnalysis> => {
 export const simulateImpact = async (
   documentText: string,
   scenario: string,
-): Promise<string> => {
-  const data = await apiFetch<{ result: string }>("/analysis/simulate", {
-    method: "POST",
-    body: JSON.stringify({ documentText, scenario }),
-  });
-  return data.result;
+): Promise<SimulationResult> => {
+  const data = await apiFetch<{ result: string; citations?: Citation[] }>(
+    "/analysis/simulate",
+    {
+      method: "POST",
+      body: JSON.stringify({ documentText, scenario }),
+    },
+  );
+  return { answer: data.result, citations: data.citations ?? [] };
 };
 
 export const deleteAnalysis = async (id: string): Promise<void> => {
@@ -355,6 +360,25 @@ export const cancelUserPlan = async (): Promise<{ success: boolean }> => {
   return apiFetch<{ success: boolean }>("/user/plan/cancel", {
     method: "POST",
   });
+};
+
+export interface PaymentRecord {
+  id: string;
+  plan: string;
+  /** Amount in the smallest currency unit (e.g. paise for INR — 45000 = ₹450.00). */
+  amount: number;
+  currency: string;
+  razorpayPaymentId: string | null;
+  razorpayOrderId: string | null;
+  /** ISO timestamp of when the payment was made. */
+  createdAt: string;
+  /** ISO timestamp of when the granted plan expires, or null if it never does. */
+  expiresAt: string | null;
+}
+
+/** Fetch the authenticated user's past plan payments, newest first. */
+export const getPaymentHistory = async (): Promise<PaymentRecord[]> => {
+  return apiFetch<PaymentRecord[]>("/user/plan/payments");
 };
 
 // ─── Lawyer Referral ───

@@ -133,3 +133,70 @@ async def send_lawyer_contact_email(
         html_body=html_body,
         reply_to=user_email,
     )
+
+
+async def send_payment_receipt_email(
+    to_email: str,
+    plan_label: str,
+    amount: int,
+    currency: str,
+    payment_id: str,
+    order_id: str,
+    expires_at: str | None = None,
+) -> None:
+    """Send a payment confirmation / receipt to the user after a successful
+    plan purchase. ``amount`` is in the smallest currency unit (paise for INR).
+    """
+    # Format the amount for display, e.g. 45000 paise -> "₹450.00".
+    symbol = "₹" if currency.upper() == "INR" else ""
+    amount_display = f"{symbol}{amount / 100:,.2f} {currency.upper()}".strip()
+    validity = f"Valid until {expires_at[:10]}" if expires_at else "Lifetime access — never expires"
+
+    subject = f"Your UnBind AI receipt — {plan_label}"
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <style>
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f13; margin: 0; padding: 0; color: #e5e7eb; }}
+        .wrapper {{ max-width: 580px; margin: 40px auto; background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 12px; overflow: hidden; }}
+        .header {{ background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 32px 36px; }}
+        .header h1 {{ margin: 0; font-size: 22px; color: #fff; font-weight: 700; letter-spacing: -0.3px; }}
+        .header p {{ margin: 6px 0 0; font-size: 14px; color: rgba(255,255,255,0.7); }}
+        .body {{ padding: 32px 36px; }}
+        .amount {{ font-size: 32px; font-weight: 700; color: #fff; margin: 8px 0 24px; }}
+        .row {{ display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2d2d44; font-size: 14px; }}
+        .row .label {{ color: #9ca3af; }}
+        .row .value {{ color: #e5e7eb; font-weight: 600; text-align: right; }}
+        .badge {{ display: inline-block; margin-top: 20px; padding: 8px 16px; background: #052e1b; color: #4ade80; border: 1px solid #14532d; border-radius: 8px; font-size: 13px; font-weight: 600; }}
+        .footer {{ padding: 20px 36px; border-top: 1px solid #2d2d44; font-size: 12px; color: #6b7280; text-align: center; }}
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="header">
+          <h1>Payment Successful</h1>
+          <p>UnBind AI · Receipt</p>
+        </div>
+        <div class="body">
+          <p style="font-size:15px; color:#9ca3af; margin:0;">Thank you for your purchase. Your plan is now active.</p>
+          <div class="amount">{amount_display}</div>
+          <div class="row"><span class="label">Plan</span><span class="value">{plan_label}</span></div>
+          <div class="row"><span class="label">Validity</span><span class="value">{validity}</span></div>
+          <div class="row"><span class="label">Payment ID</span><span class="value">{payment_id}</span></div>
+          <div class="row"><span class="label">Order ID</span><span class="value">{order_id}</span></div>
+          <div class="badge">✓ Plan activated</div>
+          <p style="margin-top:28px; font-size:13px; color:#6b7280; line-height:1.6;">
+            Keep this email for your records. If you have any questions about your
+            subscription, just reply to this message.
+          </p>
+        </div>
+        <div class="footer">
+          UnBind AI · AI-powered legal contract analysis
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    await send_email(to_email=to_email, subject=subject, html_body=html_body)
