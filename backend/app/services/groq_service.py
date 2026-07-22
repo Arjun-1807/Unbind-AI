@@ -31,6 +31,10 @@ _HYDE_SEMAPHORE = asyncio.Semaphore(2)
 # rate limits so drafting never throttles (or is throttled by) analysis calls.
 _NEGOTIATION_SEMAPHORE = asyncio.Semaphore(2)
 
+# Vision OCR (reading photographed/scanned contracts) runs on its own Groq key
+# (GROQ_VISION_API_KEY) with a dedicated concurrency gate — same rationale.
+_OCR_SEMAPHORE = asyncio.Semaphore(2)
+
 _MAX_RETRIES = 5
 
 # HyDE (Hypothetical Document Embeddings): rather than embed the user's short,
@@ -94,6 +98,19 @@ def _get_negotiation_api_key() -> str:
     key = settings.NEGOTIATION_API_KEY or settings.GROQ_API_KEY
     if not key:
         raise RuntimeError("Neither NEGOTIATION_API_KEY nor GROQ_API_KEY is set")
+    return key
+
+
+def _get_ocr_api_key() -> str:
+    """API key for vision OCR.
+
+    Prefers the dedicated GROQ_VISION_API_KEY so OCR draws on its own per-key
+    rate limit; falls back to GROQ_API_KEY when no separate key is set.
+    """
+    settings = get_settings()
+    key = settings.GROQ_VISION_API_KEY or settings.GROQ_API_KEY
+    if not key:
+        raise RuntimeError("Neither GROQ_VISION_API_KEY nor GROQ_API_KEY is set")
     return key
 
 
@@ -226,3 +243,36 @@ async def negotiation_complete(
     )
     lc_messages = _to_lc_messages(messages)
     return await _invoke_with_retry(llm, lc_messages, _NEGOTIATION_SEMAPHORE)
+
+
+@traceable(name="ocr_complete")
+async def ocr_complete(
+    image_data_url: str,
+    prompt: str,
+    temperature: float = 0.0,
+) -> str:
+    """Vision OCR: transcribe an image to text via a Groq vision model.
+
+    Uses a ChatGroq instance built with the dedicated vision key
+    (GROQ_VISION_API_KEY) and its own concurrency gate, so OCR draws on a
+    separate per-key rate limit from the main analysis calls. ``image_data_url``
+    is a ``data:image/...;base64,...`` URL. Temperature defaults to 0 for a
+    faithful transcription.
+    """
+    api_key = _get_ocr_api_key()
+    llm = ChatGroq(
+        model=get_settings().OCR_MODEL,
+        temperature=temperature,
+        api_key=api_key,
+    )
+    # Multimodal message: a text instruction plus the image. Built directly
+    # because _to_lc_messages only handles plain string content.
+    lc_messages = [
+        HumanMessage(
+            content=[
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": image_data_url}},
+            ]
+        )
+    ]
+    return await _invoke_with_retry(llm, lc_messages, _OCR_SEMAPHORE)

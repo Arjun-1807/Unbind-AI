@@ -13,7 +13,12 @@ from app.database import get_db
 from app.schemas import AnalyzeRequest, NegotiationDraftRequest, SimulateRequest
 from app.services.analysis_service import analyze_contract, simulate_impact
 from app.services.negotiation_service import draft_negotiation_message
+from app.services.ocr_service import OcrError, image_to_text, is_image_upload
 from app.services.plan_service import effective_plan
+
+# Reject oversized image uploads before OCR. Phone photos are a few MB; anything
+# much larger is likely not a document photo and wastes vision tokens/time.
+_MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
@@ -23,18 +28,34 @@ def _sse_event(event: str, data: dict) -> str:
 
 
 async def _stream_analysis(
-    text: str,
+    text: str | None,
     role: str,
     file_name: str,
     user_id: str,
     tracing_tags: list[str],
+    ocr_source: tuple[bytes, str | None, str] | None = None,
 ):
     """Run analyze_contract while streaming progress events over SSE.
 
     The pipeline itself is a single awaited coroutine, so progress updates
     (fired synchronously from inside it via on_progress) are relayed to the
     client through a queue drained by a concurrently running consumer task.
+
+    When ``ocr_source`` (raw image bytes, content-type, filename) is given, the
+    image is OCR'd here first — emitting a progress event so the client sees
+    feedback during the vision call — and the transcription becomes ``text``.
     """
+    if ocr_source is not None:
+        yield _sse_event("progress", {"stage": "ocr", "message": "Reading text from your image…"})
+        try:
+            text = await image_to_text(*ocr_source)
+        except OcrError as e:
+            yield _sse_event("error", {"code": e.code, "detail": e.message})
+            return
+        if not text or len(text.strip()) < 50:
+            yield _sse_event("error", {"code": "OCR_INSUFFICIENT_TEXT"})
+            return
+
     queue: asyncio.Queue = asyncio.Queue()
 
     def on_progress(stage: str, detail: dict) -> None:
@@ -216,8 +237,16 @@ async def upload_and_analyze(
     content = await file.read()
     file_name = file.filename or "document"
 
-    # Determine file type and extract text
-    text = _extract_text_from_upload(content, file.content_type, file_name)
+    # Determine file type and extract text (image uploads go through vision OCR).
+    if is_image_upload(file.content_type, file_name):
+        if len(content) > _MAX_IMAGE_BYTES:
+            raise HTTPException(status_code=422, detail="IMAGE_TOO_LARGE")
+        try:
+            text = await image_to_text(content, file.content_type, file_name)
+        except OcrError as e:
+            raise HTTPException(status_code=422, detail=e.code) from e
+    else:
+        text = _extract_text_from_upload(content, file.content_type, file_name)
 
     if not text or len(text.strip()) < 50:
         raise HTTPException(
@@ -297,6 +326,24 @@ async def upload_and_analyze_stream(
 
     content = await file.read()
     file_name = file.filename or "document"
+
+    # Image uploads: OCR happens inside the stream (with a progress event) so the
+    # client gets feedback during the vision call. Pass the raw bytes through.
+    if is_image_upload(file.content_type, file_name):
+        if len(content) > _MAX_IMAGE_BYTES:
+            raise HTTPException(status_code=422, detail="IMAGE_TOO_LARGE")
+        return StreamingResponse(
+            _stream_analysis(
+                None,
+                role,
+                file_name,
+                user_id,
+                ["analysis", "api", "upload", "stream", "ocr"],
+                ocr_source=(content, file.content_type, file_name),
+            ),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     text = _extract_text_from_upload(content, file.content_type, file_name)
 

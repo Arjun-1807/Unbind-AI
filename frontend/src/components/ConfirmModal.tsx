@@ -41,6 +41,10 @@ interface ConfirmModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Button text while the action is running. Defaults to "Deleting…". */
+  loadingLabel?: string;
+  /** Icon shown in the header circle. Defaults to a trash icon. */
+  icon?: React.ReactNode;
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -52,6 +56,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   message,
   confirmLabel = "Delete",
   cancelLabel = "Cancel",
+  loadingLabel = "Deleting…",
+  icon,
   loading = false,
   onConfirm,
   onCancel,
@@ -107,7 +113,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         {/* Icon */}
         <div className="flex justify-center mb-4">
           <div className="h-16 w-16 rounded-full bg-danger/10 border border-danger/20 flex items-center justify-center">
-            <TrashIcon />
+            {icon ?? <TrashIcon />}
           </div>
         </div>
 
@@ -131,7 +137,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             disabled={loading}
             className="w-full inline-flex justify-center items-center px-4 py-2 font-semibold text-white bg-danger rounded-md hover:bg-danger/90 transition-colors text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading ? "Deleting…" : confirmLabel}
+            {loading ? loadingLabel : confirmLabel}
           </button>
         </div>
       </div>

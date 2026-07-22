@@ -46,11 +46,24 @@ export default function UploadPage() {
         await refreshAnalyses();
         sessionStorage.setItem("currentAnalysis", JSON.stringify(result));
         router.push("/analysis");
-      } catch (err: any) {
-        const errorMessage = err.message || "Unknown analysis error";
-        // Check if this is a NOT_A_LEGAL_DOCUMENT error
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown analysis error";
+        // Map known error codes to friendly guidance; HEIC/unreadable-image
+        // errors already arrive as human-readable sentences (from the server's
+        // detail), so they fall through to setError as-is.
         if (errorMessage === "NOT_A_LEGAL_DOCUMENT") {
-          setToastError("This does not appear to be a legal document. Please upload a contract, agreement, or other legal document.");
+          setToastError(
+            "This does not appear to be a legal document. Please upload a contract, agreement, or other legal document.",
+          );
+        } else if (errorMessage === "OCR_INSUFFICIENT_TEXT") {
+          setToastError(
+            "We couldn't read enough text from that image. Try a clearer, well-lit photo with the page filling the frame — or upload the file as a PDF/DOCX.",
+          );
+        } else if (errorMessage === "IMAGE_TOO_LARGE") {
+          setToastError(
+            "That image is too large (max 15 MB). Please upload a smaller photo.",
+          );
         } else {
           setError(errorMessage);
         }

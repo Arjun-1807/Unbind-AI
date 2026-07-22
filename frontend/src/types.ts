@@ -99,6 +99,8 @@ export interface User {
   pro?: boolean;
   plan?: string | null;
   aiModel?: string;
+  /** ISO timestamp of account creation (from /auth/me). */
+  createdAt?: string;
 }
 
 export interface StoredAnalysis {

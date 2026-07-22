@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
-import { UploadCloudIcon, FileTextIcon, SparklesIcon } from "./Icons";
+import React, { useState, useCallback, useRef } from "react";
+import { UploadCloudIcon, FileTextIcon, SparklesIcon, CameraIcon } from "./Icons";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import BackLink from "./BackLink";
 
 interface FileUploadProps {
@@ -9,10 +10,22 @@ interface FileUploadProps {
   onBack: () => void;
 }
 
+// Keep in sync with the backend guard (_MAX_IMAGE_BYTES in analysis_routes.py).
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+
+const isHeic = (f: File) =>
+  /image\/hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test(f.name);
+const isImage = (f: File) =>
+  f.type.startsWith("image/") || /\.(jpe?g|png|webp|tiff?|bmp)$/i.test(f.name);
+
 const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [role, setRole] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  // Show the camera capture affordance on small / touch-first devices only.
+  const isMobile = useMediaQuery("(max-width: 640px)");
 
   const handleDrag = useCallback(
     (e: React.DragEvent<HTMLDivElement | HTMLLabelElement>) => {
@@ -28,6 +41,20 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
   );
 
   const processFile = (selectedFile: File) => {
+    setError(null);
+    // HEIC (default iPhone format) can't be decoded server-side without extra
+    // libs — guide the user to a supported format up front.
+    if (isHeic(selectedFile)) {
+      setError(
+        "iPhone HEIC photos aren't supported directly. Set your camera to " +
+          "'Most Compatible' (JPEG), or upload a screenshot of the photo.",
+      );
+      return;
+    }
+    if (isImage(selectedFile) && selectedFile.size > MAX_IMAGE_BYTES) {
+      setError("That image is too large (max 15 MB). Try a smaller photo.");
+      return;
+    }
     setFile(selectedFile);
   };
 
@@ -103,7 +130,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
                 or drag and drop
               </p>
               <p className="text-xs text-ink-subtle">
-                PDF, DOCX, TXT, MD, or other plain text files
+                PDF, DOCX, TXT, MD — or a photo/scan of a contract (JPG, PNG)
               </p>
               {file && (
                 <div className="mt-4 flex max-w-full min-w-0 items-center space-x-2 text-sm text-success bg-success/10 px-3 py-1.5 rounded-full ring-1 ring-inset ring-success/20">
@@ -117,10 +144,38 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
               type="file"
               className="hidden"
               onChange={handleChange}
-              accept=".txt,.md,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              accept=".txt,.md,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*,.jpg,.jpeg,.png,.webp"
             />
           </label>
         </div>
+
+        {/* Mobile: capture a photo of a paper contract with the rear camera. */}
+        {isMobile && (
+          <>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="ln-btn-secondary inline-flex w-full cursor-pointer items-center justify-center px-6 py-3 text-sm"
+            >
+              <CameraIcon className="mr-2 h-5 w-5" />
+              Take a photo of your contract
+            </button>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              capture="environment"
+              onChange={handleChange}
+            />
+          </>
+        )}
+
+        {error && (
+          <p className="text-sm text-danger text-left" role="alert">
+            {error}
+          </p>
+        )}
 
         {file && (
           <div className="w-full text-left fade-in">

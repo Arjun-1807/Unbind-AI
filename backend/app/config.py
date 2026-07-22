@@ -28,6 +28,19 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("NEGOTIATION_API_KEY", "NEGOTIATION_KEY"),
     )
+    # Separate Groq API key used only for vision OCR (reading photographed/scanned
+    # contracts). Same rationale as the HyDE/negotiation keys — its own per-key
+    # rate limit so OCR never competes with the main analysis quota. Accepts
+    # either GROQ_VISION_API_KEY or GROQ_VISION in the env; falls back to
+    # GROQ_API_KEY when empty.
+    GROQ_VISION_API_KEY: str = Field(
+        default="",
+        validation_alias=AliasChoices("GROQ_VISION_API_KEY", "GROQ_VISION"),
+    )
+    # Vision-capable Groq model used for OCR. Groq's current production vision
+    # model (llama-4-scout/maverick were deprecated in 2026). Verify against
+    # Groq's model list before changing — vision model IDs churn over time.
+    OCR_MODEL: str = "qwen/qwen3.6-27b"
     HUGGINGFACEHUB_API_TOKEN: str = ""  # Free token from huggingface.co/settings/tokens
     LANGCHAIN_TRACING_V2: bool = Field(
         default=False,
