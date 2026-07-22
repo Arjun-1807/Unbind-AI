@@ -198,8 +198,7 @@ async def generate_hypothetical_document(
             {
                 "role": "user",
                 "content": (
-                    f"Scenario/question: {scenario}\n\n"
-                    "Write the hypothetical contract passage:"
+                    f"Scenario/question: {scenario}\n\nWrite the hypothetical contract passage:"
                 ),
             },
         ]

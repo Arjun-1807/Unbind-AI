@@ -35,8 +35,7 @@ _FORMAT_GUIDANCE = {
         "subject empty, and use minimal formatting."
     ),
     "letter": (
-        "a formal letter. Leave the subject empty, and use a formal salutation "
-        "and closing."
+        "a formal letter. Leave the subject empty, and use a formal salutation and closing."
     ),
 }
 

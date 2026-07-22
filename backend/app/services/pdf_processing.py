@@ -59,9 +59,7 @@ def chunk_text(text: str, chunk_size: int = 4000, overlap: int = 300) -> list[st
     return splitter.split_text(text)
 
 
-def chunk_text_with_offsets(
-    text: str, chunk_size: int = 4000, overlap: int = 300
-) -> list[dict]:
+def chunk_text_with_offsets(text: str, chunk_size: int = 4000, overlap: int = 300) -> list[dict]:
     """Chunk text and record each chunk's character span in the original text.
 
     Returns dicts with ``text``, ``start`` and ``end`` (character offsets into

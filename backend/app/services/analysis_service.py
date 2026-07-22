@@ -518,9 +518,7 @@ async def _answer_with_citations(
     the character span (``startIndex``/``endIndex``) of the excerpt in the
     original document so the UI can jump to the exact passage.
     """
-    numbered_context = "\n\n".join(
-        f"[S{i + 1}] {chunk['text']}" for i, chunk in enumerate(chunks)
-    )
+    numbered_context = "\n\n".join(f"[S{i + 1}] {chunk['text']}" for i, chunk in enumerate(chunks))
     answer = await chat_complete(
         [
             {"role": "system", "content": _SIMULATE_SYSTEM_PROMPT},
