@@ -57,6 +57,15 @@ const CompareDocumentsModal: React.FC<CompareDocumentsModalProps> = ({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Small screens can only comfortably show one of the three panels
+  // (review list / original / revised) at a time.
+  const [mobileTab, setMobileTab] = useState<"review" | "original" | "revised">(
+    "review",
+  );
+  useEffect(() => {
+    if (open) setMobileTab("review");
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -161,7 +170,7 @@ const CompareDocumentsModal: React.FC<CompareDocumentsModalProps> = ({
             <span className="text-danger">-{deletions}</span>
           </div>
           {unmatchedCount > 0 && (
-            <span className="text-xs text-warning whitespace-nowrap">
+            <span className="hidden sm:inline text-xs text-warning whitespace-nowrap">
               {unmatchedCount} suggested rewrite
               {unmatchedCount === 1 ? "" : "s"} couldn&apos;t be matched to text
               and {unmatchedCount === 1 ? "is" : "are"} excluded
@@ -172,15 +181,16 @@ const CompareDocumentsModal: React.FC<CompareDocumentsModalProps> = ({
           {changedSegments.length > 0 && (
             <button
               onClick={handleDownload}
-              className="ln-btn-secondary text-xs sm:text-sm px-3 py-1.5 cursor-pointer inline-flex items-center gap-1.5"
+              aria-label="Download revised document"
+              className="ln-btn-secondary text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 cursor-pointer inline-flex items-center gap-1.5"
             >
               <DownloadIcon />
-              Download revised
+              <span className="hidden sm:inline">Download revised</span>
             </button>
           )}
           <button
             onClick={onClose}
-            className="text-ink-subtle hover:text-ink transition-colors cursor-pointer shrink-0 p-1"
+            className="text-ink-subtle hover:text-ink transition-colors cursor-pointer shrink-0 p-2 -m-1"
             aria-label="Close comparison"
           >
             <XIcon />
@@ -194,101 +204,140 @@ const CompareDocumentsModal: React.FC<CompareDocumentsModalProps> = ({
           there is nothing to compare.
         </div>
       ) : (
-        <div className="flex-1 min-h-0 flex overflow-hidden">
-          {/* Sidebar: per-clause accept/reject review list */}
-          <aside className="w-full max-w-xs sm:max-w-sm lg:w-96 lg:max-w-none shrink-0 border-r border-hairline bg-surface-1 flex flex-col min-h-0">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-hairline shrink-0">
-              <span className="text-sm font-semibold text-ink">
-                Review changes
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={revertAll}
-                  className="text-xs text-ink-subtle hover:text-ink transition-colors cursor-pointer underline decoration-dotted"
-                >
-                  Revert all
-                </button>
-                <span className="text-hairline-strong">|</span>
-                <button
-                  onClick={applyAll}
-                  className="text-xs text-ink-subtle hover:text-ink transition-colors cursor-pointer underline decoration-dotted"
-                >
-                  Apply all
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3">
-              {changedSegments.map((seg, i) => {
-                const decision = decisions[seg.originalIndex] ?? "ai";
-                return (
-                  <div
-                    key={seg.originalIndex}
-                    className="ln-card p-3.5 text-sm"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-ink-subtle font-medium text-xs">
-                        Clause {i + 1}
-                      </span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                          decision === "ai"
-                            ? "bg-success/10 text-success"
-                            : "bg-surface-2 text-ink-subtle"
-                        }`}
-                      >
-                        {decision === "ai" ? "Rewrite applied" : "Kept original"}
-                      </span>
-                    </div>
-                    <div className="mb-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle mb-1">
-                        Original
-                      </p>
-                      <p className="text-ink-muted text-xs leading-relaxed line-clamp-3">
-                        {seg.original}
-                      </p>
-                    </div>
-                    <div className="mb-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle mb-1">
-                        Suggested rewrite
-                      </p>
-                      <p className="text-ink text-xs leading-relaxed line-clamp-3">
-                        {seg.rewrite}
-                      </p>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => setDecision(seg.originalIndex, "original")}
-                        className={`flex-1 rounded px-2 py-1.5 cursor-pointer transition-colors text-xs ${
-                          decision === "original"
-                            ? "bg-surface-3 text-ink font-medium"
-                            : "text-ink-subtle hover:bg-surface-2"
-                        }`}
-                      >
-                        Keep original
-                      </button>
-                      <button
-                        onClick={() => setDecision(seg.originalIndex, "ai")}
-                        className={`flex-1 rounded px-2 py-1.5 cursor-pointer transition-colors text-xs ${
-                          decision === "ai"
-                            ? "bg-success/15 text-success font-medium"
-                            : "text-ink-subtle hover:bg-surface-2"
-                        }`}
-                      >
-                        Use rewrite
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </aside>
-
-          {/* Split diff panes */}
-          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-hairline overflow-hidden">
-            <DiffPane title="Original" side="old" tokens={tokens} />
-            <DiffPane title="Revised" side="new" tokens={tokens} />
+        <>
+          {/* Mobile-only panel switcher: one panel fits a phone screen at a time */}
+          <div className="lg:hidden flex items-center gap-1 px-2 py-2 border-b border-hairline bg-surface-1 shrink-0">
+            {(
+              [
+                { key: "review", label: `Review (${changedSegments.length})` },
+                { key: "original", label: "Original" },
+                { key: "revised", label: "Revised" },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setMobileTab(tab.key)}
+                className={`flex-1 whitespace-nowrap rounded-md px-2 py-2 text-xs font-medium transition-colors cursor-pointer ${
+                  mobileTab === tab.key
+                    ? "bg-surface-3 text-ink"
+                    : "text-ink-subtle active:bg-surface-2"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-        </div>
+
+          <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+            {/* Sidebar: per-clause accept/reject review list */}
+            <aside
+              className={`${
+                mobileTab === "review" ? "flex" : "hidden"
+              } lg:flex w-full lg:w-96 shrink-0 border-hairline bg-surface-1 flex-col min-h-0 lg:border-r`}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-hairline shrink-0">
+                <span className="text-sm font-semibold text-ink">
+                  Review changes
+                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={revertAll}
+                    className="text-xs text-ink-subtle hover:text-ink transition-colors cursor-pointer underline decoration-dotted py-1"
+                  >
+                    Revert all
+                  </button>
+                  <span className="text-hairline-strong">|</span>
+                  <button
+                    onClick={applyAll}
+                    className="text-xs text-ink-subtle hover:text-ink transition-colors cursor-pointer underline decoration-dotted py-1"
+                  >
+                    Apply all
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3">
+                {changedSegments.map((seg, i) => {
+                  const decision = decisions[seg.originalIndex] ?? "ai";
+                  return (
+                    <div
+                      key={seg.originalIndex}
+                      className="ln-card p-3.5 text-sm"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-ink-subtle font-medium text-xs">
+                          Clause {i + 1}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            decision === "ai"
+                              ? "bg-success/10 text-success"
+                              : "bg-surface-2 text-ink-subtle"
+                          }`}
+                        >
+                          {decision === "ai" ? "Rewrite applied" : "Kept original"}
+                        </span>
+                      </div>
+                      <div className="mb-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle mb-1">
+                          Original
+                        </p>
+                        <p className="text-ink-muted text-xs leading-relaxed line-clamp-3">
+                          {seg.original}
+                        </p>
+                      </div>
+                      <div className="mb-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-subtle mb-1">
+                          Suggested rewrite
+                        </p>
+                        <p className="text-ink text-xs leading-relaxed line-clamp-3">
+                          {seg.rewrite}
+                        </p>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => setDecision(seg.originalIndex, "original")}
+                          className={`flex-1 rounded px-2 py-2 sm:py-1.5 cursor-pointer transition-colors text-xs ${
+                            decision === "original"
+                              ? "bg-surface-3 text-ink font-medium"
+                              : "text-ink-subtle active:bg-surface-2 sm:hover:bg-surface-2"
+                          }`}
+                        >
+                          Keep original
+                        </button>
+                        <button
+                          onClick={() => setDecision(seg.originalIndex, "ai")}
+                          className={`flex-1 rounded px-2 py-2 sm:py-1.5 cursor-pointer transition-colors text-xs ${
+                            decision === "ai"
+                              ? "bg-success/15 text-success font-medium"
+                              : "text-ink-subtle active:bg-surface-2 sm:hover:bg-surface-2"
+                          }`}
+                        >
+                          Use rewrite
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </aside>
+
+            {/* Split diff panes */}
+            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-hairline overflow-hidden">
+              <DiffPane
+                title="Original"
+                side="old"
+                tokens={tokens}
+                mobileActive={mobileTab === "original"}
+              />
+              <DiffPane
+                title="Revised"
+                side="new"
+                tokens={tokens}
+                mobileActive={mobileTab === "revised"}
+              />
+            </div>
+          </div>
+        </>
       )}
     </div>,
     document.body,
@@ -299,17 +348,27 @@ interface DiffPaneProps {
   title: string;
   side: "old" | "new";
   tokens: { op: "equal" | "delete" | "insert"; text: string }[];
+  mobileActive: boolean;
 }
 
-const DiffPane: React.FC<DiffPaneProps> = ({ title, side, tokens }) => {
+const DiffPane: React.FC<DiffPaneProps> = ({
+  title,
+  side,
+  tokens,
+  mobileActive,
+}) => {
   const visible = tokens.filter((t) =>
     side === "old" ? t.op !== "insert" : t.op !== "delete",
   );
   const hasChanges = visible.some((t) => t.op !== "equal");
 
   return (
-    <div className="min-h-0 flex flex-col overflow-hidden bg-canvas">
-      <div className="px-5 sm:px-8 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-subtle bg-surface-1 border-b border-hairline shrink-0 flex items-center gap-2">
+    <div
+      className={`${
+        mobileActive ? "flex" : "hidden"
+      } lg:flex min-h-0 flex-col overflow-hidden bg-canvas`}
+    >
+      <div className="px-4 sm:px-8 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-subtle bg-surface-1 border-b border-hairline shrink-0 flex items-center gap-2">
         <span
           className={`h-1.5 w-1.5 rounded-full ${
             side === "old" ? "bg-danger" : "bg-success"
@@ -317,8 +376,8 @@ const DiffPane: React.FC<DiffPaneProps> = ({ title, side, tokens }) => {
         />
         {title}
       </div>
-      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6">
-        <div className="max-w-3xl mx-auto bg-white text-gray-900 rounded-lg border border-black/5 shadow-sm p-6 sm:p-8">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-8 py-4 sm:py-6">
+        <div className="max-w-3xl mx-auto bg-white text-gray-900 rounded-lg border border-black/5 shadow-sm p-4 sm:p-8">
           {hasChanges ? (
             <p className="whitespace-pre-wrap break-words leading-relaxed text-sm sm:text-base">
               {visible.map((t, idx) => {

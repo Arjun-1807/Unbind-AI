@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Header from "@/components/Header";
-import { LogoIcon } from "@/components/Icons";
+import Footer from "@/components/footer";
 import BackLink from "@/components/BackLink";
 import { useRouter } from "next/navigation";
 import { createPlanOrder, verifyPlanPayment } from "@/services/api";
@@ -318,13 +318,7 @@ export default function Pricing() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="text-center py-8 text-sm text-ink-subtle">
-        <div className="flex items-center justify-center space-x-2">
-          <LogoIcon className="h-6 w-6 text-primary" />
-          <p>UnBind: AI Legal Contract Analyzer</p>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }

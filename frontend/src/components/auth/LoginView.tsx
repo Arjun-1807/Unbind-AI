@@ -2,10 +2,12 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { LogoIcon } from "../Icons";
-import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { type CredentialResponse } from "@react-oauth/google";
 import BackLink from "../BackLink";
+import ResponsiveGoogleButton from "./ResponsiveGoogleButton";
 
 const LoginView: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -41,7 +43,7 @@ const LoginView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center pt-6 sm:pt-10">
+    <div className="flex flex-col items-center py-6 sm:py-10">
       <div className="w-full max-w-3xl mb-4 text-left">
         <BackLink href="/" />
       </div>
@@ -106,6 +108,28 @@ const LoginView: React.FC = () => {
               Sign in
             </button>
           </div>
+
+          <p className="text-xs text-ink-tertiary text-center">
+            By continuing, you agree to our{" "}
+            <Link
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:text-primary-hover underline"
+            >
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:text-primary-hover underline"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </form>
 
         {/* Divider */}
@@ -119,16 +143,10 @@ const LoginView: React.FC = () => {
         </div>
 
         {/* Google Sign-In */}
-        <div className="flex justify-center overflow-x-auto">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => setError("Google sign-in failed. Please try again.")}
-            theme="filled_black"
-            shape="rectangular"
-            width="368"
-            text="continue_with"
-          />
-        </div>
+        <ResponsiveGoogleButton
+          onSuccess={handleGoogleSuccess}
+          onError={() => setError("Google sign-in failed. Please try again.")}
+        />
 
         <p className="text-sm text-center text-ink-subtle">
           Don&apos;t have an account?{" "}

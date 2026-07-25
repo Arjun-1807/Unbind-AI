@@ -2,16 +2,19 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { LogoIcon } from "../Icons";
-import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { type CredentialResponse } from "@react-oauth/google";
 import BackLink from "../BackLink";
+import ResponsiveGoogleButton from "./ResponsiveGoogleButton";
 
 const SignupView: React.FC = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState("");
   const { signup, loginWithGoogle } = useAuth();
   const router = useRouter();
@@ -32,6 +35,12 @@ const SignupView: React.FC = () => {
       setError("Password must be at least 6 characters long.");
       return;
     }
+    if (!agreedToTerms) {
+      setError(
+        "You must agree to the Terms of Service and Privacy Policy to continue.",
+      );
+      return;
+    }
 
     try {
       await signup(username, email, password);
@@ -46,6 +55,12 @@ const SignupView: React.FC = () => {
   const handleGoogleSuccess = async (response: CredentialResponse) => {
     if (!response.credential) return;
     setError("");
+    if (!agreedToTerms) {
+      setError(
+        "You must agree to the Terms of Service and Privacy Policy to continue.",
+      );
+      return;
+    }
     try {
       await loginWithGoogle(response.credential);
       router.push("/dashboard");
@@ -57,13 +72,13 @@ const SignupView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center pt-6 sm:pt-10">
+    <div className="flex flex-col items-center py-6 sm:py-10">
       <div className="w-full max-w-3xl mb-4 text-left">
         <BackLink href="/" />
       </div>
       <div className="w-full max-w-md p-6 sm:p-8 space-y-6 ln-card">
-        <div className="flex flex-col items-center space-y-2">
-          <LogoIcon className="h-12 w-12 text-primary" />
+        <div className="flex flex-col items-center space-y-1.5">
+          <LogoIcon className="h-10 w-10 text-primary" />
           <h2 className="text-2xl sm:text-3xl font-semibold text-center text-ink">
             Create an Account
           </h2>
@@ -72,7 +87,7 @@ const SignupView: React.FC = () => {
           </p>
         </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label
               htmlFor="username-signup"
@@ -154,11 +169,43 @@ const SignupView: React.FC = () => {
             </div>
           </div>
 
+          <div className="flex items-start gap-2">
+            <input
+              id="agree-to-terms"
+              name="agree-to-terms"
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-hairline text-primary focus:ring-primary"
+            />
+            <label htmlFor="agree-to-terms" className="text-sm text-ink-subtle">
+              I agree to the{" "}
+              <Link
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary-hover underline"
+              >
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary-hover underline"
+              >
+                Privacy Policy
+              </Link>
+            </label>
+          </div>
+
           {error && <p className="text-sm text-danger">{error}</p>}
 
           <div>
             <button
               type="submit"
+              disabled={!agreedToTerms}
               className="w-full flex justify-center py-3 px-4 text-sm ln-btn-primary cursor-pointer"
             >
               Sign up
@@ -177,16 +224,10 @@ const SignupView: React.FC = () => {
         </div>
 
         {/* Google Sign-Up */}
-        <div className="flex justify-center overflow-x-auto">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => setError("Google sign-up failed. Please try again.")}
-            theme="filled_black"
-            shape="rectangular"
-            width="368"
-            text="continue_with"
-          />
-        </div>
+        <ResponsiveGoogleButton
+          onSuccess={handleGoogleSuccess}
+          onError={() => setError("Google sign-up failed. Please try again.")}
+        />
 
         <p className="text-sm text-center text-ink-subtle">
           Already have an account?{" "}
