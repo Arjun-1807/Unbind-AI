@@ -7,7 +7,7 @@ import RiskAnalysisView from "./RiskAnalysisView";
 import NegotiationHelperView from "./NegotiationHelperView";
 import KeyTermsView from "./KeyTermsView";
 import KeyDatesView from "./KeyDatesView";
-import ImpactSimulatorView from "./ImpactSimulatorView";
+import DocumentChatView from "./DocumentChatView";
 import ExportButton from "./ExportButton";
 import DocumentView from "./DocumentView";
 import BackLink from "./BackLink";
@@ -33,8 +33,8 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   const [activeClauseIndex, setActiveClauseIndex] = useState<number | null>(
     null,
   );
-  // Passage the impact simulator asked to highlight. `key` changes on every
-  // click (even for the same span) so DocumentView re-scrolls to it.
+  // Passage a cited answer asked to highlight. `key` changes on every click
+  // (even for the same span) so DocumentView re-scrolls to it.
   const [activeCitation, setActiveCitation] = useState<{
     start: number;
     end: number;
@@ -62,19 +62,23 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
     switch (activeTab) {
       case TABS.RISK_ANALYSIS:
         return <RiskAnalysisView {...commonProps} />;
+      case TABS.ASK_ANYTHING:
+        return (
+          <DocumentChatView
+            analysisId={analysisId}
+            onError={(msg) => onError(msg)}
+            onCitationJump={handleCitationJump}
+          />
+        );
       case TABS.NEGOTIATION_HELPER:
         return <NegotiationHelperView {...commonProps} />;
       case TABS.KEY_TERMS_GLOSSARY:
         return <KeyTermsView analysisResult={analysisResult} />;
       case TABS.KEY_DATES:
-        return <KeyDatesView analysisResult={analysisResult} />;
-      case TABS.IMPACT_SIMULATOR:
         return (
-          <ImpactSimulatorView
-            documentText={documentText}
+          <KeyDatesView
+            analysisResult={analysisResult}
             analysisId={analysisId}
-            onError={(msg) => onError(msg)}
-            onCitationJump={handleCitationJump}
           />
         );
       default:

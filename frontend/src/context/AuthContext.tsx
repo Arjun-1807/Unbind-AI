@@ -7,13 +7,13 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import type { User, StoredAnalysis } from "@/types";
+import type { User, AnalysisSummary } from "@/types";
 import * as api from "@/services/api";
 
 interface AuthContextValue {
   user: User | null;
   authReady: boolean;
-  analyses: StoredAnalysis[];
+  analyses: AnalysisSummary[];
   login: (email: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
@@ -26,7 +26,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [analyses, setAnalyses] = useState<StoredAnalysis[]>([]);
+  const [analyses, setAnalyses] = useState<AnalysisSummary[]>([]);
 
   const refreshAnalyses = useCallback(async () => {
     try {

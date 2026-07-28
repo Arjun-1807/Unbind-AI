@@ -11,7 +11,7 @@ import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 import * as api from "@/services/api";
 import type { StoredAnalysis, AnalysisProgressEvent } from "@/types";
-import footer from "@/components/footer";
+import Footer from "@/components/footer";
 export default function UploadPage() {
   const { user, refreshAnalyses } = useAuth();
   const router = useRouter();
@@ -64,6 +64,10 @@ export default function UploadPage() {
           setToastError(
             "That image is too large (max 15 MB). Please upload a smaller photo.",
           );
+        } else if (errorMessage === "FILE_TOO_LARGE") {
+          setToastError(
+            "That file is too large (max 25 MB). Try splitting the document or uploading a smaller export.",
+          );
         } else {
           setError(errorMessage);
         }
@@ -104,7 +108,7 @@ export default function UploadPage() {
           />
         )}
       </main>
-      <footer />
+      <Footer />
     </div>
   );
 }

@@ -87,6 +87,13 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""  # Gmail App Password (not your login password)
     EMAIL_FROM_NAME: str = "UnBind AI"
 
+    # Shared secret the deadline-reminder scheduler presents to POST
+    # /api/reminders/sweep. That endpoint emails every user with a due deadline,
+    # so it must not be callable by anyone who knows the URL. Left empty by
+    # default and the endpoint refuses to run — an unset secret is a
+    # misconfiguration, not permission.
+    REMINDER_SWEEP_SECRET: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

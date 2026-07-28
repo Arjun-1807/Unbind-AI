@@ -1,0 +1,89 @@
+name: Deadline reminders
+
+# Emails users about contract deadlines coming up. The backend is serverless and
+# only runs during a request, so something external has to wake it — that's this.
+#
+# Required repository secrets:
+#   BACKEND_URL           e.g. https://unbind-backend.vercel.app
+#   REMINDER_SWEEP_SECRET must match the backend's REMINDER_SWEEP_SECRET env var
+on:
+  schedule:
+    # 03:30 UTC ≈ 09:00 IST — morning for the India-first audience, and off the
+    # hour because GitHub delays jobs scheduled at :00 under load.
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report what would be sent without sending any email"
+        type: boolean
+        default: true
+
+# Never let two sweeps overlap. The sent-marker makes a double run harmless, but
+# there's no reason to pay for it.
+concurrency:
+  group: deadline-reminders
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    name: Send due deadline reminders
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the reminder sweep
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          SWEEP_SECRET: ${{ secrets.REMINDER_SWEEP_SECRET }}
+          # A manual run defaults to a dry run so testing the wiring can't
+          # accidentally email real users; the schedule always sends for real.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+
+          # "Not configured yet" is a legitimate state — reminders are opt-in
+          # infrastructure, and the rest of the app works without them. Skip
+          # green with a warning rather than failing, so an unconfigured repo
+          # doesn't email its owner a failure notice every single day.
+          if [ -z "${BACKEND_URL:-}" ] || [ -z "${SWEEP_SECRET:-}" ]; then
+            echo "::warning::Deadline reminders are not configured — skipping. Set the BACKEND_URL and REMINDER_SWEEP_SECRET repository secrets to enable them."
+            {
+              echo "### Reminder sweep skipped"
+              echo ""
+              echo "Deadline reminders are not configured yet. To enable them, set both"
+              echo "repository secrets:"
+              echo ""
+              echo '- `BACKEND_URL` — e.g. `https://unbind-backend.vercel.app`'
+              echo '- `REMINDER_SWEEP_SECRET` — must match the backend env var of the same name'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "Running reminder sweep (dry_run=${DRY_RUN})…"
+
+          # --fail-with-body so a non-2xx still prints the server's explanation
+          # instead of failing silently with an opaque exit code.
+          # --max-time guards against a hung serverless cold start.
+          http_status=$(curl --silent --show-error --fail-with-body \
+            --max-time 300 \
+            --retry 3 --retry-delay 10 --retry-all-errors \
+            --write-out '\n%{http_code}' \
+            --request POST \
+            --header "X-Reminder-Secret: ${SWEEP_SECRET}" \
+            --header 'Content-Length: 0' \
+            "${BACKEND_URL}/api/reminders/sweep?dry_run=${DRY_RUN}" \
+            | tee /tmp/sweep-response.txt | tail -n1)
+
+          # Drop the status line to leave just the JSON body.
+          sed '$d' /tmp/sweep-response.txt > /tmp/sweep-body.json
+
+          echo "HTTP ${http_status}"
+          echo "### Reminder sweep" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/sweep-body.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          # The sweep reports per-user send failures in its body rather than
+          # failing the request, so surface them as a warning — the run is still
+          # a success (the next sweep retries those users).
+          if grep -q '"failures": *[1-9]' /tmp/sweep-body.json; then
+            echo "::warning::Some reminder emails failed to send; the next sweep will retry them."
+          fi

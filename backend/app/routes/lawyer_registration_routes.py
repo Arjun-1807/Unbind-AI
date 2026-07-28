@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
+from pymongo.errors import DuplicateKeyError
 
 from app.database import get_db
 from app.schemas import LawyerRegistrationRequest
@@ -31,11 +32,17 @@ async def register_lawyer(payload: LawyerRegistrationRequest):
         "phone": payload.phone,
         "rating": 0.0,
         "verified": False,  # Lawyers need to be verified by admin
-        "createdAt": datetime.utcnow(),
+        "createdAt": datetime.now(timezone.utc),
     }
 
-    # Insert lawyer into database
-    result = await db.lawyers.insert_one(lawyer_doc)
+    # Insert lawyer into database. The unique index on lawyers.email is what
+    # actually closes the race the find_one above only narrows.
+    try:
+        result = await db.lawyers.insert_one(lawyer_doc)
+    except DuplicateKeyError as e:
+        raise HTTPException(
+            status_code=400, detail="A lawyer with this email is already registered"
+        ) from e
 
     # Return success response
     return {

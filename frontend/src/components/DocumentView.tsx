@@ -280,7 +280,7 @@ const DocumentView: React.FC<DocumentViewProps> = ({
                     ref={activeCitationRef}
                     id="doc-citation"
                     className="block rounded-md bg-primary/10 ring-2 ring-primary/50 px-2 py-1 my-1 transition-all duration-300"
-                    title="Source cited by the Impact Simulator"
+                    title="Source cited in the answer"
                   >
                     {formatLines(documentText.substring(part.start, part.end))}
                   </span>
