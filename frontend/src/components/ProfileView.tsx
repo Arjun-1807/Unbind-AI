@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { User, StoredAnalysis } from "@/types";
+import type { User, AnalysisSummary, ReminderPreferences } from "@/types";
 import {
   UserIcon,
   SparklesIcon,
@@ -22,6 +22,7 @@ import {
   getPaymentHistory,
   type PaymentRecord,
 } from "@/services/api";
+import * as api from "@/services/api";
 import { formatMoney, formatDate } from "@/lib/formatMoney";
 import { useAuth } from "@/context/AuthContext";
 import BackLink from "./BackLink";
@@ -29,7 +30,7 @@ import ConfirmModal from "./ConfirmModal";
 
 interface ProfileViewProps {
   user: User;
-  analyses: StoredAnalysis[];
+  analyses: AnalysisSummary[];
 }
 
 const FREE_MODEL = "llama-3.3-70b-versatile";
@@ -91,6 +92,63 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
   // ── Billing ──
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
+
+  // ── Deadline reminders ──
+  const [reminderPrefs, setReminderPrefs] = useState<ReminderPreferences | null>(
+    null,
+  );
+  const [remindersLoaded, setRemindersLoaded] = useState(false);
+  const [remindersSaving, setRemindersSaving] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState<Feedback | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setReminderPrefs(await api.getReminderPreferences());
+      } catch {
+        // Show the control in its default state rather than hiding it, so the
+        // user can still turn reminders off if a read fails.
+        setReminderPrefs({ enabled: true, leadDays: [14, 7, 1] });
+      } finally {
+        setRemindersLoaded(true);
+      }
+    })();
+  }, []);
+
+  const saveReminderPrefs = async (changes: Partial<ReminderPreferences>) => {
+    setRemindersSaving(true);
+    setReminderMessage(null);
+    const previous = reminderPrefs;
+    // Optimistic, so the toggle responds immediately.
+    setReminderPrefs((prev) => (prev ? { ...prev, ...changes } : prev));
+    try {
+      setReminderPrefs(await api.updateReminderPreferences(changes));
+    } catch (err) {
+      setReminderPrefs(previous);
+      setReminderMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Could not save that.",
+      });
+    } finally {
+      setRemindersSaving(false);
+    }
+  };
+
+  const toggleLeadDay = (days: number) => {
+    if (!reminderPrefs) return;
+    const next = reminderPrefs.leadDays.includes(days)
+      ? reminderPrefs.leadDays.filter((d) => d !== days)
+      : [...reminderPrefs.leadDays, days];
+    // At least one lead time must remain, or reminders would never fire.
+    if (next.length === 0) {
+      setReminderMessage({
+        type: "error",
+        text: "Keep at least one reminder time, or turn reminders off instead.",
+      });
+      return;
+    }
+    saveReminderPrefs({ leadDays: next.sort((a, b) => b - a) });
+  };
 
   const loadPlan = React.useCallback(async () => {
     try {
@@ -497,6 +555,72 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Deadline reminder settings */}
+          <div className="ln-card p-5 sm:p-6">
+            <h4 className="mb-2 text-lg font-semibold text-ink">
+              Deadline reminders
+            </h4>
+            <p className="mb-4 text-sm text-ink-subtle">
+              Email me before deadlines found in my contracts.
+            </p>
+            {remindersLoaded ? (
+              <>
+                <label className="flex cursor-pointer items-center justify-between gap-3">
+                  <span className="text-sm text-ink">
+                    {reminderPrefs?.enabled ? "On" : "Off"}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={!!reminderPrefs?.enabled}
+                    disabled={remindersSaving}
+                    onChange={(e) => saveReminderPrefs({ enabled: e.target.checked })}
+                    className="h-4 w-4 cursor-pointer accent-primary"
+                  />
+                </label>
+                {reminderPrefs?.enabled && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs text-ink-subtle">
+                      Warn me this far ahead
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {[30, 14, 7, 3, 1].map((days) => {
+                        const on = reminderPrefs.leadDays.includes(days);
+                        return (
+                          <button
+                            key={days}
+                            type="button"
+                            disabled={remindersSaving}
+                            onClick={() => toggleLeadDay(days)}
+                            className={`cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-50 ${
+                              on
+                                ? "border-primary/50 bg-primary/10 text-primary"
+                                : "border-hairline text-ink-subtle hover:text-ink"
+                            }`}
+                          >
+                            {days}d
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {reminderMessage && (
+                  <p
+                    className={`mt-3 text-sm ${
+                      reminderMessage.type === "error"
+                        ? "text-danger"
+                        : "text-success"
+                    }`}
+                  >
+                    {reminderMessage.text}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-ink-subtle">Loading…</p>
+            )}
+          </div>
+
           {/* Activity stats */}
           <div className="ln-card p-5 sm:p-6">
             <h4 className="mb-4 text-lg font-semibold text-ink">Activity</h4>

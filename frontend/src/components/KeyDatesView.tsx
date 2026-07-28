@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { AnalysisResponse } from "@/types";
+import DeadlineRemindersPanel from "./DeadlineRemindersPanel";
 import { CalendarIcon } from "./Icons";
 
 // Google Calendar logo SVG icon
@@ -18,6 +19,8 @@ const GoogleCalendarIcon: React.FC<{ className?: string }> = ({ className }) => 
 
 interface KeyDatesViewProps {
   analysisResult: AnalysisResponse;
+  /** Scopes the email-reminder panel to this analysis. */
+  analysisId: string;
 }
 
 const generateIcsFile = (dateStr: string, description: string) => {
@@ -91,7 +94,10 @@ const generateGoogleCalendarUrl = (dateStr: string, description: string): string
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 };
 
-const KeyDatesView: React.FC<KeyDatesViewProps> = ({ analysisResult }) => {
+const KeyDatesView: React.FC<KeyDatesViewProps> = ({
+  analysisResult,
+  analysisId,
+}) => {
   if (!analysisResult.keyDates || analysisResult.keyDates.length === 0) {
     return (
       <div>
@@ -112,10 +118,12 @@ const KeyDatesView: React.FC<KeyDatesViewProps> = ({ analysisResult }) => {
           Key Dates &amp; Deadlines
         </h3>
         <p className="text-ink-muted mt-2 max-w-3xl">
-          The AI has identified the following important dates and deadlines. You
-          can add them to your calendar for reminders.
+          The AI has identified the following important dates and deadlines. We
+          email you before the ones we can pin to a calendar date — and you can
+          add any of them to your own calendar.
         </p>
       </div>
+      <DeadlineRemindersPanel analysisId={analysisId} />
       <div className="space-y-4">
         {analysisResult.keyDates.map((item, index) => (
           <div

@@ -3,6 +3,7 @@ import datetime
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
+from pymongo.errors import DuplicateKeyError
 
 from app.auth import (
     clear_auth_cookie,
@@ -40,7 +41,15 @@ async def signup(body: SignupRequest, request: Request, response: Response):
         "picture": None,
         "createdAt": now,
     }
-    result = await db.users.insert_one(doc)
+    try:
+        result = await db.users.insert_one(doc)
+    except DuplicateKeyError as e:
+        # The find_one above is a fast path, not a guarantee: two concurrent
+        # signups can both pass it. The unique index on users.email is what
+        # actually prevents the duplicate, and this turns it into the same 409.
+        raise HTTPException(
+            status_code=409, detail="An account with this email already exists"
+        ) from e
     user_id = str(result.inserted_id)
 
     token = create_access_token(user_id)

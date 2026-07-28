@@ -1,4 +1,5 @@
 import asyncio
+import html
 import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -7,6 +8,16 @@ from email.mime.text import MIMEText
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _esc(value: object) -> str:
+    """Escape a value for interpolation into an HTML email body.
+
+    Anything user-supplied that reaches these templates — a contact message, the
+    sender's address — would otherwise be able to inject markup and links into
+    mail that arrives looking like it came from UnBind AI.
+    """
+    return html.escape(str(value), quote=True)
 
 
 def _send_smtp(
@@ -19,9 +30,9 @@ def _send_smtp(
     settings = get_settings()
 
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        print(
-            "[SMTP WARNING] SMTP credentials not configured (SMTP_USER or SMTP_PASSWORD is empty) — email not sent.",
-            flush=True,
+        logger.warning(
+            "SMTP credentials not configured (SMTP_USER or SMTP_PASSWORD is empty) "
+            "— email not sent."
         )
         raise ValueError("SMTP credentials not configured on the server")
 
@@ -51,12 +62,10 @@ async def send_email(
 ) -> None:
     """Non-blocking email send. Errors are logged but never raised to callers."""
     try:
-        print(f"[SMTP] Attempting to send email to {to_email}...", flush=True)
         await asyncio.to_thread(_send_smtp, to_email, subject, html_body, reply_to)
-        print(f"[SMTP] Successfully sent email to {to_email}", flush=True)
-    except Exception as exc:
-        print(f"[SMTP ERROR] Failed to send email to {to_email}: {exc}", flush=True)
-        raise exc
+    except Exception:
+        logger.exception("Failed to send email to %s (subject: %s)", to_email, subject)
+        raise
 
 
 # ── Pre-built template helpers ────────────────────────────────────────────────
@@ -73,6 +82,9 @@ async def send_lawyer_contact_email(
     with the user's email as Reply-To so the lawyer can reply directly.
     """
     subject = f"New Client Enquiry via UnBind AI — {user_email}"
+    lawyer_name = _esc(lawyer_name)
+    user_email = _esc(user_email)
+    message = _esc(message)
     html_body = f"""
     <!DOCTYPE html>
     <html>
@@ -194,6 +206,107 @@ async def send_payment_receipt_email(
         </div>
         <div class="footer">
           UnBind AI · AI-powered legal contract analysis
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    await send_email(to_email=to_email, subject=subject, html_body=html_body)
+
+
+async def send_deadline_reminder_email(
+    to_email: str,
+    user_name: str,
+    reminders: list[dict],
+    unsubscribe_url: str,
+) -> None:
+    """Digest of upcoming contract deadlines.
+
+    One email covering every due deadline rather than one per deadline — three
+    obligations landing the same week should not be three emails.
+
+    The unsubscribe link is not optional decoration: this is scheduled mail the
+    user didn't individually request, so it needs a working one-click opt-out to
+    be legitimate (and to stay out of spam folders).
+    """
+    soonest = min(r["daysUntil"] for r in reminders)
+    count = len(reminders)
+    if soonest <= 0:
+        urgency = "today"
+    elif soonest == 1:
+        urgency = "tomorrow"
+    else:
+        urgency = f"in {soonest} days"
+
+    noun = "deadline" if count == 1 else "deadlines"
+    subject = f"Contract {noun}: {'1 is' if count == 1 else f'{count} are'} coming up ({urgency})"
+
+    rows = ""
+    for r in reminders:
+        days = r["daysUntil"]
+        if days <= 0:
+            when, tone = "Due today", "#f87171"
+        elif days == 1:
+            when, tone = "Due tomorrow", "#fbbf24"
+        else:
+            when, tone = f"In {days} days", "#a5b4fc"
+        rows += f"""
+          <tr>
+            <td style="padding:14px 0; border-bottom:1px solid #2d2d44;">
+              <div style="font-size:15px; color:#e5e7eb; font-weight:600;">{_esc(r["description"])}</div>
+              <div style="font-size:13px; color:#9ca3af; margin-top:4px;">{_esc(r["fileName"])}</div>
+            </td>
+            <td style="padding:14px 0; border-bottom:1px solid #2d2d44; text-align:right; white-space:nowrap; vertical-align:top;">
+              <div style="font-size:14px; color:{tone}; font-weight:600;">{when}</div>
+              <div style="font-size:12px; color:#6b7280; margin-top:4px;">{_esc(r["dueDate"])}</div>
+            </td>
+          </tr>"""
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <style>
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f13; margin: 0; padding: 0; color: #e5e7eb; }}
+        .wrapper {{ max-width: 580px; margin: 40px auto; background: #1a1a2e; border: 1px solid #2d2d44; border-radius: 12px; overflow: hidden; }}
+        .header {{ background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 32px 36px; }}
+        .header h1 {{ margin: 0; font-size: 22px; color: #fff; font-weight: 700; letter-spacing: -0.3px; }}
+        .header p {{ margin: 6px 0 0; font-size: 14px; color: rgba(255,255,255,0.7); }}
+        .body {{ padding: 32px 36px; }}
+        .cta {{ display: inline-block; margin-top: 28px; padding: 12px 28px; background: #4f46e5; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 600; }}
+        .footer {{ padding: 20px 36px; border-top: 1px solid #2d2d44; font-size: 12px; color: #6b7280; text-align: center; line-height: 1.7; }}
+        .footer a {{ color: #9ca3af; }}
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="header">
+          <h1>Upcoming contract {noun}</h1>
+          <p>UnBind AI · Deadline reminders</p>
+        </div>
+        <div class="body">
+          <p style="font-size:16px; color:#c7d2fe; margin:0 0 8px;">Hi {_esc(user_name)},</p>
+          <p style="font-size:15px; color:#9ca3af; line-height:1.6; margin:0;">
+            {"Here's a deadline" if count == 1 else f"Here are {count} deadlines"} from
+            {"a contract" if count == 1 else "contracts"} you analysed with UnBind.
+          </p>
+
+          <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+            {rows}
+          </table>
+
+          <a href="{_esc(get_settings().FRONTEND_URL.rstrip("/"))}/dashboard" class="cta" style="color:#ffffff !important; text-decoration:none;">Open my documents</a>
+
+          <p style="margin-top:28px; font-size:13px; color:#6b7280; line-height:1.6;">
+            Dates are taken from the contract text as written. UnBind explains contracts —
+            it isn't legal advice, so check anything consequential with a lawyer.
+          </p>
+        </div>
+        <div class="footer">
+          UnBind AI · Deadline reminders<br/>
+          You're getting this because you analysed a contract with upcoming dates.<br/>
+          <a href="{_esc(unsubscribe_url)}">Turn off deadline reminders</a>
         </div>
       </div>
     </body>

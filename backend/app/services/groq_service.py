@@ -5,7 +5,7 @@ from typing import Any
 
 from bson import ObjectId
 from groq import RateLimitError
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from langsmith import traceable
 
@@ -115,13 +115,24 @@ def _get_ocr_api_key() -> str:
 
 
 def _to_lc_messages(messages: list[dict]) -> list:
-    """Convert dict messages to LangChain message objects."""
+    """Convert dict messages to LangChain message objects.
+
+    ``assistant`` is mapped as well as ``system``/``user``, so multi-turn
+    conversations can replay prior turns — dropping them (as this used to) makes
+    the model treat every follow-up as the first question and lose the thread.
+    An unrecognised role raises rather than being silently discarded.
+    """
     lc_messages = []
     for msg in messages:
-        if msg["role"] == "system":
+        role = msg["role"]
+        if role == "system":
             lc_messages.append(SystemMessage(content=msg["content"]))
-        elif msg["role"] == "user":
+        elif role == "user":
             lc_messages.append(HumanMessage(content=msg["content"]))
+        elif role == "assistant":
+            lc_messages.append(AIMessage(content=msg["content"]))
+        else:
+            raise ValueError(f"unsupported message role: {role!r}")
     return lc_messages
 
 

@@ -29,11 +29,11 @@ langsmith>=0.1.0
 # langchain-community (above) + huggingface_hub, so no local torch/transformers.
 huggingface_hub>=0.23.0
 
-# Vector store
-chromadb>=0.5.0
-# chromadb 0.5.x calls posthog.capture() positionally; posthog 3+ broke that
-# signature and spams "Failed to send telemetry event" errors. Pin to 2.x.
-posthog>=2.4.0,<3.0
+# Vector search. No vector database: retrieval is always scoped to a single
+# contract (tens to a few hundred 384-dim vectors), so an exact numpy cosine scan
+# is faster than an index round-trip and exact rather than approximate. Vectors
+# are persisted per analysis in MongoDB as packed float32.
+numpy>=1.26.0
 
 # PDF processing
 pdfplumber>=0.10.0

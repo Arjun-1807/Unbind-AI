@@ -3,12 +3,12 @@ import json
 import logging
 import re
 from collections.abc import Callable
-from functools import lru_cache
 from typing import Any
 
-from langchain_core.embeddings import Embeddings
 from langsmith import traceable
 
+from app.services import vector_store
+from app.services.embeddings_service import embed_query, embed_texts
 from app.services.groq_service import chat_complete, generate_hypothetical_document
 from app.services.pdf_processing import (
     chunk_text,
@@ -376,248 +376,61 @@ async def analyze_contract(
     }
 
 
-# ───── Impact simulator with LangChain Chroma (HuggingFace hosted embeddings) ─────
-
-# Small, fast & free embedding model served via HuggingFace's hosted Inference
-# API — nothing runs locally, so no torch/GPU and it works the same in
-# deployment. 384-dim, ~256-token input limit, which is why the retrieval chunks
-# below are kept small so nothing gets silently truncated.
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+# ───── Retrieval (shared by every question-answering path) ─────
 
 
-class _HFInferenceEmbeddings(Embeddings):
-    """LangChain embeddings backed by huggingface_hub's InferenceClient.
-
-    We use InferenceClient directly (not langchain-community's
-    HuggingFaceInferenceAPIEmbeddings) because the latter hardcodes the retired
-    ``api-inference.huggingface.co`` host, which no longer resolves. The modern
-    client targets ``router.huggingface.co`` and needs only huggingface_hub —
-    no local torch/transformers.
-    """
-
-    def __init__(self, token: str, model: str) -> None:
-        from huggingface_hub import InferenceClient
-
-        self._model = model
-        self._client = InferenceClient(model=model, token=token, provider="hf-inference")
-
-    def _embed_one(self, text: str) -> list[float]:
-        import numpy as np
-
-        vec = self._client.feature_extraction(text, model=self._model)
-        arr = np.asarray(vec, dtype="float32")
-        # Some models return per-token vectors (seq_len, dim); mean-pool them
-        # down to a single sentence vector. Sentence-transformers models
-        # usually already return the pooled (dim,) vector.
-        if arr.ndim == 2:
-            arr = arr.mean(axis=0)
-        elif arr.ndim > 2:
-            arr = arr.reshape(-1, arr.shape[-1]).mean(axis=0)
-        return arr.astype("float32").tolist()
-
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return [self._embed_one(t) for t in texts]
-
-    def embed_query(self, text: str) -> list[float]:
-        return self._embed_one(text)
-
-
-@lru_cache(maxsize=1)
-def _get_embeddings() -> Embeddings:
-    """Build the HuggingFace Inference-API embedding client once per process."""
-    from app.config import get_settings
-
-    token = get_settings().HUGGINGFACEHUB_API_TOKEN
-    if not token:
-        raise RuntimeError("HUGGINGFACEHUB_API_TOKEN is not set")
-
-    return _HFInferenceEmbeddings(token=token, model=EMBEDDING_MODEL_NAME)
-
-
-def _run_vector_search(indexed_chunks: list[dict], query: str, k: int) -> list[dict]:
-    """Build an ephemeral Chroma index and return the top-k relevant chunks.
-
-    ``indexed_chunks`` are ``{text, start, end}`` dicts (see
-    ``chunk_text_with_offsets``); the character offsets ride along as Chroma
-    metadata so retrieved chunks can be traced back to their exact spot in the
-    document for citations. ``query`` is the text embedded to score chunks —
-    with HyDE this is the hypothetical passage rather than the raw scenario.
-    Synchronous and CPU-bound (model inference), so call it via
-    ``asyncio.to_thread`` from async code to avoid blocking the event loop.
-    """
-    import chromadb
-    from chromadb.config import Settings as ChromaSettings
-    from langchain_community.vectorstores import Chroma
-    from langchain_core.documents import Document
-
-    documents = [
-        Document(
-            page_content=chunk["text"],
-            metadata={"start": chunk["start"], "end": chunk["end"]},
-        )
-        for chunk in indexed_chunks
-    ]
-    # Disable Chroma's anonymized telemetry — it otherwise spams noisy
-    # "Failed to send telemetry event" logs on every request.
-    chroma_client = chromadb.EphemeralClient(settings=ChromaSettings(anonymized_telemetry=False))
-    vectorstore = Chroma.from_documents(
-        documents=documents,
-        embedding=_get_embeddings(),
-        client=chroma_client,
-        collection_name="contract_analysis",
-    )
-    try:
-        relevant_docs = vectorstore.similarity_search(query, k=k)
-        return [
-            {
-                "text": doc.page_content,
-                "start": doc.metadata.get("start", -1),
-                "end": doc.metadata.get("end", -1),
-            }
-            for doc in relevant_docs
-        ]
-    finally:
-        # Drop the in-memory collection so repeated requests never collide.
-        try:
-            chroma_client.delete_collection("contract_analysis")
-        except Exception:
-            pass
-
-
-# System prompt shared by the answer builder. The [n] citation contract is what
-# lets the frontend turn markers into clickable jumps to the exact source span.
-_SIMULATE_SYSTEM_PROMPT = (
-    "You help people with below-average literacy. Answer simply in plain words. "
-    "Use up to 5 bullet points, each 1–2 short sentences, no jargon. "
-    'If helpful, include 1 tiny example starting with "Example:". '
-    "The contract excerpts below are labelled [S1], [S2], and so on. When a "
-    "point is based on an excerpt, put that excerpt's label in square brackets "
-    'right after the point, e.g. "You could lose your deposit [S2]." Cite ONLY '
-    "labels that actually appear below (e.g. if only [S1] is shown, never write "
-    "[S2]). These [S#] labels are the ONLY citations — never turn a clause "
-    'number from the contract (like "2." or "Section 3") into a citation.'
-)
-
-
-def _citation_preview(text: str, limit: int = 180) -> str:
-    """Short single-line preview of a chunk for the citation's Sources list."""
-    collapsed = " ".join(text.split())
-    if len(collapsed) <= limit:
-        return collapsed
-    return collapsed[: limit - 1].rstrip() + "…"
-
-
-async def _answer_with_citations(
-    scenario: str,
-    chunks: list[dict],
-    user_id: str | None,
-) -> dict:
-    """Ask the LLM to answer the scenario, citing numbered excerpts inline.
-
-    Returns ``{"answer": str, "citations": [...]}`` where each citation carries
-    the character span (``startIndex``/``endIndex``) of the excerpt in the
-    original document so the UI can jump to the exact passage.
-    """
-    numbered_context = "\n\n".join(f"[S{i + 1}] {chunk['text']}" for i, chunk in enumerate(chunks))
-    answer = await chat_complete(
-        [
-            {"role": "system", "content": _SIMULATE_SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": (
-                    f"Scenario: {scenario}\n\nContract Excerpts:\n{numbered_context}\n\n"
-                    "Write the answer in very simple words. Keep it under 300 words. "
-                    "Add the [number] citations inline where they apply."
-                ),
-            },
-        ],
-        user_id=user_id,
-        temperature=0.2,
-    )
-    citations = [
-        {
-            "id": i + 1,
-            "snippet": _citation_preview(chunk["text"]),
-            "startIndex": chunk["start"],
-            "endIndex": chunk["end"],
-        }
-        for i, chunk in enumerate(chunks)
-    ]
-    return {"answer": answer, "citations": citations}
-
-
-@traceable(name="simulate_impact")
-async def simulate_impact(
+async def retrieve_relevant_chunks(
     document_text: str,
-    scenario: str,
-    user_id: str | None = None,
-) -> dict:
-    """Vector-based impact simulation with clause-level citations.
+    query: str,
+    *,
+    analysis_id: str | None,
+    user_id: str | None,
+    k: int = 6,
+    use_hyde: bool = True,
+) -> list[dict]:
+    """Find the ``k`` passages of ``document_text`` most relevant to ``query``.
 
-    Returns ``{"answer": str, "citations": [...]}``. Each citation carries the
-    character span of the source excerpt in ``document_text`` so the UI can jump
-    to the exact passage the answer relied on.
+    When ``analysis_id`` and ``user_id`` are known the document's embeddings are
+    persisted and reused across questions; otherwise the search still works but
+    has to embed the document on the spot (the path legacy CLI callers take,
+    since they send raw text with no analysis to key an index on).
+
+    Degrades rather than fails: HyDE failure falls back to embedding the raw
+    query, and a retrieval failure falls back to keyword matching. Both keep
+    character offsets intact so citations still point at the right passage.
     """
-    if not scenario.strip():
-        return {"answer": "Please enter a scenario to simulate.", "citations": []}
-
-    # ~1000-char chunks (~250 tokens) sit just under the embedding model's
-    # 256-token limit, so each chunk is embedded in full — no truncation, which
-    # keeps retrieval accurate even for a 3–5 page document. Offsets ride along
-    # so retrieved chunks map back to their exact place in the document.
-    indexed_chunks = chunk_text_with_offsets(document_text, 1000, 150)
-
-    if not indexed_chunks:
-        return {"answer": "Document appears to be empty or unreadable.", "citations": []}
-
-    try:
-        # Never ask for more neighbours than we have chunks (avoids edge errors
-        # on short docs), but cap at 6 to keep the LLM context focused.
-        k = min(6, len(indexed_chunks))
-
-        # HyDE: draft a hypothetical contract passage that would answer the
-        # scenario and embed that alongside the raw scenario. The clause-style
-        # wording sits closer to real contract text in embedding space, so
-        # retrieval finds the right chunks more often than embedding the short
-        # scenario alone. Runs on a dedicated Groq key (separate rate limit);
-        # if generation fails we fall back to embedding just the scenario.
+    search_query = query
+    if use_hyde:
+        # HyDE: draft a hypothetical contract passage that would answer the query
+        # and embed that alongside the raw query. Clause-style wording sits closer
+        # to real contract text in embedding space, so retrieval finds the right
+        # passages more often than embedding a short question alone. Runs on a
+        # dedicated Groq key with its own rate limit.
         try:
-            hypothetical = await generate_hypothetical_document(scenario)
-            search_query = f"{scenario}\n\n{hypothetical}"
+            hypothetical = await generate_hypothetical_document(query)
+            search_query = f"{query}\n\n{hypothetical}"
         except Exception as e:
-            logger.warning("HyDE generation failed, embedding raw scenario: %s", e)
-            search_query = scenario
+            logger.warning("HyDE generation failed, embedding the raw query: %s", e)
 
-        relevant_chunks = await asyncio.to_thread(
-            _run_vector_search, indexed_chunks, search_query, k
+    if analysis_id and user_id:
+        try:
+            return await vector_store.search(analysis_id, user_id, document_text, search_query, k=k)
+        except Exception as e:
+            logger.warning("Vector search failed, falling back to keyword matching: %s", e)
+            return await vector_store.keyword_fallback(document_text, query, k=k)
+
+    # No analysis to key an index on (e.g. an ad-hoc call) — embed in-memory.
+    try:
+        chunks = chunk_text_with_offsets(
+            document_text, vector_store.CHUNK_SIZE, vector_store.CHUNK_OVERLAP
         )
-
-        if not relevant_chunks:
-            return {
-                "answer": (
-                    "Could not find any information in the document relevant to your scenario. "
-                    "Please try rephrasing your question or check if the topic is covered in the "
-                    "contract."
-                ),
-                "citations": [],
-            }
-
-        return await _answer_with_citations(scenario, relevant_chunks, user_id)
-
+        if not chunks:
+            return []
+        vectors = await embed_texts([c["text"] for c in chunks])
+        blob, count, dim = vector_store._pack(vectors)
+        index = {"chunks": chunks, "vectors": blob, "count": count, "dim": dim}
+        query_vector = await embed_query(search_query)
+        return vector_store.search_index(index, query_vector, k)
     except Exception as e:
-        logger.warning(
-            "simulate_impact vector search failed, falling back to keyword matching: %s", e
-        )
-        # Fallback to simple keyword matching if vector search fails. Offsets are
-        # preserved so citations still jump to the right place.
-        scenario_lower = scenario.lower()
-        relevant = [
-            c
-            for c in indexed_chunks
-            if any(word in c["text"].lower() for word in scenario_lower.split())
-        ]
-
-        if not relevant:
-            relevant = indexed_chunks[:6]  # Take first 6 chunks as fallback
-
-        return await _answer_with_citations(scenario, relevant[:6], user_id)
+        logger.warning("Ad-hoc vector search failed, falling back to keyword matching: %s", e)
+        return await vector_store.keyword_fallback(document_text, query, k=k)

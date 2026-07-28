@@ -4,10 +4,13 @@ export const APP_NAME = "UnBind";
 
 export const TABS = {
   RISK_ANALYSIS: "Risk Analysis",
+  // Answers both plain questions ("what's the notice period?") and what-if
+  // scenarios ("what if I leave early?"). These were once separate tabs, which
+  // made the user classify their own question for no benefit.
+  ASK_ANYTHING: "Ask Anything",
   NEGOTIATION_HELPER: "Negotiation Helper",
   KEY_TERMS_GLOSSARY: "Key Terms Glossary",
   KEY_DATES: "Key Dates",
-  IMPACT_SIMULATOR: "Impact Simulator",
 };
 
 export const RISK_COLORS: {

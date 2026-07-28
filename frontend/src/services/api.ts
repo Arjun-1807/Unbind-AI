@@ -1,11 +1,15 @@
 import type {
   User,
+  AnalysisSummary,
   StoredAnalysis,
   AnalysisResponse,
   LawyerProfile,
   AnalysisProgressEvent,
   Citation,
-  SimulationResult,
+  ChatMessage,
+  DocumentAnswer,
+  Reminder,
+  ReminderPreferences,
   NegotiationDraftRequest,
   NegotiationDraft,
 } from "@/types";
@@ -274,26 +278,51 @@ export const uploadAndAnalyzeStream = async (
   throw new ApiError(500, "Stream ended without a result");
 };
 
-export const getUserAnalyses = async (): Promise<StoredAnalysis[]> => {
-  return apiFetch<StoredAnalysis[]>("/analysis/history");
+export const getUserAnalyses = async (
+  { limit, skip }: { limit?: number; skip?: number } = {},
+): Promise<AnalysisSummary[]> => {
+  const params = new URLSearchParams();
+  if (limit !== undefined) params.set("limit", String(limit));
+  if (skip !== undefined) params.set("skip", String(skip));
+  const query = params.toString();
+  return apiFetch<AnalysisSummary[]>(
+    `/analysis/history${query ? `?${query}` : ""}`,
+  );
 };
 
 export const getAnalysisById = async (id: string): Promise<StoredAnalysis> => {
   return apiFetch<StoredAnalysis>(`/analysis/history/${id}`);
 };
 
-export const simulateImpact = async (
-  documentText: string,
-  scenario: string,
-): Promise<SimulationResult> => {
-  const data = await apiFetch<{ result: string; citations?: Citation[] }>(
-    "/analysis/simulate",
+// ── Document Q&A ────────────────────────────────────────────────────────────
+//
+// The web app asks questions through /analysis/{id}/chat. The older
+// /analysis/simulate endpoint still exists server-side for the published CLI,
+// but nothing here calls it, so there's no client method for it.
+
+export const askDocument = async (
+  analysisId: string,
+  question: string,
+): Promise<DocumentAnswer> => {
+  const data = await apiFetch<{ answer: string; citations?: Citation[] }>(
+    `/analysis/${analysisId}/chat`,
     {
       method: "POST",
-      body: JSON.stringify({ documentText, scenario }),
+      body: JSON.stringify({ question }),
     },
   );
-  return { answer: data.result, citations: data.citations ?? [] };
+  return { answer: data.answer, citations: data.citations ?? [] };
+};
+
+export const getDocumentChat = async (
+  analysisId: string,
+): Promise<ChatMessage[]> => {
+  const data = await apiFetch<ChatMessage[]>(`/analysis/${analysisId}/chat`);
+  return data.map((m) => ({ ...m, citations: m.citations ?? [] }));
+};
+
+export const clearDocumentChat = async (analysisId: string): Promise<void> => {
+  await apiFetch(`/analysis/${analysisId}/chat`, { method: "DELETE" });
 };
 
 export const draftNegotiationMessage = async (
@@ -437,4 +466,40 @@ export const registerLawyer = async (data: {
       body: JSON.stringify(data),
     },
   );
+};
+
+// ── Deadline reminders ──────────────────────────────────────────────────────
+
+export const getReminders = async (
+  analysisId: string,
+): Promise<Reminder[]> => {
+  return apiFetch<Reminder[]>(`/reminders/analysis/${analysisId}`);
+};
+
+/**
+ * Supply a date the parser refused to guess (e.g. "within 30 days of signing"),
+ * turning a flagged item into a real reminder.
+ */
+export const setReminderDueDate = async (
+  reminderId: string,
+  dueDate: string,
+): Promise<void> => {
+  await apiFetch(`/reminders/${reminderId}/due-date`, {
+    method: "PUT",
+    body: JSON.stringify({ dueDate }),
+  });
+};
+
+export const getReminderPreferences =
+  async (): Promise<ReminderPreferences> => {
+    return apiFetch<ReminderPreferences>("/reminders/preferences");
+  };
+
+export const updateReminderPreferences = async (
+  changes: Partial<ReminderPreferences>,
+): Promise<ReminderPreferences> => {
+  return apiFetch<ReminderPreferences>("/reminders/preferences", {
+    method: "PUT",
+    body: JSON.stringify(changes),
+  });
 };

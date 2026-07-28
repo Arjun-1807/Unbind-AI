@@ -313,13 +313,13 @@ const LandingPage: React.FC = () => {
               },
               {
                 icon: <TargetIcon className="h-6 w-6" />,
-                title: "Impact Simulator",
-                desc: '"What if I…?" scenario testing against your contract. See how changes ripple through your terms.',
+                title: "Ask Anything",
+                desc: 'Ask what a clause means, or "what if I leave early?" — answers come from your contract, in a conversation that remembers what you asked.',
               },
               {
                 icon: <FileSearchIcon className="h-6 w-6" />,
                 title: "Source Citations",
-                desc: "Every simulator answer links to the exact clause it's based on — one click jumps you straight there in the document.",
+                desc: "Every answer links to the exact clause it's based on — one click jumps you straight there in the document.",
               },
               {
                 icon: <FileTextIcon className="h-6 w-6" />,

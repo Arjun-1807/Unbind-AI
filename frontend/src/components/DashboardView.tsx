@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { User, StoredAnalysis, RiskLevel } from "@/types";
+import type { User, AnalysisSummary, RiskLevel } from "@/types";
 import {
   SparklesIcon,
   FileTextIcon,
@@ -30,7 +30,7 @@ const RISK_FILTERS: Array<{ value: "All" | RiskLevel; label: string }> = [
   { value: "Negligible" as RiskLevel, label: "Negligible risk" },
 ];
 
-const countByRisk = (analysis: StoredAnalysis) =>
+const countByRisk = (analysis: AnalysisSummary) =>
   analysis.analysisResult.clauses.reduce(
     (acc, clause) => {
       acc[clause.riskLevel] = (acc[clause.riskLevel] || 0) + 1;
@@ -40,7 +40,7 @@ const countByRisk = (analysis: StoredAnalysis) =>
   );
 
 /** Aggregate risk-level counts across every analysis, for the trend summary. */
-const RiskTrendSummary: React.FC<{ analyses: StoredAnalysis[] }> = ({
+const RiskTrendSummary: React.FC<{ analyses: AnalysisSummary[] }> = ({
   analyses,
 }) => {
   if (analyses.length === 0) return null;
@@ -129,13 +129,13 @@ const RiskTrendSummary: React.FC<{ analyses: StoredAnalysis[] }> = ({
 
 interface DashboardViewProps {
   user: User;
-  analyses: StoredAnalysis[];
-  onSelectAnalysis: (analysis: StoredAnalysis) => void;
+  analyses: AnalysisSummary[];
+  onSelectAnalysis: (analysis: AnalysisSummary) => void;
   onNewAnalysis: () => void;
   onDeleteAnalysis: (analysisId: string) => void | Promise<void>;
 }
 
-const RiskSummary: React.FC<{ analysis: StoredAnalysis }> = ({ analysis }) => {
+const RiskSummary: React.FC<{ analysis: AnalysisSummary }> = ({ analysis }) => {
   const counts = analysis.analysisResult.clauses.reduce(
     (acc, clause) => {
       acc[clause.riskLevel] = (acc[clause.riskLevel] || 0) + 1;
@@ -223,7 +223,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [dailyCount, setDailyCount] = React.useState(0);
   const [dailyLimit, setDailyLimit] = React.useState<number | null>(1);
   const [pendingDelete, setPendingDelete] =
-    React.useState<StoredAnalysis | null>(null);
+    React.useState<AnalysisSummary | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [riskFilter, setRiskFilter] = React.useState<"All" | RiskLevel>("All");

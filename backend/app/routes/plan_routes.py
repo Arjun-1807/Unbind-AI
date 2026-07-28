@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError
 
@@ -16,7 +16,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.services.email_service import send_payment_receipt_email
 from app.services.model_selector import select_model
-from app.services.plan_service import effective_plan
+from app.services.plan_service import effective_plan, plan_limit, query_limit
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/user/plan", tags=["user_plan"])
@@ -33,13 +33,6 @@ PLAN_CATALOGUE = {
     "Brief": {"amount": 10000, "duration_days": 30, "label": "UnBind Brief (1 month)"},
     "Motion": {"amount": 45000, "duration_days": 90, "label": "UnBind Motion (3 months)"},
     "Verdict": {"amount": 150000, "duration_days": None, "label": "UnBind Verdict (Lifetime)"},
-}
-
-PLAN_LIMITS = {
-    None: 1,
-    "Brief": 3,
-    "Motion": 5,
-    "Verdict": None,  # unlimited
 }
 
 
@@ -365,11 +358,20 @@ async def razorpay_webhook(request: Request):
 
 
 @router.get("/payments")
-async def list_payments(request: Request):
-    """Return the authenticated user's payment/billing history, newest first."""
+async def list_payments(
+    request: Request,
+    limit: int = Query(50, ge=1, le=200),
+    skip: int = Query(0, ge=0),
+):
+    """Return a page of the authenticated user's payment history, newest first."""
     user_id = await get_current_user_id(request)
     db = get_db()
-    cursor = db.payments.find({"userId": ObjectId(user_id)}).sort("createdAt", -1)
+    cursor = (
+        db.payments.find({"userId": ObjectId(user_id)})
+        .sort("createdAt", -1)
+        .skip(skip)
+        .limit(limit)
+    )
     payments = []
     async for p in cursor:
         created = p.get("createdAt")
@@ -411,11 +413,12 @@ async def get_plan(request: Request):
     # A time-limited plan (Brief/Motion) reverts to the free tier once it lapses;
     # lifetime (Verdict) never expires.
     plan = effective_plan(user)
-    limit = PLAN_LIMITS.get(plan, 1)
+    limit = plan_limit(plan)
+    q_limit = query_limit(plan)
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    last_date = user.get("lastAnalysisDate", "")
-    daily_count = user.get("dailyAnalysisCount", 0) if last_date == today else 0
+    daily_count = user.get("dailyAnalysisCount", 0) if user.get("lastAnalysisDate") == today else 0
+    query_count = user.get("dailyQueryCount", 0) if user.get("lastQueryDate") == today else 0
 
     return {
         "plan": plan,
@@ -424,4 +427,9 @@ async def get_plan(request: Request):
         "dailyCount": daily_count,
         "dailyLimit": limit,  # None means unlimited
         "limitReached": False if limit is None else daily_count >= limit,
+        # Follow-up AI queries (impact simulator, negotiation drafting) are
+        # metered separately from full analyses.
+        "queryCount": query_count,
+        "queryLimit": q_limit,
+        "queryLimitReached": False if q_limit is None else query_count >= q_limit,
     }

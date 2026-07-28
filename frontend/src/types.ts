@@ -62,9 +62,46 @@ export interface Citation {
   endIndex: number;
 }
 
-export interface SimulationResult {
+/** One turn in a document Q&A conversation. */
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  citations: Citation[];
+  /** ISO timestamp; absent for messages not yet round-tripped to the server. */
+  createdAt?: string;
+}
+
+export interface DocumentAnswer {
   answer: string;
   citations: Citation[];
+}
+
+/** Why a key date couldn't be turned into a reminder automatically. */
+export type ReminderReason =
+  | "relative"
+  | "recurring"
+  | "conditional"
+  | "ambiguous"
+  | "unparseable"
+  | "past";
+
+export interface Reminder {
+  id: string;
+  description: string;
+  /** The date exactly as the contract worded it. */
+  sourceDate: string;
+  /** ISO YYYY-MM-DD, or null when no date could be resolved. */
+  dueDate: string | null;
+  schedulable: boolean;
+  reason: ReminderReason | null;
+  /** True when the user could supply the missing date themselves. */
+  needsAttention: boolean;
+  sentLeads: number[];
+}
+
+export interface ReminderPreferences {
+  enabled: boolean;
+  leadDays: number[];
 }
 
 export type NegotiationTone = "polite" | "neutral" | "firm";
@@ -103,12 +140,20 @@ export interface User {
   createdAt?: string;
 }
 
-export interface StoredAnalysis {
+/**
+ * An analysis as it appears in a list. The history endpoint deliberately omits
+ * `documentText` — it dwarfs everything else in the payload and no list view
+ * renders it. Fetch the full record with `getAnalysisById` when one is opened.
+ */
+export interface AnalysisSummary {
   id: string;
   userId: string;
   fileName: string;
   analysisDate: string;
   analysisResult: AnalysisResponse;
+}
+
+export interface StoredAnalysis extends AnalysisSummary {
   documentText: string;
 }
 
