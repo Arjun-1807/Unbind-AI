@@ -18,6 +18,12 @@ on:
         type: boolean
         default: true
 
+# Least privilege: this workflow doesn't even check the code out — it just POSTs
+# to the backend. Without an explicit block it would inherit the repository
+# default token scope (possibly read/write-all) for no reason at all.
+permissions:
+  contents: read
+
 # Never let two sweeps overlap. The sent-marker makes a double run harmless, but
 # there's no reason to pay for it.
 concurrency:

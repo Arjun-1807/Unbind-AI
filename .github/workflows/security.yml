@@ -5,6 +5,13 @@ on:
   push:
     branches: [main]
 
+# Least privilege: both jobs only read the checkout. Without this block the run
+# inherits the repository default token scope, which may be read/write-all — and
+# these jobs execute third-party tooling (the Semgrep image, the Gitleaks binary),
+# so a supply-chain compromise there would inherit whatever the token can do.
+permissions:
+  contents: read
+
 # Cancel superseded runs on the same ref to save CI minutes.
 concurrency:
   group: security-${{ github.workflow }}-${{ github.ref }}
@@ -15,17 +22,27 @@ jobs:
     name: Semgrep (SAST)
     runs-on: ubuntu-latest
     # The official Semgrep image ships the CLI and rule tooling preinstalled.
+    # Pinned to an exact version AND digest: untagged means `:latest`, so the
+    # scanner silently changed under us on every run and executed inside a job
+    # holding the workflow token. The digest is the multi-arch OCI image index
+    # for 1.172.0 — bump both together.
     container:
-      image: semgrep/semgrep
+      image: semgrep/semgrep:1.172.0@sha256:65dcd4408adda7c183a6b4550cb1e9b19f7f627a6fbb7e0559bd466bedc44d7b
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Curated rulesets for this stack (Python/FastAPI backend + TS/React
-      # frontend). Runs in AUDIT mode: findings are reported in the job log but
-      # do NOT fail the build, so introducing SAST to an existing codebase
-      # doesn't wedge CI red on day one. Once the current findings are triaged
-      # (fix real ones, suppress false positives with `# nosemgrep`), add
-      # `--error` below to make new findings block the merge.
+      # frontend).
+      #
+      # `--error` is now ENABLED (it used to run in audit mode). Audit mode meant
+      # findings were printed and then ignored, so the job was green no matter
+      # what Semgrep discovered and nothing was ever blocked from merging — a
+      # scanner whose result has no consequence isn't a control.
+      #
+      # If this turns the build red, triage rather than removing --error:
+      #   * fix the real finding, or
+      #   * suppress a false positive with a `# nosemgrep: <rule-id>` comment on
+      #     the offending line, with a note explaining why it's safe.
       - name: Run Semgrep
         run: >-
           semgrep scan
@@ -34,13 +51,14 @@ jobs:
           --config p/typescript
           --config p/react
           --config p/secrets
+          --error
           --metrics off
 
   secret-scan:
     name: Secret scan (Gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Full history so pushes/PRs are scanned across all commits, not just
           # the tip — a secret added in an earlier commit still gets caught.
@@ -55,5 +73,18 @@ jobs:
           sudo mv gitleaks /usr/local/bin/gitleaks
           gitleaks version
 
+      # --config is passed explicitly rather than relying on gitleaks' implicit
+      # "<source>/.gitleaks.toml" lookup, so a missing or renamed config is a hard
+      # error instead of a silent fallback to the default rules — which is exactly
+      # the failure mode that let a committed MongoDB URI pass this job. See
+      # .gitleaks.toml for the added connection-string rules.
+      # --exit-code 1 is the default, but stated explicitly: a hit MUST fail the
+      # build, and nothing here should swallow the status.
       - name: Scan for secrets
-        run: gitleaks detect --source . --redact --verbose
+        run: >-
+          gitleaks detect
+          --source .
+          --config .gitleaks.toml
+          --redact
+          --verbose
+          --exit-code 1

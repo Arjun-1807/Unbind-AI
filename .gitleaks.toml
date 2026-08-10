@@ -1,0 +1,130 @@
+# Gitleaks configuration for UnBind AI.
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# CI ran `gitleaks detect` across full history (fetch-depth: 0) and passed green,
+# yet a live MongoDB Atlas connection string with embedded credentials had been
+# committed in a8cfcd7 (server/src/index.ts). Gitleaks' default ruleset targets
+# *provider-shaped* tokens — AKIA..., ghp_..., sk_live_..., etc. — which are
+# recognisable on their own. A database URI's password has no shape at all: it is
+# just an arbitrary string between ':' and '@'. Nothing in the default rules
+# could match it, so the highest-impact credential in the repo was the one class
+# the scanner was blind to.
+#
+# The rules below close that gap. They are ADDITIVE — `useDefault = true` keeps
+# every upstream rule intact.
+#
+# Gitleaks picks this file up automatically from the repo root, and
+# `.github/workflows/security.yml` also passes it explicitly via --config.
+
+title = "UnBind AI secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Repo-wide false positives"
+paths = [
+  # This file necessarily contains the patterns it detects.
+  '''(^|/)\.gitleaks\.toml$''',
+]
+
+# ── Connection strings with embedded credentials ──────────────────────────────
+# The class the default rules missed. Matches scheme://user:password@host for
+# MongoDB specifically (the actual leak), with a dedicated rule so its allowlist
+# can be kept tight.
+[[rules]]
+id = "mongodb-uri-credentials"
+description = "MongoDB connection string with embedded credentials"
+regex = '''(?i)\bmongodb(?:\+srv)?://[^:@/\s'"]{1,128}:[^@\s'"]{2,256}@[a-z0-9._-]{1,256}'''
+tags = ["database", "mongodb", "credentials"]
+keywords = ["mongodb://", "mongodb+srv://"]
+
+  [rules.allowlist]
+  description = "Documentation placeholders, env-var interpolation, and the known historical leak"
+  regexes = [
+    # backend/.env.example ships mongodb+srv://<username>:<password>@<cluster>…
+    '''<[^>\s]{1,64}>''',
+    # ${MONGO_USER}:${MONGO_PASSWORD}@ and $MONGO_USER:$MONGO_PASSWORD@
+    '''\$\{?[A-Za-z_][A-Za-z0-9_]{0,63}\}?:''',
+    # Obvious doc placeholders spelled out in words.
+    '''(?i)://(?:user(?:name)?|youruser|myuser|dbuser|admin|root|changeme):(?:pass(?:word|wd)?|yourpassword|mypassword|secret|changeme|x{3,}|\*{3,})@''',
+  ]
+  paths = [
+    '''(^|/)\.env\.(?:example|sample|template|dist)$''',
+  ]
+  commits = [
+    # ══ KNOWN HISTORICAL LEAK — DO NOT COPY THIS PATTERN FOR NEW FINDINGS ══
+    # The "initial commit" hardcoded a real MongoDB Atlas URI in
+    # server/src/index.ts. It was removed from the tree in 99bfd49, but git
+    # history is immutable, so every future scan would re-report it and leave CI
+    # permanently red — which trains people to ignore this job, defeating the
+    # whole control.
+    #
+    # REQUIRED REMEDIATION (this entry does NOT fix the leak):
+    #   1. Rotate the Atlas database user's password — assume the credential is
+    #      compromised; it has been public in this repo's history.
+    #   2. Optionally purge it from history (git filter-repo / BFG) and
+    #      force-push, then delete this entry.
+    # Scoped to this one rule and this one commit, so any *other* secret in that
+    # commit — and every credentialed URI in every other commit — still fails.
+    "a8cfcd7570186abe73a278596644bc5bf8955cda",
+  ]
+
+# Same class, other services (Postgres, Redis, AMQP, SMTP, HTTP basic-auth…).
+# Scheme-restricted rather than matching any `://`, to keep the false-positive
+# rate low enough that people trust the job.
+[[rules]]
+id = "generic-uri-basic-auth"
+description = "URI with embedded basic-auth credentials (postgres/redis/amqp/smtp/http/...)"
+regex = '''(?i)\b(?:postgres(?:ql)?|mysql|mariadb|redis(?:s)?|amqps?|ftps?|https?|ldaps?|smtps?|clickhouse|mssql|sqlserver|elasticsearch|nats)://[^:@/\s'"]{1,128}:[^@\s'"]{2,256}@[a-z0-9._-]{1,256}'''
+tags = ["credentials", "connection-string"]
+
+  [rules.allowlist]
+  description = "Placeholders, documentation hosts, and vendored third-party fixtures"
+  regexes = [
+    '''<[^>\s]{1,64}>''',
+    '''\$\{?[A-Za-z_][A-Za-z0-9_]{0,63}\}?:''',
+    # RFC 2606 / RFC 6761 reserved documentation + test hosts, and loopback.
+    '''(?i)@(?:localhost|127\.0\.0\.1|0\.0\.0\.0|(?:[a-z0-9-]+\.)*example\.(?:com|org|net)|[a-z0-9.-]+\.(?:local|test|invalid|localdomain))''',
+    # Spelled-out dummy pairs, e.g. the fast-uri test vectors in cli/node_modules.
+    '''(?i)://(?:user(?:name)?|youruser|myuser|dbuser|admin|root|guest|foo|bar|baz|test|dummy|placeholder|changeme):(?:pass(?:word|wd)?|yourpassword|mypassword|secret|foo|bar|baz|test|dummy|placeholder|changeme|x{3,}|\d{3,}|\*{3,})@''',
+  ]
+  paths = [
+    '''(^|/)\.env\.(?:example|sample|template|dist)$''',
+    # Vendored dependencies: third-party test fixtures are full of
+    # http://user:pass@example.com vectors and none of them are our secrets.
+    '''(^|/)node_modules/''',
+    '''(^|/)(?:package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$''',
+  ]
+
+# ── Razorpay (this app takes payments) ────────────────────────────────────────
+# A leaked live key pair lets an attacker read customer payment data and issue
+# refunds, so it is worth a dedicated rule.
+[[rules]]
+id = "razorpay-live-key-id"
+description = "Razorpay LIVE key id"
+regex = '''\brzp_live_[A-Za-z0-9]{10,32}\b'''
+tags = ["razorpay", "payment", "key-id"]
+keywords = ["rzp_live_"]
+
+# The secret half has no distinguishing shape, so anchor on the variable name and
+# gate on entropy to avoid firing on `RAZORPAY_KEY_SECRET=` placeholders.
+[[rules]]
+id = "razorpay-key-secret"
+description = "Razorpay API key secret / webhook secret"
+regex = '''(?i)\brazorpay[_-]?(?:key[_-]?secret|webhook[_-]?secret|secret)["'\s]{0,5}[:=]["'\s]{0,5}([A-Za-z0-9_\-]{16,64})'''
+secretGroup = 1
+entropy = 3.0
+tags = ["razorpay", "payment", "secret"]
+keywords = ["razorpay"]
+
+  [rules.allowlist]
+  description = "Placeholders in docs and .env templates"
+  regexes = [
+    '''(?i)^(?:your|my|the|some|dummy|placeholder|example|changeme|test|xxx|sk_test)''',
+    '''(?i)(?:your[_-]?razorpay|key[_-]?secret[_-]?here|replace[_-]?me)''',
+  ]
+  paths = [
+    '''(^|/)\.env\.(?:example|sample|template|dist)$''',
+  ]

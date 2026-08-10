@@ -3,24 +3,34 @@ name: Publish to GitHub Packages
 on:
   workflow_dispatch:
 
+# Deny-by-default at the top level so any job added later starts with no token
+# scope and has to opt in, rather than inheriting the repository default.
+permissions: {}
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Minimal for the task: `contents: read` for the checkout, `packages: write`
+    # for `npm publish` to GitHub Packages. Nothing else is needed.
     permissions:
       contents: read
       packages: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           registry-url: 'https://npm.pkg.github.com'
 
+      # `npm ci` installs exactly the tree in cli/package-lock.json. `npm install`
+      # re-resolves ranges at build time, so the artifact published to the registry
+      # could contain dependency versions nobody reviewed — including a freshly
+      # released malicious patch — and would not be reproducible from the commit.
       - name: Install dependencies
         working-directory: cli
-        run: npm install
+        run: npm ci
 
       - name: Publish
         working-directory: cli
