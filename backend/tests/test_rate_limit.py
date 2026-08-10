@@ -124,6 +124,22 @@ async def test_account_dated_today_but_missing_counter_is_not_locked_out(seed_us
 # ── Refund on failure ────────────────────────────────────────────────────────
 
 
+async def test_release_leaves_the_attempt_counter_alone(seed_user):
+    """A refund gives back the allowance but never the attempt.
+
+    This is the property that terminates a fail-and-get-refunded loop: the
+    refundable counter returns to 0, but the attempt counter only ever climbs.
+    """
+    user = seed_user(plan=None, dailyAnalysisCount=0, lastAnalysisDate=_today())
+    uid = str(user["_id"])
+
+    reserved = await reserve(uid, ANALYSIS)
+    await release(uid, ANALYSIS, reserved=reserved)
+
+    assert _count(seed_user.db, user) == 0
+    assert _count(seed_user.db, user, "dailyAnalysisAttemptCount") == 1
+
+
 async def test_release_refunds_a_reserved_unit(seed_user):
     user = seed_user(plan=None, dailyAnalysisCount=0, lastAnalysisDate=_today())
     uid = str(user["_id"])
@@ -157,6 +173,106 @@ async def test_release_after_midnight_does_not_touch_tomorrows_counter(seed_user
     user = seed_user(plan="Brief", dailyAnalysisCount=2, lastAnalysisDate=_yesterday())
     await release(str(user["_id"]), ANALYSIS)
     assert _count(seed_user.db, user) == 2
+
+
+# ── The never-refunded attempt ceiling ───────────────────────────────────────
+#
+# Refunding is necessary (a user shouldn't lose their day to our outage) but on
+# its own it is a hole: every refund reopens the gate, so a caller that fails
+# after the LLM has been billed can loop forever. The attempt counter is the
+# backstop — it is never handed back, so the loop is bounded regardless.
+
+
+@pytest.mark.parametrize("plan,limit", [(None, 1), ("Brief", 3), ("Motion", 5)])
+async def test_a_refund_loop_terminates_at_the_attempt_ceiling(seed_user, plan, limit):
+    user = seed_user(plan=plan, dailyAnalysisCount=0, lastAnalysisDate=_today())
+    uid = str(user["_id"])
+    ceiling = quota_service.attempt_limit(limit)
+
+    # Reserve-then-refund, exactly what a user-fault failure path used to do.
+    for _ in range(ceiling):
+        reserved = await reserve(uid, ANALYSIS)
+        await release(uid, ANALYSIS, reserved=reserved)
+
+    # Quota looks untouched, so the old code would have carried on indefinitely.
+    assert _count(seed_user.db, user) == 0
+    with pytest.raises(HTTPException) as exc:
+        await reserve(uid, ANALYSIS)
+    assert exc.value.status_code == 429
+    assert "attempts" in exc.value.detail
+
+
+async def test_attempt_ceiling_rejection_does_not_consume_quota(seed_user):
+    """The rejected call reserved nothing, so the allowance must be untouched."""
+    user = seed_user(
+        plan="Brief",
+        dailyAnalysisCount=0,
+        dailyAnalysisAttemptCount=quota_service.attempt_limit(3),
+        lastAnalysisDate=_today(),
+    )
+    with pytest.raises(HTTPException):
+        await reserve(str(user["_id"]), ANALYSIS)
+    assert _count(seed_user.db, user) == 0
+
+
+async def test_plain_quota_rejection_does_not_burn_an_attempt(seed_user):
+    """A 'you've used your allowance' 429 is not a failed attempt."""
+    user = seed_user(
+        plan=None,
+        dailyAnalysisCount=1,
+        dailyAnalysisAttemptCount=1,
+        lastAnalysisDate=_today(),
+    )
+    with pytest.raises(HTTPException) as exc:
+        await reserve(str(user["_id"]), ANALYSIS)
+    assert "limit reached" in exc.value.detail
+    assert _count(seed_user.db, user, "dailyAnalysisAttemptCount") == 1
+
+
+async def test_attempt_counter_resets_on_a_new_day(seed_user):
+    user = seed_user(
+        plan="Brief",
+        dailyAnalysisCount=3,
+        dailyAnalysisAttemptCount=quota_service.attempt_limit(3),
+        lastAnalysisDate=_yesterday(),
+    )
+    await reserve(str(user["_id"]), ANALYSIS)
+
+    stored = seed_user.db.users._docs[str(user["_id"])]
+    assert stored["dailyAnalysisCount"] == 1
+    assert stored["dailyAnalysisAttemptCount"] == 1
+
+
+async def test_account_predating_the_attempt_counter_keeps_todays_usage(seed_user):
+    """Backfilling the new field must not silently reset an accrued count.
+
+    A free-tier user who already analysed today has no attempt field yet; if the
+    backfill shared the rollover's filter it would zero their count too and hand
+    out a bonus analysis on the day this ships.
+    """
+    user = seed_user(plan=None, dailyAnalysisCount=1, lastAnalysisDate=_today())
+    with pytest.raises(HTTPException) as exc:
+        await reserve(str(user["_id"]), ANALYSIS)
+    assert exc.value.status_code == 429
+    assert _count(seed_user.db, user) == 1
+    assert _count(seed_user.db, user, "dailyAnalysisAttemptCount") == 0
+
+
+async def test_query_counter_has_its_own_attempt_ceiling(seed_user):
+    user = seed_user(plan=None, lastQueryDate=_today())
+    uid = str(user["_id"])
+    ceiling = quota_service.attempt_limit(10)
+
+    for _ in range(ceiling):
+        reserved = await reserve(uid, QUERY)
+        await release(uid, QUERY, reserved=reserved)
+
+    with pytest.raises(HTTPException) as exc:
+        await reserve(uid, QUERY)
+    assert exc.value.status_code == 429
+    assert _count(seed_user.db, user, "dailyQueryAttemptCount") == ceiling
+    # The analysis counters are untouched by any of this.
+    assert _count(seed_user.db, user, "dailyAnalysisAttemptCount") is None
 
 
 # ── The query counter is independent of the analysis counter ─────────────────
