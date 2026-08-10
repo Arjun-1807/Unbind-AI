@@ -16,11 +16,15 @@ from app import config, database
 # ── Settings override ────────────────────────────────────────────────────────
 
 TEST_SETTINGS_OVERRIDES = {
+    # Explicit, so the production validator is skipped and cookies are built
+    # with dev flags. JWT_SECRET has no default in Settings, so it must be
+    # supplied here or constructing Settings raises.
+    "ENVIRONMENT": "development",
     "JWT_SECRET": "test-secret-key-for-unit-tests-only-0123456789abcdef",
     "JWT_ALGORITHM": "HS256",
     "JWT_EXPIRE_DAYS": 7,
     "GROQ_API_KEY": "gsk_test_key",
-    "FRONTEND_URL": "http://localhost:3000",  # local dev → skips prod validator
+    "FRONTEND_URL": "http://localhost:3000",
     "COOKIE_NAME": "unbind_token",
     # Razorpay (payments) — deterministic test values so signatures/webhooks are
     # reproducible and never depend on a populated .env.

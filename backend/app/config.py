@@ -1,5 +1,6 @@
 from functools import lru_cache
 from os import environ
+from typing import Literal
 
 from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings
@@ -8,7 +9,14 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     PORT: int = 8000
     MONGODB_URI: str = "mongodb://localhost:27017/unbindai"
-    JWT_SECRET: str = "dev_secret_change_me"
+    # Which deployment this is. Every security-relevant relaxation (insecure
+    # defaults, non-Secure cookies) is gated on this single explicit switch
+    # rather than inferred from FRONTEND_URL — a forgotten env var must fail
+    # closed, so "production" is the default and dev opts out.
+    ENVIRONMENT: Literal["development", "production"] = "production"
+    # No default: an unset JWT_SECRET is a hard startup failure in every
+    # environment. Any default here would be a publicly known signing key.
+    JWT_SECRET: str
     GROQ_API_KEY: str = ""
     # Separate Groq API key used only for HyDE (hypothetical document generation
     # during retrieval). Kept distinct from GROQ_API_KEY so HyDE calls draw on
@@ -98,28 +106,18 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
 
-    def _is_local_dev(self) -> bool:
-        """Local dev is inferred from FRONTEND_URL pointing at localhost."""
-        return self.FRONTEND_URL.startswith("http://localhost") or self.FRONTEND_URL.startswith(
-            "http://127.0.0.1"
-        )
-
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> "Settings":
-        """Fail fast on startup if insecure defaults are used outside local dev.
+        """Fail fast on startup if a production deploy is missing real secrets.
 
-        Local development (FRONTEND_URL on localhost/127.0.0.1) is allowed to
-        boot on the shipped defaults so the app runs out of the box.
+        Gated on the explicit ``ENVIRONMENT`` switch, not on guessing from
+        ``FRONTEND_URL``: the old inference meant a deploy that simply forgot
+        ``FRONTEND_URL`` skipped these checks entirely.
         """
-        if self._is_local_dev():
+        if self.ENVIRONMENT != "production":
             return self
 
         errors: list[str] = []
-        if self.JWT_SECRET == "dev_secret_change_me":
-            errors.append(
-                "JWT_SECRET is still the insecure default 'dev_secret_change_me'. "
-                'Set a strong secret (e.g. `python -c "import secrets; print(secrets.token_hex(32))"`).'
-            )
         if not self.GROQ_API_KEY:
             errors.append("GROQ_API_KEY is empty. Set it to a valid Groq API key.")
 

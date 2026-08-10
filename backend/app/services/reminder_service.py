@@ -349,33 +349,70 @@ async def run_sweep(*, today: date | None = None, dry_run: bool = False) -> dict
 # ── Unsubscribe tokens ───────────────────────────────────────────────────────
 
 
+UNSUBSCRIBE_TOKEN_TTL_DAYS = 90
+
+
+def _unsubscribe_signing_key() -> str:
+    """Signing key for unsubscribe tokens, derived from — but not equal to — JWT_SECRET.
+
+    These tokens ride in an email URL query string, so they leak into proxy
+    logs, mail archives and referrers. Using a distinct key makes it
+    structurally impossible for one to verify as a session token (and vice
+    versa) no matter what the ``purpose`` claim says: the signature simply
+    won't check out. Derived rather than configured so there is no extra secret
+    to deploy, and rotating JWT_SECRET rotates this too.
+    """
+    import hashlib
+    import hmac
+
+    from app.config import get_settings
+
+    return hmac.new(
+        get_settings().JWT_SECRET.encode(), b"unsubscribe-v1", hashlib.sha256
+    ).hexdigest()
+
+
 def build_unsubscribe_token(user_id: str) -> str:
     """Signed, long-lived token so unsubscribing needs no login.
 
-    Scoped with a purpose claim so it can't be replayed as a session token.
+    Scoped with a purpose claim *and* a separate signing key so it can't be
+    replayed as a session token, and expires so a leaked link isn't forever.
     """
     from jose import jwt
 
     from app.config import get_settings
 
     settings = get_settings()
+    now = datetime.now(timezone.utc)
     return jwt.encode(
-        {"userId": user_id, "purpose": "unsubscribe"},
-        settings.JWT_SECRET,
+        {
+            "userId": user_id,
+            "purpose": "unsubscribe",
+            "iat": now,
+            "exp": now + timedelta(days=UNSUBSCRIBE_TOKEN_TTL_DAYS),
+        },
+        _unsubscribe_signing_key(),
         algorithm=settings.JWT_ALGORITHM,
     )
 
 
 def read_unsubscribe_token(token: str) -> str | None:
-    """Return the user id from an unsubscribe token, or None if it isn't one."""
+    """Return the user id from an unsubscribe token, or None if it isn't one.
+
+    None covers every rejection reason — wrong key, wrong purpose, expired,
+    malformed — because the caller renders the same "link isn't valid" page for
+    all of them and shouldn't leak which.
+    """
     from jose import JWTError, jwt
 
     from app.config import get_settings
 
     settings = get_settings()
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token, _unsubscribe_signing_key(), algorithms=[settings.JWT_ALGORITHM])
     except JWTError:
+        # jose raises ExpiredSignatureError (a JWTError subclass) for an expired
+        # token, so this covers expiry as well as bad signatures and garbage.
         return None
     if payload.get("purpose") != "unsubscribe":
         return None

@@ -19,8 +19,12 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(user_id: str) -> str:
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.JWT_EXPIRE_DAYS)
-    payload = {"userId": user_id, "exp": expire}
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(days=settings.JWT_EXPIRE_DAYS)
+    # ``purpose`` is what stops a token minted for some other job (e.g. the
+    # emailed unsubscribe link) from being replayed as a session credential.
+    # ``get_current_user_id`` accepts nothing but purpose="session".
+    payload = {"userId": user_id, "purpose": "session", "iat": now, "exp": expire}
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
@@ -32,33 +36,30 @@ def decode_access_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Not authenticated") from e
 
 
-def _is_local_dev(request: Request | None = None) -> bool:
-    """Check if we are running in local development mode.
+def _cookie_security() -> tuple[bool, str]:
+    """Return ``(secure, samesite)`` for the auth cookie.
 
-    When a *request* is available we also inspect the ``X-Forwarded-Proto``
-    header that reverse-proxies such as Vercel inject.  If the original
-    request was over HTTPS we know we are **not** in local dev even when
-    ``FRONTEND_URL`` still points to localhost (a common misconfiguration).
+    Driven solely by the declared ``ENVIRONMENT`` rather than sniffed from
+    ``FRONTEND_URL`` or ``X-Forwarded-Proto``: a misconfigured/absent
+    ``FRONTEND_URL`` used to silently downgrade a production deploy to a
+    non-Secure cookie. Production is cross-site (frontend and API on different
+    origins), so it needs ``SameSite=None`` — which browsers only honour with
+    ``Secure``. Local dev is same-site over plain HTTP, so ``lax``/non-Secure.
     """
-    if request is not None:
-        proto = request.headers.get("x-forwarded-proto", "")
-        if "https" in proto:
-            return False
-    settings = get_settings()
-    return settings.FRONTEND_URL.startswith("http://localhost") or settings.FRONTEND_URL.startswith(
-        "http://127.0.0.1"
-    )
+    if get_settings().ENVIRONMENT == "production":
+        return True, "none"
+    return False, "lax"
 
 
 def set_auth_cookie(response: Response, token: str, request: Request | None = None) -> None:
     settings = get_settings()
-    local = _is_local_dev(request)
+    secure, samesite = _cookie_security()
     response.set_cookie(
         key=settings.COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax" if local else "none",
-        secure=not local,
+        samesite=samesite,
+        secure=secure,
         path="/",
         max_age=settings.JWT_EXPIRE_DAYS * 86400,
     )
@@ -66,12 +67,12 @@ def set_auth_cookie(response: Response, token: str, request: Request | None = No
 
 def clear_auth_cookie(response: Response, request: Request | None = None) -> None:
     settings = get_settings()
-    local = _is_local_dev(request)
+    secure, samesite = _cookie_security()
     response.delete_cookie(
         key=settings.COOKIE_NAME,
         path="/",
-        secure=not local,
-        samesite="lax" if local else "none",
+        secure=secure,
+        samesite=samesite,
     )
 
 
@@ -93,6 +94,13 @@ async def get_current_user_id(request: Request) -> str:
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     payload = decode_access_token(token)
+    # Only tokens minted as sessions authenticate. Other token types we sign
+    # (e.g. unsubscribe links, which travel in email URLs and get logged by
+    # every proxy in between) must never be usable as a Bearer credential.
+    # Tokens issued before this claim existed have no ``purpose`` and are
+    # rejected here — that logs everyone out once, by design.
+    if payload.get("purpose") != "session":
+        raise HTTPException(status_code=401, detail="Not authenticated")
     user_id = payload.get("userId")
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
