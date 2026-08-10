@@ -21,7 +21,31 @@ const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api`;
 // NEXT_PUBLIC_BACKEND_ORIGIN is injected by next.config.mjs from the same
 // BACKEND_API_URL the rewrite uses, so both paths always agree.
 const STREAM_API_BASE = process.env.NEXT_PUBLIC_BACKEND_ORIGIN || "http://localhost:8000";
-const ACCESS_TOKEN_KEY = "unbind_access_token";
+
+/**
+ * Keys older builds used to persist the session credential in the browser.
+ * `unbind_access_token` held the raw 7-day JWT and `"user"` cached the whole
+ * auth response, `accessToken` included. Both are gone (see
+ * `withoutAccessToken`), but existing visitors still have them on disk, so
+ * `purgeLegacyBrowserCredentials` deletes them on first load.
+ */
+const LEGACY_CREDENTIAL_KEYS = ["unbind_access_token", "user"] as const;
+
+/**
+ * Delete any session credential a previous version of this app persisted in
+ * `localStorage`. Safe to call on every page load; it is a no-op once clean.
+ */
+export function purgeLegacyBrowserCredentials(): void {
+  if (typeof window === "undefined") return;
+  for (const key of LEGACY_CREDENTIAL_KEYS) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // Storage can be unavailable (private mode, disabled cookies). Nothing
+      // to purge in that case, and failing here must not break boot.
+    }
+  }
+}
 
 /**
  * Typed error thrown for every non-2xx response. Carries the HTTP `status`
@@ -53,43 +77,34 @@ async function toApiError(res: Response): Promise<ApiError> {
   return new ApiError(res.status, detail);
 }
 
-function getStoredAccessToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
-}
-
-function storeAccessToken(token?: string | null): void {
-  if (typeof window === "undefined") return;
-  if (token) {
-    localStorage.setItem(ACCESS_TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-  }
-}
-
-function withAuthHeader(init?: RequestInit): RequestInit {
-  const token = getStoredAccessToken();
-  if (!token) return init || {};
-  return {
-    ...init,
-    headers: {
-      ...(init?.headers || {}),
-      Authorization: `Bearer ${token}`,
-    },
-  };
+/**
+ * The auth endpoints still return `accessToken` in the JSON body because the
+ * published Node CLI needs it as a `Authorization: Bearer` credential. The
+ * browser must never keep a copy: the backend sets the same token as an
+ * `httpOnly` cookie, which script cannot read and which every request below
+ * sends via `credentials: "include"`. A script-reachable duplicate would hand
+ * any XSS or hostile dependency a 7-day bearer credential usable from
+ * anywhere, so it is stripped here, at the boundary, before it can reach React
+ * state or storage.
+ */
+function withoutAccessToken(raw: User & { accessToken?: string }): User {
+  const safe: User & { accessToken?: string } = { ...raw };
+  delete safe.accessToken;
+  return safe;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const requestInit = withAuthHeader(init);
-  const method = (requestInit?.method || "GET").toUpperCase();
-  const shouldSetJsonHeader = method !== "GET" && !(requestInit?.body instanceof FormData);
+  const method = (init?.method || "GET").toUpperCase();
+  const shouldSetJsonHeader = method !== "GET" && !(init?.body instanceof FormData);
   const headers = {
     ...(shouldSetJsonHeader ? { "Content-Type": "application/json" } : {}),
-    ...(requestInit?.headers || {}),
+    ...(init?.headers || {}),
   };
   const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    // The httpOnly auth cookie is the *only* credential the browser holds, so
+    // this is mandatory on every path and must not be overridable by `init`.
     credentials: "include",
-    ...requestInit,
     headers,
   });
   if (!res.ok) {
@@ -109,8 +124,7 @@ export const signup = async (
     method: "POST",
     body: JSON.stringify({ username, email, password }),
   });
-  storeAccessToken(user.accessToken);
-  return user;
+  return withoutAccessToken(user);
 };
 
 export const login = async (email: string, password: string): Promise<User> => {
@@ -118,27 +132,25 @@ export const login = async (email: string, password: string): Promise<User> => {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
-  storeAccessToken(user.accessToken);
-  return user;
+  return withoutAccessToken(user);
 };
 
 export const logout = async (): Promise<void> => {
   await apiFetch("/auth/logout", { method: "POST" });
-  storeAccessToken(null);
+  // The session itself lives in the httpOnly cookie the server just cleared;
+  // this only sweeps credentials older builds left behind in localStorage.
+  purgeLegacyBrowserCredentials();
 };
 
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
     const user = await apiFetch<User & { accessToken?: string }>("/auth/me");
-    // Re-hydrate the stored token on every page load
-    if (user?.accessToken) storeAccessToken(user.accessToken);
-    return user;
-  } catch (error) {
-    // Only clear the stored token when the server actually rejected auth;
-    // a network/other error shouldn't log the user out locally.
-    if (error instanceof ApiError && error.status === 401) {
-      storeAccessToken(null);
-    }
+    // /auth/me re-mints a fresh cookie server-side; nothing to persist here.
+    return user ? withoutAccessToken(user) : null;
+  } catch {
+    // A 401 means no session; any other failure (network, 5xx) also leaves us
+    // without a user for this render. Either way there is nothing local to
+    // clear, because the credential is a cookie the browser manages.
     return null;
   }
 };
@@ -148,8 +160,7 @@ export const googleLogin = async (credential: string): Promise<User> => {
     method: "POST",
     body: JSON.stringify({ credential }),
   });
-  storeAccessToken(user.accessToken);
-  return user;
+  return withoutAccessToken(user);
 };
 
 export const updatePassword = async (
@@ -182,13 +193,12 @@ export const uploadAndAnalyze = async (
   const form = new FormData();
   form.append("file", file);
   form.append("role", role);
-  const requestInit = withAuthHeader({
+  const res = await fetch(`${API_BASE}/analysis/upload`, {
     method: "POST",
+    // Authenticated by the httpOnly auth cookie. Do not set Content-Type: the
+    // browser must generate the multipart boundary itself.
     credentials: "include",
     body: form,
-  });
-  const res = await fetch(`${API_BASE}/analysis/upload`, {
-    ...requestInit,
   });
   if (!res.ok) {
     throw await toApiError(res);
@@ -252,15 +262,16 @@ export const uploadAndAnalyzeStream = async (
   const form = new FormData();
   form.append("file", file);
   form.append("role", role);
-  const requestInit = withAuthHeader({
+  // This is a `fetch` + ReadableStream reader, not an `EventSource`, so the
+  // cookie travels normally. STREAM_API_BASE is a different origin from the app
+  // in production, and the backend answers with SameSite=None;Secure cookies
+  // plus CORS `allow_credentials` for exactly this origin, so
+  // `credentials: "include"` authenticates the stream without any header.
+  const res = await fetch(`${STREAM_API_BASE}/api/analysis/upload/stream`, {
     method: "POST",
     credentials: "include",
     body: form,
   });
-  const res = await fetch(
-    `${STREAM_API_BASE}/api/analysis/upload/stream`,
-    requestInit,
-  );
   if (!res.ok || !res.body) {
     throw await toApiError(res);
   }

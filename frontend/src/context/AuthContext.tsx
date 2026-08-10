@@ -37,14 +37,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load user on mount
+  // Load user on mount.
+  //
+  // The session lives entirely in the backend's httpOnly auth cookie, so there
+  // is no local copy to hydrate from and nothing here writes one: persisting
+  // the user object also persisted its `accessToken`, turning any XSS into a
+  // 7-day credential theft. Earlier builds did exactly that, so the first job
+  // on boot is to purge what they left on disk.
   useEffect(() => {
+    api.purgeLegacyBrowserCredentials();
     (async () => {
-      // 1) Prefer backend truth
       const remoteUser = await api.getCurrentUser();
       if (remoteUser) {
         setUser(remoteUser);
-        localStorage.setItem("user", JSON.stringify(remoteUser));
         try {
           const data = await api.getUserAnalyses();
           setAnalyses(data);
@@ -55,8 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // 2) No valid backend session; clear stale local cache
-      localStorage.removeItem("user");
+      // No valid backend session.
       setUser(null);
       setAnalyses([]);
       setAuthReady(true);
@@ -67,8 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string) => {
       const u = await api.login(email, password);
       setUser(u);
-      localStorage.setItem("user", JSON.stringify(u));
-      await refreshAnalyses();
+      void refreshAnalyses();
     },
     [refreshAnalyses],
   );
@@ -77,8 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (username: string, email: string, password: string) => {
       const u = await api.signup(username, email, password);
       setUser(u);
-      localStorage.setItem("user", JSON.stringify(u));
-      await refreshAnalyses();
+      void refreshAnalyses();
     },
     [refreshAnalyses],
   );
@@ -87,15 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (credential: string) => {
       const u = await api.googleLogin(credential);
       setUser(u);
-      localStorage.setItem("user", JSON.stringify(u));
-      await refreshAnalyses();
+      void refreshAnalyses();
     },
     [refreshAnalyses],
   );
 
   const logoutHandler = useCallback(async () => {
     await api.logout();
-    localStorage.removeItem("user");
     setUser(null);
     setAnalyses([]);
   }, []);
