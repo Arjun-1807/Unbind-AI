@@ -281,15 +281,48 @@ async def test_chat_route_rejects_another_users_analysis(
     assert seed_user.db.users._docs[uid].get("dailyQueryCount") is None
 
 
-async def test_chat_route_refunds_the_quota_when_answering_fails(
+async def test_chat_route_refunds_the_quota_when_the_upstream_is_down(
     override_settings, seed_user, monkeypatch
 ):
+    """An outage on our side must not cost the user a query."""
+    import httpx
+
     user = seed_user(plan=None)
     uid = str(user["_id"])
     analysis_id = _seed_analysis(seed_user.db, uid)
 
     async def boom(*args, **kwargs):
-        raise RuntimeError("model unavailable")
+        raise httpx.ConnectTimeout("groq unreachable")
+
+    monkeypatch.setattr(document_chat_service, "answer_question", boom)
+
+    from app.schemas import DocumentQuestionRequest
+
+    with pytest.raises(httpx.ConnectTimeout):
+        await analysis_routes.ask_document(
+            analysis_id,
+            DocumentQuestionRequest(question="How much notice?"),
+            _authed(override_settings, uid),
+        )
+    assert seed_user.db.users._docs[uid]["dailyQueryCount"] == 0
+    # The attempt, however, is never handed back — that is what bounds a loop.
+    assert seed_user.db.users._docs[uid]["dailyQueryAttemptCount"] == 1
+
+
+async def test_chat_route_keeps_the_quota_when_the_failure_came_after_the_llm_ran(
+    override_settings, seed_user, monkeypatch
+):
+    """A failure we can't attribute to an outage is assumed to have been billed.
+
+    Refunding indiscriminately is what made a failure loop free: the counter
+    returned to where it started, so the gate never closed.
+    """
+    user = seed_user(plan=None)
+    uid = str(user["_id"])
+    analysis_id = _seed_analysis(seed_user.db, uid)
+
+    async def boom(*args, **kwargs):
+        raise RuntimeError("model returned something unusable")
 
     monkeypatch.setattr(document_chat_service, "answer_question", boom)
 
@@ -301,7 +334,7 @@ async def test_chat_route_refunds_the_quota_when_answering_fails(
             DocumentQuestionRequest(question="How much notice?"),
             _authed(override_settings, uid),
         )
-    assert seed_user.db.users._docs[uid]["dailyQueryCount"] == 0
+    assert seed_user.db.users._docs[uid]["dailyQueryCount"] == 1
 
 
 async def test_chat_route_enforces_the_query_quota(override_settings, seed_user, stub_pipeline):

@@ -19,6 +19,16 @@ from app.services.pdf_processing import (
 logger = logging.getLogger(__name__)
 
 
+class ClauseExtractionError(RuntimeError):
+    """The pipeline ran but produced nothing usable.
+
+    Subclasses ``RuntimeError`` so existing handlers still catch it, and exists
+    so a route can tell "this message was written for the user" apart from an
+    arbitrary internal ``RuntimeError`` (a missing API key, say) whose text must
+    never reach a client.
+    """
+
+
 # ───── Helpers ─────
 
 
@@ -248,7 +258,9 @@ async def validate_legal_document(
     """Validate if the provided text is a legal document.
 
     Returns True if the text appears to be a legal document (contract, agreement, NDA, etc.).
-    Defaults to True if parsing fails (fail open).
+
+    Fails **closed**: an unreadable verdict is treated as "not a legal document".
+    See the comment at the return for why.
     """
     MAX_START = 700
     MAX_END = 300
@@ -278,11 +290,21 @@ async def validate_legal_document(
     )
 
     parsed = _try_parse_json(output)
-    if parsed and isinstance(parsed, dict):
-        return parsed.get("isLegal", True)
+    if isinstance(parsed, dict) and "isLegal" in parsed:
+        return bool(parsed["isLegal"])
 
-    # Fail open: if parsing fails, default to True (don't block valid documents)
-    return True
+    # Fail closed. This used to default to True, which meant an unreadable
+    # one-word verdict admitted arbitrary text to the full pipeline — hundreds of
+    # chunk completions, all billed, for input we never established was a
+    # contract. Failing closed costs the user one cheap retry of a call that is
+    # asked for nothing but `{"isLegal": true}` and whose response is also mined
+    # for an embedded JSON span, so an unparseable answer is genuinely rare.
+    logger.warning(
+        "Legal-document validation returned unparseable output; treating as "
+        "not-a-legal-document. preview=%r",
+        (output or "")[:200],
+    )
+    return False
 
 
 # ───── Public: analyse contract ─────
@@ -349,11 +371,11 @@ async def analyze_contract(
 
     if not all_clauses:
         if parse_failures > 0:
-            raise RuntimeError(
+            raise ClauseExtractionError(
                 "The AI model returned output in an unexpected format, so clauses could not be parsed. "
                 "Please retry, switch model, or contact support if this persists."
             )
-        raise RuntimeError(
+        raise ClauseExtractionError(
             "No legal clauses were identified in the document. "
             "It might be too short or in an unsupported format."
         )

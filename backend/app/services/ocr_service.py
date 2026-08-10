@@ -39,6 +39,14 @@ HEIC_EXTENSIONS = (".heic", ".heif")
 _MAX_DIM = 2000  # px — longest side after downscaling
 _JPEG_QUALITY = 85
 
+# Decompression-bomb ceiling, in pixels. Byte size says nothing about how much
+# memory an image needs: a 194 KB PNG can declare a 13000x13000 canvas (169 MP)
+# and expand to ~500 MB the moment it is decoded, so it sails through the
+# route's 15 MB byte cap and takes the worker down. 40 MP is well above any real
+# scanned contract (a 600 dpi A4 page is ~35 MP) and bounds a decode at roughly
+# 120 MB.
+_MAX_IMAGE_PIXELS = 40_000_000
+
 _OCR_PROMPT = (
     "Transcribe all the text in this image of a document exactly as written, "
     "preserving line breaks and reading order. Output only the raw text — no "
@@ -73,28 +81,79 @@ def _is_heic(content_type: str | None, file_name: str) -> bool:
     return ct in HEIC_CONTENT_TYPES or name.endswith(HEIC_EXTENSIONS)
 
 
+def _too_many_pixels(dimensions: str) -> OcrError:
+    return OcrError(
+        "IMAGE_TOO_MANY_PIXELS",
+        f"That image is too large to process ({dimensions}). Please upload an "
+        f"image under {_MAX_IMAGE_PIXELS // 1_000_000} megapixels, or a PDF of "
+        "the document.",
+    )
+
+
+def _unreadable() -> OcrError:
+    return OcrError("UNREADABLE_IMAGE", "The image could not be read.")
+
+
 def _preprocess_to_data_url(content: bytes) -> str:
     """Downscale + re-encode the image as JPEG and return a base64 data URL.
 
     Synchronous/CPU-bound — call via ``asyncio.to_thread``.
+
+    Rejects decompression bombs before any pixel data is allocated. ``open()``
+    reads only the header, so ``img.size`` is known while the image still costs
+    nothing; everything expensive happens after that check.
     """
     from PIL import Image, UnidentifiedImageError
 
+    # Pillow's own default (~89 MP) is both too high for us and only a *warning*
+    # until you exceed twice it, so lower the hard limit as well as checking the
+    # header ourselves. Cheap and idempotent; set here because the PIL import is
+    # deliberately lazy.
+    Image.MAX_IMAGE_PIXELS = _MAX_IMAGE_PIXELS
+
     try:
         img = Image.open(io.BytesIO(content))
+        width, height = img.size
+    except Image.DecompressionBombError as exc:
+        # Pillow raises this from open() past 2x MAX_IMAGE_PIXELS. It descends
+        # straight from Exception, so the (UnidentifiedImageError, OSError) arm
+        # this function used to have did not cover it and a bomb became an
+        # unhandled 500.
+        raise _too_many_pixels("too many pixels") from exc
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise _unreadable() from exc
+    except Exception as exc:  # noqa: BLE001 - header parsing of untrusted bytes
+        logger.exception("Unexpected failure reading an uploaded image header")
+        raise _unreadable() from exc
+
+    # Between 1x and 2x the limit Pillow only warns, so this is the check that
+    # actually stops a 169 MP "194 KB" PNG from allocating half a gigabyte.
+    if width * height > _MAX_IMAGE_PIXELS:
+        raise _too_many_pixels(f"{width}x{height} pixels")
+
+    try:
         img.load()
-    except (UnidentifiedImageError, OSError) as exc:
-        raise OcrError("UNREADABLE_IMAGE", "The image could not be read.") from exc
 
-    # Flatten to RGB (drops alpha/palette) so JPEG encoding always succeeds.
-    if img.mode != "RGB":
-        img = img.convert("RGB")
+        # Flatten to RGB (drops alpha/palette) so JPEG encoding always succeeds.
+        if img.mode != "RGB":
+            img = img.convert("RGB")
 
-    # thumbnail() only ever shrinks and preserves aspect ratio.
-    img.thumbnail((_MAX_DIM, _MAX_DIM))
+        # thumbnail() only ever shrinks and preserves aspect ratio.
+        img.thumbnail((_MAX_DIM, _MAX_DIM))
 
-    buffer = io.BytesIO()
-    img.save(buffer, format="JPEG", quality=_JPEG_QUALITY)
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=_JPEG_QUALITY)
+    except Image.DecompressionBombError as exc:
+        raise _too_many_pixels(f"{width}x{height} pixels") from exc
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise _unreadable() from exc
+    except Exception as exc:  # noqa: BLE001 - decoding attacker-supplied bytes
+        # Defensive: Pillow's decoders are C code fed untrusted input and can
+        # raise things this module has no reason to know about. A malformed
+        # upload must not become a 500.
+        logger.exception("Unexpected failure decoding an uploaded image")
+        raise _unreadable() from exc
+
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
     return f"data:image/jpeg;base64,{encoded}"
 

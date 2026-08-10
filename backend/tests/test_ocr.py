@@ -71,6 +71,32 @@ class TestPreprocess:
             _preprocess_to_data_url(b"not an image")
         assert exc.value.code == "UNREADABLE_IMAGE"
 
+    def test_decompression_bomb_is_rejected_before_it_is_decoded(self):
+        """A tiny file can declare an enormous canvas.
+
+        A 13000x13000 PNG of flat colour compresses to ~200 KB — well under the
+        route's 15 MB byte cap — and expands to ~500 MB the moment it is decoded.
+        The header is inspected first so that decode never happens.
+        """
+        bomb = _make_png(13000, 13000)
+        assert len(bomb) < 15 * 1024 * 1024  # sails through the byte cap
+
+        with pytest.raises(OcrError) as exc:
+            _preprocess_to_data_url(bomb)
+        assert exc.value.code == "IMAGE_TOO_MANY_PIXELS"
+
+    def test_pillows_own_ceiling_is_lowered_too(self):
+        """Belt and braces: Pillow only warns until 2x its default limit."""
+        from PIL import Image
+
+        _preprocess_to_data_url(_make_png(40, 40))
+        assert Image.MAX_IMAGE_PIXELS == ocr_service._MAX_IMAGE_PIXELS
+
+    def test_an_image_just_under_the_pixel_ceiling_still_works(self):
+        side = int(ocr_service._MAX_IMAGE_PIXELS**0.5) - 1000
+        data_url = _preprocess_to_data_url(_make_png(side, side))
+        assert data_url.startswith("data:image/jpeg;base64,")
+
 
 class TestImageToText:
     async def test_heic_rejected_before_any_call(self, monkeypatch):

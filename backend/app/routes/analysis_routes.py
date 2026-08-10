@@ -4,11 +4,14 @@ import json
 import logging
 from datetime import datetime, timezone
 
+import httpx
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from groq import APIConnectionError, APIStatusError, RateLimitError
 from langsmith.run_helpers import tracing_context
+from pymongo.errors import PyMongoError
 
 from app.auth import get_current_user_id
 from app.database import get_db
@@ -19,7 +22,7 @@ from app.schemas import (
     SimulateRequest,
 )
 from app.services import document_chat_service, reminder_service, vector_store
-from app.services.analysis_service import analyze_contract
+from app.services.analysis_service import ClauseExtractionError, analyze_contract
 from app.services.negotiation_service import draft_negotiation_message
 from app.services.ocr_service import OcrError, image_to_text, is_image_upload
 from app.services.quota_service import ANALYSIS, QUERY, release, reserve
@@ -28,13 +31,94 @@ from app.services.quota_service import ANALYSIS, QUERY, release, reserve
 # much larger is likely not a document photo and wastes vision tokens/time.
 _MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
-# Cap document uploads too. Without this the whole file is read into memory
-# before we know anything about it, so a single large PDF can exhaust the
-# worker. 25 MB comfortably covers a scanned several-hundred-page contract.
+# Cap document uploads too. 25 MB comfortably covers a scanned several-hundred-
+# page contract.
 _MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
+
+# Block size for the capped upload read. Big enough that a legitimate 25 MB file
+# is 25 awaits, small enough that the overshoot past the cap is negligible.
+_UPLOAD_BLOCK_BYTES = 1024 * 1024
+
+# Fixed, client-safe copy for failures whose real cause must not be echoed back.
+# Exception text carries library internals, file paths and sometimes
+# configuration ("GROQ_API_KEY is not set"); the client gets a stable code and
+# the details go to the log.
+_GENERIC_ERROR_CODE = "ANALYSIS_FAILED"
+_GENERIC_ERROR_DETAIL = "The analysis could not be completed. Please try again."
+_PDF_ERROR_DETAIL = "This PDF could not be read. Try re-exporting it, or upload it as a DOCX."
+_DOCX_ERROR_DETAIL = "This DOCX could not be read. Try re-exporting it, or upload it as a PDF."
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analysis", tags=["analysis"])
+
+
+class PreflightRejection(HTTPException):
+    """A 4xx raised before any LLM call was made.
+
+    Exists purely so the refund rule can be decided structurally instead of by
+    guessing from an exception's type or message: an upload we rejected while
+    reading or parsing it cost CPU but not a single token, so handing the quota
+    unit back is free. The never-refunded attempt counter in ``quota_service``
+    is what stops someone looping on these.
+    """
+
+
+# Upstream/our-side failures where the completion never happened, so nothing was
+# billed. An allowlist, because guessing wrong in the other direction is what
+# costs money.
+_INFRASTRUCTURE_ERRORS: tuple[type[BaseException], ...] = (
+    APIConnectionError,  # also covers APITimeoutError
+    RateLimitError,  # upstream refused the request outright, nothing generated
+    httpx.TransportError,  # connect/read/write timeouts and dropped sockets
+    PyMongoError,  # we produced a result and then failed to store it
+    ConnectionError,
+    TimeoutError,  # asyncio.TimeoutError is an alias of this on 3.11+
+)
+
+
+def _is_infrastructure_failure(exc: BaseException) -> bool:
+    """True when the failure is ours or an upstream's, not the request's."""
+    if isinstance(exc, PreflightRejection):
+        return False
+    if isinstance(exc, HTTPException):
+        # Our own 4xx are rejections of the request; only a 5xx is our fault.
+        return exc.status_code >= 500
+    if isinstance(exc, APIStatusError):
+        return exc.status_code >= 500
+    return isinstance(exc, _INFRASTRUCTURE_ERRORS)
+
+
+def _should_refund(exc: BaseException) -> bool:
+    """True when this failure cost us no LLM tokens, so the quota unit is free to give back.
+
+    The single question this asks is "did we already pay Groq for this?".
+    Refundable: an infrastructure failure (upstream 5xx, timeout, dropped
+    connection, database outage), an upload rejected before any model call
+    (:class:`PreflightRejection`), and an image that never reached the vision
+    model (:class:`OcrError` — HEIC, undecodable bytes, a decompression bomb;
+    every one of those is raised before ``ocr_complete``).
+
+    Not refundable, and this is the whole point: ``OCR_INSUFFICIENT_TEXT`` (the
+    vision completion happened and returned nothing useful),
+    ``NOT_A_LEGAL_DOCUMENT`` (a classifier completion reached that verdict) and
+    :class:`ClauseExtractionError` (up to a few hundred chunk completions, all
+    billed). Refunding those is what made a failure loop free and let one free
+    account drive unbounded spend — the counter went back where it started, so
+    the gate never closed.
+
+    Anything unrecognised (a bare ``RuntimeError``, say) falls on the
+    no-refund side deliberately: being wrong there costs one user one unit of
+    their daily allowance, versus an unmetered LLM bill.
+    """
+    return isinstance(exc, (PreflightRejection, OcrError)) or _is_infrastructure_failure(exc)
+
+
+async def _release_if_refundable(
+    exc: BaseException, user_id: str, counter=ANALYSIS, *, reserved: bool = True
+) -> None:
+    """Refund the reserved quota unit only if ``exc`` cost us no LLM tokens."""
+    if _should_refund(exc):
+        await release(user_id, counter, reserved=reserved)
 
 
 async def _schedule_reminders(analysis_id: str, user_id: str, file_name: str, result: dict) -> None:
@@ -60,13 +144,51 @@ def _utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _reject_if_oversized(content: bytes, is_image: bool) -> None:
-    """Raise 413 when an upload exceeds the limit for its kind."""
+def _size_limit(is_image: bool) -> tuple[int, str]:
+    """The byte cap and the client-facing code for an upload of this kind."""
     if is_image:
-        if len(content) > _MAX_IMAGE_BYTES:
-            raise HTTPException(status_code=413, detail="IMAGE_TOO_LARGE")
-    elif len(content) > _MAX_DOCUMENT_BYTES:
-        raise HTTPException(status_code=413, detail="FILE_TOO_LARGE")
+        return _MAX_IMAGE_BYTES, "IMAGE_TOO_LARGE"
+    return _MAX_DOCUMENT_BYTES, "FILE_TOO_LARGE"
+
+
+async def _read_upload_within_limit(request: Request, file: UploadFile, is_image: bool) -> bytes:
+    """Read an upload into memory, aborting the moment it exceeds its cap.
+
+    The cap used to be applied to ``await file.read()`` — i.e. to the length of
+    bytes that were already, in their entirety, in RAM — which enforced nothing
+    at all. Reading in blocks and checking a running total means the process
+    never holds more than the limit plus one block, so the 413 is real.
+
+    ``Content-Length`` is consulted first as a cheap short-circuit. It counts
+    multipart framing as well as the file, so it can only ever over-estimate:
+    safe to reject on, never safe to trust as a substitute for counting.
+    """
+    limit, code = _size_limit(is_image)
+
+    declared = request.headers.get("content-length")
+    if declared and declared.strip().isdigit() and int(declared) > limit:
+        raise PreflightRejection(status_code=413, detail=code)
+
+    blocks: list[bytes] = []
+    total = 0
+    while True:
+        block = await file.read(_UPLOAD_BLOCK_BYTES)
+        if not block:
+            break
+        total += len(block)
+        if total > limit:
+            # Stop before this block joins the others, so the peak is bounded.
+            raise PreflightRejection(status_code=413, detail=code)
+        blocks.append(block)
+    return b"".join(blocks)
+
+
+async def _read_upload(request: Request, file: UploadFile) -> tuple[bytes, str, bool]:
+    """Resolve an upload to ``(content, file_name, is_image)`` under its size cap."""
+    file_name = file.filename or "document"
+    is_image = is_image_upload(file.content_type, file_name)
+    content = await _read_upload_within_limit(request, file, is_image)
+    return content, file_name, is_image
 
 
 def _sse_event(event: str, data: dict) -> str:
@@ -92,19 +214,33 @@ async def _stream_analysis(
     image is OCR'd here first — emitting a progress event so the client sees
     feedback during the vision call — and the transcription becomes ``text``.
 
-    ``reserved`` says whether the caller consumed a unit of the daily quota; any
-    path that ends in an ``error`` event refunds it, since the user got nothing.
+    ``reserved`` says whether the caller consumed a unit of the daily quota. It
+    is handed back only for a failure that cost us no LLM tokens (see
+    :func:`_should_refund`). Every outcome that a completion was already billed
+    for keeps the unit — refunding those is what made "upload a photo of a blank
+    wall in a loop" a free way to spend someone else's Groq budget.
     """
     if ocr_source is not None:
         yield _sse_event("progress", {"stage": "ocr", "message": "Reading text from your image…"})
         try:
             text = await image_to_text(*ocr_source)
         except OcrError as e:
-            await release(user_id, ANALYSIS, reserved=reserved)
+            # The user's own image: HEIC, undecodable, or a decompression bomb —
+            # all raised before the vision call, so the unit is refundable.
+            # OcrError messages are written for humans, so passing them through
+            # leaks nothing.
+            await _release_if_refundable(e, user_id, ANALYSIS, reserved=reserved)
             yield _sse_event("error", {"code": e.code, "detail": e.message})
             return
+        except Exception as e:
+            await _release_if_refundable(e, user_id, ANALYSIS, reserved=reserved)
+            logger.exception("Vision OCR failed for user %s", user_id)
+            yield _sse_event(
+                "error", {"code": _GENERIC_ERROR_CODE, "detail": _GENERIC_ERROR_DETAIL}
+            )
+            return
         if not text or len(text.strip()) < 50:
-            await release(user_id, ANALYSIS, reserved=reserved)
+            # The vision completion was made and billed; no refund.
             yield _sse_event("error", {"code": "OCR_INSUFFICIENT_TEXT"})
             return
 
@@ -143,19 +279,31 @@ async def _stream_analysis(
         try:
             result = pipeline_task.result()
         except ValueError as e:
-            await release(user_id, ANALYSIS, reserved=reserved)
             if str(e) == "NOT_A_LEGAL_DOCUMENT":
+                # A classifier completion was spent reaching this verdict.
                 yield _sse_event("error", {"code": "NOT_A_LEGAL_DOCUMENT"})
-            else:
-                yield _sse_event("error", {"code": "ERROR", "detail": str(e)})
+                return
+            logger.exception("Streaming analysis failed for user %s", user_id)
+            yield _sse_event(
+                "error", {"code": _GENERIC_ERROR_CODE, "detail": _GENERIC_ERROR_DETAIL}
+            )
+            return
+        except ClauseExtractionError as e:
+            # Every chunk completion was made and billed before we got here, so
+            # this is emphatically not refundable. The message is ours, written
+            # for the user, so it is safe to pass on.
+            logger.warning("Clause extraction produced nothing for user %s: %s", user_id, e)
+            yield _sse_event("error", {"code": "NO_CLAUSES_EXTRACTED", "detail": str(e)})
             return
         except Exception as e:
             # Catch-all, not just RuntimeError: letting an unexpected exception
             # escape the generator truncates the SSE stream, and the client sees
             # a dead connection instead of an error it can render.
-            await release(user_id, ANALYSIS, reserved=reserved)
+            await _release_if_refundable(e, user_id, ANALYSIS, reserved=reserved)
             logger.exception("Streaming analysis failed for user %s", user_id)
-            yield _sse_event("error", {"code": "ERROR", "detail": str(e)})
+            yield _sse_event(
+                "error", {"code": _GENERIC_ERROR_CODE, "detail": _GENERIC_ERROR_DETAIL}
+            )
             return
 
         db = get_db()
@@ -208,12 +356,24 @@ async def analyze(body: AnalyzeRequest, request: Request):
             if str(e) == "NOT_A_LEGAL_DOCUMENT":
                 raise HTTPException(status_code=422, detail="NOT_A_LEGAL_DOCUMENT") from e
             raise
-        except RuntimeError as e:
+        except ClauseExtractionError as e:
             raise HTTPException(status_code=422, detail=str(e)) from e
-    except Exception:
-        # The user got no analysis back, so don't spend their daily quota on it.
-        await release(user_id, ANALYSIS, reserved=reserved)
+    except HTTPException as e:
+        # Both rejections above are verdicts a completion was already billed for,
+        # so nothing is refunded; routed through the same helper so this stays
+        # true if the block grows.
+        await _release_if_refundable(e, user_id, ANALYSIS, reserved=reserved)
         raise
+    except Exception as e:
+        # Refund only what we broke. A rejected document or an unparseable model
+        # response has already been paid for in tokens, and handing the quota
+        # back for it is a free retry loop.
+        await _release_if_refundable(e, user_id, ANALYSIS, reserved=reserved)
+        logger.exception("Analysis failed for user %s", user_id)
+        raise HTTPException(
+            status_code=502 if _is_infrastructure_failure(e) else 500,
+            detail=_GENERIC_ERROR_DETAIL,
+        ) from e
 
     # Persist to DB
     db = get_db()
@@ -245,28 +405,32 @@ async def upload_and_analyze(
 ):
     """Upload a file (PDF or text), extract text, and analyse."""
     user_id = await get_current_user_id(request)
+    # Size-check and slurp the body *before* reserving: an oversized upload costs
+    # no LLM work, so it should cost no quota either, and this way the 413 needs
+    # no refund at all.
+    content, file_name, is_image = await _read_upload(request, file)
     reserved = await reserve(user_id, ANALYSIS)
 
     try:
-        content = await file.read()
-        file_name = file.filename or "document"
-        is_image = is_image_upload(file.content_type, file_name)
-        _reject_if_oversized(content, is_image)
-
         # Determine file type and extract text (images go through vision OCR).
         if is_image:
             try:
                 text = await image_to_text(content, file.content_type, file_name)
             except OcrError as e:
-                raise HTTPException(status_code=422, detail=e.code) from e
+                # Every OcrError is raised before the vision call, so this is
+                # refundable — matching the streaming endpoint's behaviour.
+                raise PreflightRejection(status_code=422, detail=e.code) from e
+            if not text or len(text.strip()) < 50:
+                # The vision completion ran and was billed, so unlike the
+                # rejections above this one is not refundable.
+                raise HTTPException(status_code=422, detail="OCR_INSUFFICIENT_TEXT")
         else:
             text = await _extract_text_from_upload(content, file.content_type, file_name)
-
-        if not text or len(text.strip()) < 50:
-            raise HTTPException(
-                status_code=422,
-                detail="Not enough text extracted from the document.",
-            )
+            if not text or len(text.strip()) < 50:
+                raise PreflightRejection(
+                    status_code=422,
+                    detail="Not enough text extracted from the document.",
+                )
 
         try:
             with tracing_context(
@@ -285,13 +449,21 @@ async def upload_and_analyze(
             if str(e) == "NOT_A_LEGAL_DOCUMENT":
                 raise HTTPException(status_code=422, detail="NOT_A_LEGAL_DOCUMENT") from e
             raise
-        except RuntimeError as e:
+        except ClauseExtractionError as e:
             raise HTTPException(status_code=422, detail=str(e)) from e
-    except Exception:
-        # Nothing was delivered — refund the quota rather than charge the user
-        # for an unreadable scan or a rejected document.
-        await release(user_id, ANALYSIS, reserved=reserved)
+    except HTTPException as e:
+        # A 4xx says the upload was at fault. Refundable only when we hadn't paid
+        # for a completion yet (PreflightRejection); OCR_INSUFFICIENT_TEXT and
+        # NOT_A_LEGAL_DOCUMENT had, so they stand.
+        await _release_if_refundable(e, user_id, ANALYSIS, reserved=reserved)
         raise
+    except Exception as e:
+        await _release_if_refundable(e, user_id, ANALYSIS, reserved=reserved)
+        logger.exception("Upload analysis failed for user %s", user_id)
+        raise HTTPException(
+            status_code=502 if _is_infrastructure_failure(e) else 500,
+            detail=_GENERIC_ERROR_DETAIL,
+        ) from e
 
     # Persist
     db = get_db()
@@ -343,14 +515,12 @@ async def upload_and_analyze_stream(
 ):
     """Upload a file (PDF or text), extract text, and stream analysis progress via SSE."""
     user_id = await get_current_user_id(request)
+    # Same ordering as /upload: cap the body first (no quota spent on a 413),
+    # then reserve.
+    content, file_name, is_image = await _read_upload(request, file)
     reserved = await reserve(user_id, ANALYSIS)
 
     try:
-        content = await file.read()
-        file_name = file.filename or "document"
-        is_image = is_image_upload(file.content_type, file_name)
-        _reject_if_oversized(content, is_image)
-
         # Image uploads: OCR happens inside the stream (with a progress event) so
         # the client gets feedback during the vision call. Pass raw bytes through.
         if is_image:
@@ -371,13 +541,20 @@ async def upload_and_analyze_stream(
         text = await _extract_text_from_upload(content, file.content_type, file_name)
 
         if not text or len(text.strip()) < 50:
-            raise HTTPException(
+            raise PreflightRejection(
                 status_code=422,
                 detail="Not enough text extracted from the document.",
             )
-    except Exception:
-        await release(user_id, ANALYSIS, reserved=reserved)
+    except HTTPException as e:
+        await _release_if_refundable(e, user_id, ANALYSIS, reserved=reserved)
         raise
+    except Exception as e:
+        await _release_if_refundable(e, user_id, ANALYSIS, reserved=reserved)
+        logger.exception("Upload text extraction failed for user %s", user_id)
+        raise HTTPException(
+            status_code=502 if _is_infrastructure_failure(e) else 500,
+            detail=_GENERIC_ERROR_DETAIL,
+        ) from e
 
     return StreamingResponse(
         _stream_analysis(
@@ -505,8 +682,8 @@ async def ask_document(analysis_id: str, body: DocumentQuestionRequest, request:
                 doc.get("documentText", ""),
                 body.question,
             )
-    except Exception:
-        await release(user_id, QUERY, reserved=reserved)
+    except Exception as e:
+        await _release_if_refundable(e, user_id, QUERY, reserved=reserved)
         raise
 
 
@@ -550,6 +727,14 @@ async def simulate(body: SimulateRequest, request: Request):
     but adds a stored conversation.
     """
     user_id = await get_current_user_id(request)
+    # An analysisId keys a persisted vector index (up to ~800 chunk records), so
+    # an unchecked one lets a caller mint permanent index rows under ids they
+    # have nothing to do with. Every vector-store read is already scoped by
+    # userId, so this is not a cross-user read — but the write side needs the
+    # same ownership rule the /{analysis_id}/chat path already applies.
+    if body.analysisId:
+        await _load_owned_analysis(body.analysisId, user_id)
+
     # Metered: each call is a HyDE completion plus retrieval, so leaving it
     # unbounded is an unbounded bill.
     reserved = await reserve(user_id, QUERY)
@@ -571,8 +756,8 @@ async def simulate(body: SimulateRequest, request: Request):
                 user_id=user_id,
                 analysis_id=body.analysisId,
             )
-    except Exception:
-        await release(user_id, QUERY, reserved=reserved)
+    except Exception as e:
+        await _release_if_refundable(e, user_id, QUERY, reserved=reserved)
         raise
     # ``result`` is the legacy field name the CLI reads; ``citations`` lets newer
     # clients link answer markers back to the document.
@@ -596,8 +781,8 @@ async def negotiation_message(body: NegotiationDraftRequest, request: Request):
             tags=["analysis", "api", "negotiation"],
         ):
             return await draft_negotiation_message(body)
-    except Exception:
-        await release(user_id, QUERY, reserved=reserved)
+    except Exception as e:
+        await _release_if_refundable(e, user_id, QUERY, reserved=reserved)
         raise
 
 
@@ -634,9 +819,10 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
                 pages.append(text)
             return "\n\n".join(pages)
     except Exception:
-        # Fallback to PyPDF2
+        # Fallback to pypdf (the maintained successor to the archived PyPDF2;
+        # PdfReader's API is unchanged).
         try:
-            from PyPDF2 import PdfReader
+            from pypdf import PdfReader
 
             reader = PdfReader(io.BytesIO(pdf_bytes))
             pages = []
@@ -645,7 +831,11 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
                 pages.append(text)
             return "\n\n".join(pages)
         except Exception as e:
-            raise HTTPException(status_code=422, detail=f"Failed to extract PDF text: {e}") from e
+            # The exception text is a parser's opinion of attacker-controlled
+            # bytes — library internals, sometimes file paths. Log it, tell the
+            # client something it can act on.
+            logger.exception("PDF text extraction failed")
+            raise PreflightRejection(status_code=422, detail=_PDF_ERROR_DETAIL) from e
 
 
 def _extract_docx_text(docx_bytes: bytes) -> str:
@@ -665,4 +855,5 @@ def _extract_docx_text(docx_bytes: bytes) -> str:
 
         return "\n".join(paragraphs + table_text)
     except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Failed to extract DOCX text: {e}") from e
+        logger.exception("DOCX text extraction failed")
+        raise PreflightRejection(status_code=422, detail=_DOCX_ERROR_DETAIL) from e
