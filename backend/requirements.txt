@@ -3,7 +3,10 @@ fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 
 # Authentication
-python-jose[cryptography]>=3.3.0
+# >=3.4.0: 3.3.0 is affected by CVE-2024-33663 (algorithm confusion — an ECDSA
+# public key accepted as an HMAC secret) and CVE-2024-33664 (JWE decompression
+# bomb DoS). Both are fixed in 3.4.0.
+python-jose[cryptography]>=3.4.0
 passlib[bcrypt]>=1.7.4
 bcrypt==4.0.1
 
@@ -37,12 +40,22 @@ numpy>=1.26.0
 
 # PDF processing
 pdfplumber>=0.10.0
-PyPDF2>=3.0.0
+# pypdf, NOT PyPDF2: PyPDF2 is archived/EOL (pypdf is its official successor) and
+# still carries an unfixed infinite-loop DoS on malformed input (CVE-2023-36464
+# class). This parses fully attacker-controlled upload bytes, so it must be on a
+# maintained parser.
+pypdf>=5.0.0
 
 # DOCX processing
 python-docx>=1.1.0
-python-multipart
+# Parses attacker-controlled multipart upload bodies, so it must not float to an
+# old release: <0.0.7 has a ReDoS in Content-Type parsing (CVE-2024-24762) and
+# <0.0.18 a malformed-boundary DoS (CVE-2024-53981).
+python-multipart>=0.0.18
 
 # Image processing for vision OCR (downscale/normalise before sending to Groq).
 # Pure pip wheel (no system binary) — already present transitively via pdfplumber.
-Pillow>=10.0.0
+# >=11.0.0: the 10.x line accumulated several CVEs in the image decoders this
+# code path feeds with user-uploaded photos/scans (e.g. the libwebp and
+# ImageMath/eval issues). 11.x is the current well-supported line.
+Pillow>=11.0.0
