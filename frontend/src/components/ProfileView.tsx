@@ -222,10 +222,11 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
       setPwMessage({ type: "error", text: "New passwords do not match" });
       return;
     }
-    if (newPassword.length < 6) {
+    // Must match the server policy in UpdatePasswordRequest (min_length=8).
+    if (newPassword.length < 8) {
       setPwMessage({
         type: "error",
-        text: "Password must be at least 6 characters",
+        text: "Password must be at least 8 characters",
       });
       return;
     }

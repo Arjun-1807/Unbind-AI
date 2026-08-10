@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Annotated
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -10,12 +11,19 @@ MAX_SCENARIO_CHARS = 2_000
 MAX_CLAUSE_CHARS = 20_000
 MAX_NEGOTIATION_POINTS = 50
 
+# Password policy, enforced server-side on every path that sets a password.
+# The 72-byte ceiling is bcrypt's: it silently truncates anything longer, so a
+# longer password would give a false sense of strength (and passlib/bcrypt
+# raises on over-long input in some versions).
+MIN_PASSWORD_LENGTH = 8
+MAX_PASSWORD_LENGTH = 72
+
 
 # ---------- Auth ----------
 class SignupRequest(BaseModel):
-    username: str
+    username: str = Field(min_length=1, max_length=100)
     email: EmailStr
-    password: str
+    password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
 
 
 class LoginRequest(BaseModel):
@@ -37,7 +45,7 @@ class UserResponse(BaseModel):
 
 class UpdatePasswordRequest(BaseModel):
     currentPassword: str
-    newPassword: str
+    newPassword: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
 
 
 # ---------- Analysis ----------
@@ -178,6 +186,9 @@ class LawyerProfile(BaseModel):
     createdAt: datetime
 
 
+Specialization = Annotated[str, Field(min_length=1, max_length=100)]
+
+
 class ContactLawyerRequest(BaseModel):
     lawyerId: str
     message: str = Field(max_length=5_000)
@@ -187,10 +198,15 @@ class ContactLawyerRequest(BaseModel):
 
 
 class LawyerRegistrationRequest(BaseModel):
-    name: str
+    # Every field is bounded: this model is posted by unauthenticated-ish
+    # registration, so bare `str`/`list[str]` would let anyone write
+    # arbitrarily large documents into the lawyers collection.
+    name: str = Field(min_length=1, max_length=200)
     email: EmailStr
-    specializations: list[str]
-    bio: str
-    experienceYears: int
-    city: str
-    phone: str | None = None
+    # max_length on the list caps the item count; the Annotated cap on the item
+    # type is what stops 20 x 10MB strings from getting through.
+    specializations: list[Specialization] = Field(max_length=20)
+    bio: str = Field(max_length=5_000)
+    experienceYears: int = Field(ge=0, le=80)
+    city: str = Field(min_length=1, max_length=100)
+    phone: str | None = Field(None, max_length=40)

@@ -20,6 +20,16 @@ from app.services.model_selector import select_model
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Login returns the same message whether the email is unknown or the password is
+# wrong, but that is only half the story: bcrypt costs ~250x a failed lookup, so
+# *timing* alone reveals which emails are registered. Every failing branch is
+# compared against this throwaway hash so the work done is the same either way.
+# Computed once at import (bcrypt is deliberately slow).
+_DUMMY_PASSWORD_HASH = hash_password("dummy-password-for-timing")
+
+# Google's tokeninfo endpoint reports these for a genuine ID token.
+_GOOGLE_ISSUERS = ("accounts.google.com", "https://accounts.google.com")
+
 
 class GoogleLoginRequest(BaseModel):
     credential: str
@@ -70,10 +80,17 @@ async def signup(body: SignupRequest, request: Request, response: Response):
 async def login(body: LoginRequest, request: Request, response: Response):
     db = get_db()
     user = await db.users.find_one({"email": body.email.lower()})
-    if not user:
+
+    # A Google-only account has passwordHash = None; it must not be loggable via
+    # password, and must not crash verify_password either.
+    stored_hash = user.get("passwordHash") if user else None
+    if not stored_hash:
+        # Spend the same bcrypt time as a real check before failing, so an
+        # unknown (or password-less) email is not distinguishable by latency.
+        verify_password(body.password, _DUMMY_PASSWORD_HASH)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    if not verify_password(body.password, user["passwordHash"]):
+    if not verify_password(body.password, stored_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     user_id = str(user["_id"])
@@ -132,13 +149,13 @@ async def update_password(body: UpdatePasswordRequest, request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    # Verify current password
-    if not verify_password(body.currentPassword, user["passwordHash"]):
+    # Verify current password. A Google-only account has no passwordHash, so
+    # compare against the dummy hash rather than handing None to bcrypt.
+    if not verify_password(body.currentPassword, user.get("passwordHash") or _DUMMY_PASSWORD_HASH):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
-    # Validate new password
-    if len(body.newPassword) < 6:
-        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    # The length policy for newPassword lives in UpdatePasswordRequest (a 422),
+    # so it cannot drift from the signup policy. No second check here.
 
     # Hash and update password
     new_password_hash = hash_password(body.newPassword)
@@ -154,7 +171,7 @@ async def google_login(body: GoogleLoginRequest, request: Request, response: Res
     settings = get_settings()
 
     # Verify the Google ID token with Google's tokeninfo endpoint
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=5.0) as client:
         res = await client.get(
             "https://oauth2.googleapis.com/tokeninfo",
             params={"id_token": body.credential},
@@ -169,6 +186,17 @@ async def google_login(body: GoogleLoginRequest, request: Request, response: Res
     if info.get("aud") != settings.GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=401, detail="Token audience mismatch")
 
+    # ...and that Google itself issued it.
+    if info.get("iss") not in _GOOGLE_ISSUERS:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+
+    # An unverified email claim is attacker-controlled: anyone can put a
+    # victim's address on a Google account they own. Without this check the
+    # email-matching below would hand them the victim's account.
+    # tokeninfo returns this as the string "true", not a bool.
+    if info.get("email_verified") not in (True, "true"):
+        raise HTTPException(status_code=401, detail="Google email not verified")
+
     google_sub = info.get("sub")
     email = info.get("email", "").lower()
     name = info.get("name") or email.split("@")[0]
@@ -176,20 +204,38 @@ async def google_login(body: GoogleLoginRequest, request: Request, response: Res
 
     if not email:
         raise HTTPException(status_code=400, detail="Google account has no email")
+    if not google_sub:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
 
     db = get_db()
     now = datetime.datetime.now()
 
-    user = await db.users.find_one({"email": email})
+    # The Google subject is the stable identity; the email is not (it can be
+    # changed on the Google side, and matching on it alone is what allowed the
+    # takeover). Look up by sub first and only fall back to email.
+    user = await db.users.find_one({"googleSub": google_sub})
+    if not user:
+        user = await db.users.find_one({"email": email})
 
     if user:
-        # Update picture in case it changed
+        # Linking onto an existing password account is gated on the verified
+        # email check above, not refused outright. What made this a takeover was
+        # trusting an *unverified* email claim: anyone could put a victim's
+        # address on a Google account they owned. A verified claim means Google
+        # confirmed control of that mailbox, which is the same assurance a
+        # password-reset email carries — so it is sufficient to link, and it
+        # keeps the Google button working for users who signed up with a
+        # password. Do not relax the email_verified check above without
+        # revisiting this.
+        #
+        # Update picture in case it changed.
         await db.users.update_one(
             {"_id": user["_id"]},
             {"$set": {"picture": picture, "googleSub": google_sub}},
         )
         user_id = str(user["_id"])
         username = user["username"]
+        email = user["email"]
         pro = user.get("pro", False)
         created_at = user.get("createdAt", now)
     else:
@@ -202,11 +248,32 @@ async def google_login(body: GoogleLoginRequest, request: Request, response: Res
             "pro": False,
             "createdAt": now,
         }
-        result = await db.users.insert_one(doc)
-        user_id = str(result.inserted_id)
-        username = name
-        pro = False
-        created_at = now
+        try:
+            result = await db.users.insert_one(doc)
+        except DuplicateKeyError as e:
+            # Two concurrent first-time logins for the same Google account: the
+            # unique index on users.email rejects the loser. Adopt the record
+            # the winner just created instead of 500ing.
+            user = await db.users.find_one({"email": email})
+            if not user or (user.get("passwordHash") and user.get("googleSub") != google_sub):
+                # Whatever now owns this email is not this Google identity, so
+                # the same refusal as the linking check above applies.
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "An account with this email already exists. Sign in with your "
+                        "password, then link Google from your account settings."
+                    ),
+                ) from e
+            user_id = str(user["_id"])
+            username = user["username"]
+            pro = user.get("pro", False)
+            created_at = user.get("createdAt", now)
+        else:
+            user_id = str(result.inserted_id)
+            username = name
+            pro = False
+            created_at = now
 
     token = create_access_token(user_id)
     set_auth_cookie(response, token, request)

@@ -31,8 +31,10 @@ const SignupView: React.FC = () => {
       setError("Passwords do not match.");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    // Must match the server policy in SignupRequest (min_length=8), otherwise
+    // the UI accepts a password the API rejects with a raw 422.
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
       return;
     }
     if (!agreedToTerms) {
