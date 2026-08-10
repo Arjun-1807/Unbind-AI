@@ -11,7 +11,19 @@ router = APIRouter(prefix="/lawyer-register", tags=["lawyer_registration"])
 
 @router.post("/", response_model=dict)
 async def register_lawyer(payload: LawyerRegistrationRequest):
-    """Register a new lawyer for the referral network."""
+    """Register a new lawyer for the referral network.
+
+    Deliberately UNAUTHENTICATED: this backs the "join our lawyer network" form
+    on the public landing page (``frontend/src/components/LandingPage.tsx``),
+    which is only rendered to signed-out visitors, so requiring a session would
+    break the sole legitimate caller.
+
+    What makes that safe is that the row is written with ``verified: False`` and
+    every read path in ``lawyer_routes`` filters on ``verified: True`` — an
+    un-vetted submission is invisible in the paid directory and cannot be
+    contacted until an admin promotes it. Abuse of the endpoint itself is bounded
+    by rate limiting and the field-length caps on ``LawyerRegistrationRequest``.
+    """
     db = get_db()
 
     # Check if lawyer with this email already exists

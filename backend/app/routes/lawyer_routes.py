@@ -55,8 +55,16 @@ async def list_lawyers(
 
     db = get_db()
 
-    # Build query filter
-    query = {}
+    # Build query filter.
+    #
+    # `verified` is NOT optional. POST /api/lawyer-register/ is a public endpoint
+    # (it backs the "register as a lawyer" form on the unauthenticated landing
+    # page), so anyone on the internet can insert a lawyers document with an
+    # attacker-controlled email. Those rows land with verified=False and stay
+    # invisible until an admin vets them — without this filter a fake profile
+    # would show up in the paid directory immediately, and contacting it would
+    # email the attacker the customer's address and contract details.
+    query = {"verified": True}
     if specialization:
         query["specializations"] = {"$in": [specialization]}
 
@@ -97,8 +105,10 @@ async def get_lawyer(lawyer_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid lawyer ID") from e
 
-    # Fetch lawyer
-    lawyer_doc = await db.lawyers.find_one({"_id": object_id})
+    # Fetch lawyer. Unverified (self-registered, un-vetted) profiles are treated
+    # as non-existent so a direct-by-id fetch can't be used to bypass the
+    # verified filter on the listing above.
+    lawyer_doc = await db.lawyers.find_one({"_id": object_id, "verified": True})
     if not lawyer_doc:
         raise HTTPException(status_code=404, detail="Lawyer not found")
 
@@ -131,8 +141,11 @@ async def contact_lawyer(lawyer_id: str, request: ContactLawyerRequest, http_req
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid lawyer ID") from e
 
-    # Check if lawyer exists
-    lawyer_doc = await db.lawyers.find_one({"_id": object_id})
+    # Check the lawyer exists AND is verified. This is the step that actually
+    # prevents the harm: without `verified: True` here, a self-registered profile
+    # with an attacker-controlled email would receive the customer's contact
+    # address and their free-text message about their contract.
+    lawyer_doc = await db.lawyers.find_one({"_id": object_id, "verified": True})
     if not lawyer_doc:
         raise HTTPException(status_code=404, detail="Lawyer not found")
 

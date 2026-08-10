@@ -35,6 +35,58 @@ PLAN_CATALOGUE = {
     "Verdict": {"amount": 150000, "duration_days": None, "label": "UnBind Verdict (Lifetime)"},
 }
 
+# Plan tiers, worst → best (free tier is None → 0). A purchase may extend or
+# upgrade what a user has, but must never silently replace something better:
+# without this ordering a ₹100 Brief bought on top of a lifetime Verdict would
+# overwrite it with a 30-day expiry. Kept in sync with plan_service.PLAN_LIMITS.
+PLAN_RANK: dict[str | None, int] = {None: 0, "Brief": 1, "Motion": 2, "Verdict": 3}
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    """Mongo can hand back a naive datetime; treat it as the UTC we stored."""
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+def _better_expiry(a: datetime | None, b: datetime | None) -> datetime | None:
+    """The more generous of two plan expiries. ``None`` means "never expires"
+    (lifetime), so it beats every concrete date."""
+    if a is None or b is None:
+        return None
+    return max(a, b)
+
+
+def _resolve_grant(
+    current_plan: str | None,
+    current_expires_at: datetime | None,
+    new_plan: str,
+    new_expires_at: datetime | None,
+) -> tuple[str, datetime | None]:
+    """Merge a newly purchased plan into whatever the user already has, keeping
+    the better of the two — extend or upgrade, never downgrade.
+
+    ``current_plan`` must be the *effective* plan (see
+    ``plan_service.effective_plan``), so a lapsed Brief counts as free tier and
+    doesn't block a new purchase. Rules:
+
+    * No active plan → the purchase applies as-is.
+    * Purchase of a strictly lower tier → keep the existing plan and expiry
+      untouched (the buyer keeps what they already paid for).
+    * Same or higher tier → take the new plan name and the later of the two
+      expiries, so an upgrade can never shorten access.
+    """
+    cur_rank = PLAN_RANK.get(current_plan, 0) if current_plan else 0
+    new_rank = PLAN_RANK.get(new_plan, 0)
+
+    if cur_rank == 0 or current_plan is None:
+        return new_plan, new_expires_at
+
+    if cur_rank > new_rank:
+        return current_plan, current_expires_at
+
+    return new_plan, _better_expiry(current_expires_at, new_expires_at)
+
 
 def _rzp_auth() -> tuple[str, str]:
     """Return (key_id, key_secret), or 503 if payments aren't configured."""
@@ -147,13 +199,19 @@ async def _grant_plan(db, user_id: str, plan: str, order: dict, payment_id: str)
     or a duplicate webhook can't extend the plan or double-count a purchase. The
     unique index on ``payments.razorpayPaymentId`` is the race-safe backstop for
     two concurrent grants of the same payment.
+
+    The grant itself only ever improves the user's standing: ``_resolve_grant``
+    keeps the higher tier and the later expiry, so buying a cheaper plan on top
+    of an active better one can't clobber it (see ``PLAN_RANK``).
     """
     existing = await db.payments.find_one({"razorpayPaymentId": payment_id})
     if existing:
         exp = existing.get("planExpiresAt")
         return {
             "success": True,
-            "plan": existing.get("plan", plan),
+            # grantedPlan is what the user actually ended up with, which differs
+            # from the purchased plan when the purchase was a no-op downgrade.
+            "plan": existing.get("grantedPlan") or existing.get("plan", plan),
             "expiresAt": exp.isoformat() if hasattr(exp, "isoformat") else exp,
             "alreadyProcessed": True,
         }
@@ -162,6 +220,25 @@ async def _grant_plan(db, user_id: str, plan: str, order: dict, payment_id: str)
     duration = PLAN_CATALOGUE[plan]["duration_days"]
     expires_at = now + timedelta(days=duration) if duration is not None else None
 
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+
+    if user and user.get("lastPaymentId") == payment_id:
+        # This exact payment was already applied to the user, but we crashed
+        # before recording it in `payments` below. Re-running the merge would
+        # push the expiry out a second time, so carry the existing grant through
+        # unchanged and just let the payment record catch up.
+        granted_plan = user.get("plan") or plan
+        granted_expires_at = _as_utc(user.get("planExpiresAt"))
+    else:
+        # effective_plan (not user["plan"]) so an already-lapsed plan doesn't
+        # count as "better" than the plan just bought.
+        granted_plan, granted_expires_at = _resolve_grant(
+            effective_plan(user),
+            _as_utc(user.get("planExpiresAt")) if user else None,
+            plan,
+            expires_at,
+        )
+
     # Grant the plan first. The $set is idempotent and this ordering guarantees a
     # paying user is never left un-granted: if we crash before recording the
     # payment below, a replay simply re-grants and records it (self-healing).
@@ -169,10 +246,10 @@ async def _grant_plan(db, user_id: str, plan: str, order: dict, payment_id: str)
         {"_id": ObjectId(user_id)},
         {
             "$set": {
-                "plan": plan,
+                "plan": granted_plan,
                 "pro": True,
                 "planActivatedAt": now,
-                "planExpiresAt": expires_at,
+                "planExpiresAt": granted_expires_at,
                 "lastPaymentId": payment_id,
             }
         },
@@ -185,29 +262,33 @@ async def _grant_plan(db, user_id: str, plan: str, order: dict, payment_id: str)
         await db.payments.insert_one(
             {
                 "userId": ObjectId(user_id),
+                # `plan` is what was bought (drives the receipt/history line);
+                # `grantedPlan` is what the account ended up on, which differs
+                # when the purchase was a lower tier than the active plan.
                 "plan": plan,
+                "grantedPlan": granted_plan,
                 "amount": order["amount"],
                 "currency": order.get("currency", "INR"),
                 "razorpayOrderId": order["id"],
                 "razorpayPaymentId": payment_id,
-                "planExpiresAt": expires_at,
+                "planExpiresAt": granted_expires_at,
                 "createdAt": now,
             }
         )
     except DuplicateKeyError:
         return {
             "success": True,
-            "plan": plan,
-            "expiresAt": expires_at.isoformat() if expires_at else None,
+            "plan": granted_plan,
+            "expiresAt": granted_expires_at.isoformat() if granted_expires_at else None,
             "alreadyProcessed": True,
         }
 
-    await _send_receipt(db, user_id, plan, order, payment_id, expires_at)
+    await _send_receipt(db, user_id, plan, order, payment_id, granted_expires_at)
 
     return {
         "success": True,
-        "plan": plan,
-        "expiresAt": expires_at.isoformat() if expires_at else None,
+        "plan": granted_plan,
+        "expiresAt": granted_expires_at.isoformat() if granted_expires_at else None,
         "alreadyProcessed": False,
     }
 
