@@ -111,10 +111,11 @@ const OverlayRephrasedPdf: React.FC<OverlayRephrasedPdfProps> = ({
       }));
       for (const cl of clauses) {
         if (!cl.original) continue;
-        const parts = cl.original.split(" ");
-        const rx = new RegExp(parts.map(escapeRx).join("\\s+"));
-        if (rx.test(combined)) {
-          combined = combined.replace(rx, cl.rewrite);
+        // Avoid constructing dynamic RegExp from user-controlled text (ReDoS risk).
+        // Use normalized plain-string matching since both sides are whitespace-normalized.
+        const orig = cl.original;
+        if (orig && combined.includes(orig)) {
+          combined = combined.replace(orig, cl.rewrite);
         }
       }
 

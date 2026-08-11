@@ -47,6 +47,14 @@ function printHelp() {
   );
 }
 
+// Validate CLI path inputs to guard against injection/traversal and NUL bytes.
+function safeResolveInput(p) {
+  if (typeof p !== 'string' || p.includes('\0')) {
+    throw new Error('Invalid path argument');
+  }
+  return path.resolve(p);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export async function main(rawArgs) {
@@ -94,7 +102,7 @@ export async function main(rawArgs) {
   }
 
   // ── Validate file path ─────────────────────────────────────────────────────
-  const filePath = path.resolve(command);
+  const filePath = safeResolveInput(command);
 
   if (!fs.existsSync(filePath)) {
     console.error(chalk.red(`\n  ✗ File not found: ${command}\n`));
@@ -242,7 +250,7 @@ async function exportCommand(args) {
     process.exit(1);
   }
 
-  const filePath = path.resolve(fileArg);
+  const filePath = safeResolveInput(fileArg);
 
   if (!fs.existsSync(filePath)) {
     console.error(chalk.red(`\n  ✗ File not found: ${fileArg}\n`));

@@ -278,9 +278,20 @@ export function exportAnalysis(analysis, opts = {}) {
     path.extname(analysis.fileName ?? '')
   );
   const defaultName = `${baseName}-unbind-report.${format}`;
-  const outputPath = opts.outputPath
-    ? path.resolve(opts.outputPath)
-    : path.resolve(process.cwd(), defaultName);
+  // Resolve and validate output path to avoid writing outside the working dir
+  const outputPath = (() => {
+    if (opts.outputPath) {
+      const resolved = path.resolve(opts.outputPath);
+      const cwd = process.cwd();
+      const rel = path.relative(cwd, resolved);
+      // If the resolved path is outside cwd, reject it
+      if (rel.startsWith('..') || path.isAbsolute(rel) && rel !== '') {
+        throw new Error('Invalid output path: must be inside the current working directory');
+      }
+      return resolved;
+    }
+    return path.resolve(process.cwd(), defaultName);
+  })();
 
   const content =
     format === 'txt' ? buildPlainText(analysis) : buildMarkdown(analysis);
