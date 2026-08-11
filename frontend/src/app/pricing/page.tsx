@@ -7,11 +7,22 @@ import { useRouter } from "next/navigation";
 import { createPlanOrder, verifyPlanPayment } from "@/services/api";
 import { loadRazorpay } from "@/lib/razorpay";
 import { useAuth } from "@/context/AuthContext";
+import {
+  SparklesIcon,
+  FileSearchIcon,
+  ScaleIcon,
+  CheckIcon,
+  CheckCircleIcon,
+} from "@/components/Icons";
 
 const TerminalIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <polyline points="4 17 10 11 4 5" /><line x1="12" x2="20" y1="19" y2="19" />
   </svg>
+);
+
+const PlanCheck = () => (
+  <CheckIcon className="h-4 w-4 text-success mt-0.5 shrink-0" />
 );
 export default function Pricing() {
     const router = useRouter();
@@ -122,7 +133,9 @@ export default function Pricing() {
 
               <div className="space-y-6">
                 <div className="flex gap-4">
-                  <div className="text-3xl">⚡</div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <SparklesIcon className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
                     <h3 className="text-xl font-semibold text-ink mb-2">
                       Advanced AI Analysis
@@ -135,7 +148,9 @@ export default function Pricing() {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="text-3xl">🔍</div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <FileSearchIcon className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
                     <h3 className="text-xl font-semibold text-ink mb-2">
                       Deeper Insights
@@ -148,7 +163,9 @@ export default function Pricing() {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="text-3xl">👨‍⚖️</div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <ScaleIcon className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
                     <h3 className="text-xl font-semibold text-ink mb-2">
                       Curated Lawyer Assistance
@@ -163,7 +180,7 @@ export default function Pricing() {
 
               <div className="ln-card p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-2xl">✓</span>
+                  <CheckCircleIcon className="h-5 w-5 text-success" />
                   <p className="text-ink font-semibold">Cancel Anytime</p>
                 </div>
                 <p className="text-ink-muted text-sm">
@@ -194,27 +211,25 @@ export default function Pricing() {
                   </div>
                   <ul className="space-y-2 mb-6 flex-grow">
                     <li className="flex items-start gap-2 text-ink-muted text-sm">
-                      <span className="text-success mt-0.5">✓</span>
+                      <PlanCheck />
                       <span>Top-end AI models</span>
                     </li>
                     <li className="flex items-start gap-2 text-ink-muted text-sm">
-                      <span className="text-success mt-0.5">✓</span>
+                      <PlanCheck />
                       <span>Faster analysis</span>
                     </li>
                     <li className="flex items-start gap-2 text-ink-muted text-sm">
-                      <span className="text-success mt-0.5">✓</span>
+                      <PlanCheck />
                       <span>Valid for 1 month</span>
                     </li>
                     <li className="flex items-start gap-2 text-ink-muted text-sm">
-                      <span className="text-success mt-0.5">✓</span>
+                      <PlanCheck />
                       <span>3 analysis per day</span>
                     </li>
                   </ul>
-                  {/* <Link href="/checkout?plan=pro1"> */}
                     <button className={btnClass("Brief")} onClick={() => handleSelectPlan("Brief")} disabled={isDisabled("Brief")}>
                       {btnLabel("Brief", "Get Brief")}
                     </button>
-                  {/* </Link> */}
                 </div>
 
                 {/* Pro 2 Card - Popular */}
@@ -235,31 +250,29 @@ export default function Pricing() {
                   </div>
                   <ul className="space-y-2 mb-6 flex-grow">
                     <li className="flex items-start gap-2 text-ink-muted text-sm">
-                      <span className="text-success mt-0.5">✓</span>
+                      <PlanCheck />
                       <span>Top-end AI models</span>
                     </li>
                     <li className="flex items-start gap-2 text-ink-muted text-sm">
-                      <span className="text-success mt-0.5">✓</span>
+                      <PlanCheck />
                       <span>Faster analysis</span>
                     </li>
                     <li className="flex items-start gap-2 text-ink-muted text-sm">
-                      <span className="text-success mt-0.5">✓</span>
+                      <PlanCheck />
                       <span className="font-semibold">Deeper analysis</span>
                     </li>
                     <li className="flex items-start gap-2 text-ink-muted text-sm">
-                      <span className="text-success mt-0.5">✓</span>
+                      <PlanCheck />
                       <span>Valid for 3 months</span>
                     </li>
                     <li className="flex items-start gap-2 text-ink-muted text-sm">
-                      <span className="text-success mt-0.5">✓</span>
+                      <PlanCheck />
                       <span>5 analyses per day</span>
                     </li>
                   </ul>
-                  {/* <Link href="/checkout?plan=pro2"> */}
                     <button className={btnClass("Motion")} onClick={() => handleSelectPlan("Motion")} disabled={isDisabled("Motion")}>
                       {btnLabel("Motion", "Get Motion")}
                     </button>
-                  {/* </Link> */}
                               </div>
                               
               </div>
@@ -277,29 +290,29 @@ export default function Pricing() {
                 </div>
                 <ul className="space-y-3 mb-6">
                   <li className="flex items-start gap-2 text-ink-muted">
-                    <span className="text-success mt-1">✓</span>
+                    <PlanCheck />
                     <span>Top-end AI models</span>
                   </li>
                   <li className="flex items-start gap-2 text-ink-muted">
-                    <span className="text-success mt-1">✓</span>
+                    <PlanCheck />
                     <span>Faster analysis</span>
                   </li>
                   <li className="flex items-start gap-2 text-ink-muted">
-                    <span className="text-success mt-1">✓</span>
+                    <PlanCheck />
                     <span>Deeper analysis</span>
                   </li>
                   <li className="flex items-start gap-2 text-ink-muted">
-                    <span className="text-success mt-1">✓</span>
+                    <PlanCheck />
                     <span className="font-semibold">
                       Curated lawyer assistance
                     </span>
                   </li>
                   <li className="flex items-start gap-2 text-ink-muted">
-                    <span className="text-success mt-1">✓</span>
+                    <PlanCheck />
                     <span className="font-semibold">Lifetime access</span>
                   </li>
                    <li className="flex items-start gap-2 text-ink-muted">
-                    <span className="text-success mt-1">✓</span>
+                    <PlanCheck />
                     <span className="font-semibold">Unlimited Analysis</span>
                   </li>
                    <li className="flex items-start gap-2 text-sm">
@@ -307,11 +320,9 @@ export default function Pricing() {
                   <span className="text-primary font-semibold">CLI tool access (exclusive)</span>
                 </li>
                 </ul>
-                {/* <Link href="/checkout?plan=pro3"> */}
                   <button className={btnClass("Verdict")} onClick={() => handleSelectPlan("Verdict")} disabled={isDisabled("Verdict")}>
                     {btnLabel("Verdict", "Get Verdict")}
                   </button>
-                {/* </Link> */}
               </div>
             </div>
           </div>
