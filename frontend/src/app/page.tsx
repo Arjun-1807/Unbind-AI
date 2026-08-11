@@ -8,19 +8,21 @@ import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 import Footer from "@/components/footer";
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const router = useRouter();
 
   // If the user is already authenticated, always send them to the real dashboard
   // so all dashboard actions (analysis navigation, new analysis, etc.) work correctly.
+  // Wait for authReady so a valid session cookie doesn't flash the landing page
+  // before redirecting.
   useEffect(() => {
-    if (user) {
+    if (authReady && user) {
       router.replace("/dashboard");
     }
-  }, [user, router]);
+  }, [authReady, user, router]);
 
-  // While redirecting, render nothing to avoid showing a partially wired dashboard.
-  if (user) return null;
+  // While the auth check is pending, or while redirecting, render nothing.
+  if (!authReady || user) return null;
 
   return (
     <div className="min-h-screen font-sans">
