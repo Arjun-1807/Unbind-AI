@@ -14,6 +14,7 @@ interface AuthContextValue {
   user: User | null;
   authReady: boolean;
   analyses: AnalysisSummary[];
+  analysesLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
@@ -27,13 +28,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [analyses, setAnalyses] = useState<AnalysisSummary[]>([]);
+  const [analysesLoading, setAnalysesLoading] = useState(true);
 
   const refreshAnalyses = useCallback(async () => {
+    setAnalysesLoading(true);
     try {
       const data = await api.getUserAnalyses();
       setAnalyses(data);
     } catch {
       setAnalyses([]);
+    } finally {
+      setAnalysesLoading(false);
     }
   }, []);
 
@@ -50,12 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const remoteUser = await api.getCurrentUser();
       if (remoteUser) {
         setUser(remoteUser);
-        try {
-          const data = await api.getUserAnalyses();
-          setAnalyses(data);
-        } catch {
-          setAnalyses([]);
-        }
+        await refreshAnalyses();
         setAuthReady(true);
         return;
       }
@@ -63,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // No valid backend session.
       setUser(null);
       setAnalyses([]);
+      setAnalysesLoading(false);
       setAuthReady(true);
     })();
   }, []);
@@ -106,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         authReady,
         analyses,
+        analysesLoading,
         login: loginHandler,
         signup: signupHandler,
         loginWithGoogle: loginWithGoogleHandler,
