@@ -52,7 +52,11 @@ function safeResolveInput(p) {
   if (typeof p !== 'string' || p.includes('\0')) {
     throw new Error('Invalid path argument');
   }
-  return path.resolve(p);
+  // p is the document path the local operator typed on their own command
+  // line (e.g. `unbind ~/contracts/employment.pdf`) — there is no privilege
+  // boundary here for a path to traverse across, unlike a server resolving a
+  // path on a remote client's behalf.
+  return path.resolve(p); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────

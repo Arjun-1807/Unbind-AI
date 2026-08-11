@@ -281,7 +281,10 @@ export function exportAnalysis(analysis, opts = {}) {
   // Resolve and validate output path to avoid writing outside the working dir
   const outputPath = (() => {
     if (opts.outputPath) {
-      const resolved = path.resolve(opts.outputPath);
+      // opts.outputPath is the local CLI operator's own --output flag, not a
+      // remote/untrusted input, and the containment check below rejects any
+      // resolution outside cwd before the path is used.
+      const resolved = path.resolve(opts.outputPath); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       const cwd = process.cwd();
       const rel = path.relative(cwd, resolved);
       // If the resolved path is outside cwd, reject it
@@ -290,7 +293,11 @@ export function exportAnalysis(analysis, opts = {}) {
       }
       return resolved;
     }
-    return path.resolve(process.cwd(), defaultName);
+    // defaultName is built from path.basename()/path.extname() of the
+    // document's own filename with a fixed "-unbind-report.<ext>" suffix
+    // appended, so it can never contain a path separator or resolve to a
+    // parent directory.
+    return path.resolve(process.cwd(), defaultName); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   })();
 
   const content =
