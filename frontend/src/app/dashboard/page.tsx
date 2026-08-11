@@ -9,7 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import * as api from "@/services/api";
 import Footer from "@/components/footer";
 export default function DashboardPage() {
-  const { user, authReady, analyses, refreshAnalyses } = useAuth();
+  const { user, authReady, analyses, analysesLoading, refreshAnalyses } =
+    useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export default function DashboardPage() {
         <DashboardView
           user={user}
           analyses={analyses}
+          analysesLoading={analysesLoading}
           onSelectAnalysis={(a) => {
             sessionStorage.setItem("currentAnalysis", JSON.stringify(a));
             router.push("/analysis");

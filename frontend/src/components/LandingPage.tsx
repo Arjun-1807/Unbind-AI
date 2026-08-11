@@ -2,25 +2,16 @@
 
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  LogoIcon,
-  SparklesIcon,
-  ShieldCheckIcon,
-  FileTextIcon,
-  DownloadIcon,
-  CalendarIcon,
-  AlertTriangleIcon,
-  CameraIcon,
-  FileSearchIcon,
-} from "./Icons";
+import { SparklesIcon, ScaleIcon } from "./Icons";
 import HeroProductMockup from "./HeroProductMockup";
 import HowItWorksFlow from "./HowItWorksFlow";
+import RedlineHeadline from "./RedlineHeadline";
+import BentoFeatureGrid from "./BentoFeatureGrid";
+import RedlineTicker from "./RedlineTicker";
 import {
   UploadMockup,
   ClauseMockup,
   NegotiationMockup,
-  ExportMockup,
-  DashboardMockup,
 } from "./mockups/FeatureMockups";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { registerLawyer } from "@/services/api";
@@ -28,18 +19,6 @@ import { registerLawyer } from "@/services/api";
 const TerminalIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <polyline points="4 17 10 11 4 5" /><line x1="12" x2="20" y1="19" y2="19" />
-  </svg>
-);
-
-const TargetIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
-  </svg>
-);
-
-const BookOpenIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
   </svg>
 );
 
@@ -195,7 +174,7 @@ const LandingPage: React.FC = () => {
               AI-Powered Contract Intelligence
             </div>
 
-            <h1
+            <RedlineHeadline
               className="rise-in mx-auto max-w-3xl font-semibold"
               style={{
                 color: "var(--ln-ink)",
@@ -204,11 +183,7 @@ const LandingPage: React.FC = () => {
                 letterSpacing: "-0.03em",
                 ["--i" as string]: 1,
               }}
-            >
-              Contracts decoded.
-              <br />
-              Risks revealed.
-            </h1>
+            />
 
             <p
               className="rise-in mx-auto mt-6 max-w-2xl"
@@ -267,6 +242,8 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      <RedlineTicker />
+
       {/* Features Grid */}
       <section className="py-12 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -279,74 +256,7 @@ const LandingPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                icon: <AlertTriangleIcon className="h-6 w-6" />,
-                title: "Risk Analysis",
-                desc: "Clause-by-clause risk scoring with a visual risk meter. See what's dangerous before you sign.",
-              },
-              {
-                icon: <CameraIcon className="h-6 w-6" />,
-                title: "Snap a Photo",
-                desc: "Only have a paper contract? Photograph or scan it and our vision AI reads the text for you — no typing.",
-              },
-              {
-                icon: <ShieldCheckIcon className="h-6 w-6" />,
-                title: "Negotiation Helper",
-                desc: "AI-suggested clause rewrites with keep, AI, or custom options for every risky term.",
-              },
-              {
-                icon: <SparklesIcon className="h-6 w-6" />,
-                title: "Negotiation Message",
-                desc: "Turn the changes you want into a polite, ready-to-send message — pick the points, tone, and format, then copy and send.",
-              },
-              {
-                icon: <BookOpenIcon className="h-6 w-6" />,
-                title: "Key Terms Glossary",
-                desc: "Legal jargon translated to plain English. Understand indemnification, force majeure, and more.",
-              },
-              {
-                icon: <CalendarIcon className="h-6 w-6" />,
-                title: "Key Dates & Deadlines",
-                desc: "Automatic deadline extraction with ICS calendar export. Never miss a renewal or notice period.",
-              },
-              {
-                icon: <TargetIcon className="h-6 w-6" />,
-                title: "Ask Anything",
-                desc: 'Ask what a clause means, or "what if I leave early?" — answers come from your contract, in a conversation that remembers what you asked.',
-              },
-              {
-                icon: <FileSearchIcon className="h-6 w-6" />,
-                title: "Source Citations",
-                desc: "Every answer links to the exact clause it's based on — one click jumps you straight there in the document.",
-              },
-              {
-                icon: <FileTextIcon className="h-6 w-6" />,
-                title: "Document View",
-                desc: "Side-by-side contract view with interactive clause highlighting linked to the analysis.",
-              },
-            ].map((feature, i) => (
-              <div
-                key={i}
-                className="reveal lift group ln-card p-6 hover:border-hairline-strong"
-                style={{ ["--i" as string]: i % 3 }}
-              >
-                <div
-                  className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg text-primary transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
-                  style={{ background: "rgba(94,106,210,0.12)", border: "1px solid rgba(94,106,210,0.25)" }}
-                >
-                  {feature.icon}
-                </div>
-                <h3 className="text-lg font-medium text-ink mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-ink-subtle text-sm leading-relaxed">
-                  {feature.desc}
-                </p>
-              </div>
-            ))}
-          </div>
+          <BentoFeatureGrid />
         </div>
       </section>
 
@@ -417,8 +327,17 @@ const LandingPage: React.FC = () => {
                   <span className="text-ink-muted"> Found 12 clauses · Risk Score: </span>
                   <span className="text-danger font-semibold">7.2/10</span>
                 </div>
+                <div className="mt-3 text-ink-muted">
+                  <span className="text-primary">unbind&gt;</span> redline &quot;Late Payment Penalty&quot;
+                </div>
+                <div className="mt-1" style={{ color: "var(--ln-danger)" }}>
+                  - $200/day, compounding, no cap
+                </div>
+                <div style={{ color: "#4ade80" }}>
+                  + $50 one-time fee, capped at 1 month&apos;s rent
+                </div>
                 <div className="mt-2 text-ink-muted caret">
-                  <span className="text-primary">unbind&gt;</span> show risks
+                  <span className="text-primary">unbind&gt;</span>
                 </div>
               </div>
             </div>
@@ -465,6 +384,14 @@ const LandingPage: React.FC = () => {
             </h2>
             <p className="mt-4 text-base sm:text-lg text-ink-subtle max-w-2xl mx-auto">
               Start free and upgrade when you need more. Cancel anytime.
+            </p>
+            <p className="mt-4 text-sm">
+              <span className="line-through" style={{ color: "var(--ln-danger)" }}>
+                ₹15,000+ for a lawyer to review one contract
+              </span>{" "}
+              <span className="font-medium" style={{ color: "#4ade80" }}>
+                → ₹100/month for unlimited contracts
+              </span>
             </p>
           </div>
 
@@ -567,57 +494,6 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Extra features row */}
-      <section className="py-12 sm:py-24 border-t border-hairline">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* PDF Export card */}
-            <div className="reveal lift ln-card p-6 sm:p-8 flex flex-col justify-between" style={{ ["--i" as string]: 0 }}>
-              <div>
-                <div
-                  className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg text-primary"
-                  style={{ background: "rgba(94,106,210,0.12)", border: "1px solid rgba(94,106,210,0.25)" }}
-                >
-                  <DownloadIcon className="h-5 w-5" />
-                </div>
-                <h3 className="text-xl font-medium text-ink mb-2">PDF Export & Modified Contracts</h3>
-                <p className="text-ink-subtle leading-relaxed">
-                  Download your full analysis as a formatted PDF report. Export modified contracts
-                  with your negotiated clause changes applied — ready to send to the other party.
-                </p>
-              </div>
-              <div className="mt-6 flex justify-center">
-                <div className="w-full max-w-[440px]">
-                  <ExportMockup />
-                </div>
-              </div>
-            </div>
-
-            {/* Dashboard card */}
-            <div className="reveal lift ln-card p-6 sm:p-8 flex flex-col justify-between" style={{ ["--i" as string]: 1 }}>
-              <div>
-                <div
-                  className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg text-primary"
-                  style={{ background: "rgba(94,106,210,0.12)", border: "1px solid rgba(94,106,210,0.25)" }}
-                >
-                  <LogoIcon className="h-5 w-5" />
-                </div>
-                <h3 className="text-xl font-medium text-ink mb-2">Dashboard & History</h3>
-                <p className="text-ink-subtle leading-relaxed">
-                  All your past analyses in one place. Re-visit any contract, compare risk scores
-                  over time, and manage your account with secure JWT-based authentication.
-                </p>
-              </div>
-              <div className="mt-6 flex justify-center">
-                <div className="w-full max-w-[440px]">
-                  <DashboardMockup />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="relative overflow-hidden py-12 sm:py-24 border-t border-hairline">
         {/* Ambient lavender glow behind the closing line */}
@@ -625,6 +501,12 @@ const LandingPage: React.FC = () => {
           aria-hidden="true"
           className="glow-pulse pointer-events-none absolute left-1/2 top-1/2 h-64 w-[38rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
           style={{ background: "radial-gradient(closest-side, rgba(94,106,210,0.20), transparent)" }}
+        />
+        {/* Faint scales-of-justice watermark, echoing the quote below */}
+        <ScaleIcon
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[26rem] w-[26rem] -translate-x-1/2 -translate-y-1/2 text-ink opacity-[0.04]"
+          strokeWidth={1}
         />
         <div className="reveal relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl sm:text-4xl font-semibold text-ink tracking-tight">

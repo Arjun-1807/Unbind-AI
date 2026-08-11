@@ -130,6 +130,7 @@ const RiskTrendSummary: React.FC<{ analyses: AnalysisSummary[] }> = ({
 interface DashboardViewProps {
   user: User;
   analyses: AnalysisSummary[];
+  analysesLoading: boolean;
   onSelectAnalysis: (analysis: AnalysisSummary) => void;
   onNewAnalysis: () => void;
   onDeleteAnalysis: (analysisId: string) => void | Promise<void>;
@@ -213,6 +214,7 @@ const PlanTooltip: React.FC<{ plan: string }> = ({ plan }) => {
 const DashboardView: React.FC<DashboardViewProps> = ({
   user,
   analyses,
+  analysesLoading,
   onSelectAnalysis,
   onNewAnalysis,
   onDeleteAnalysis,
@@ -399,7 +401,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         )}
 
-        {analyses.length === 0 ? (
+        {analysesLoading ? (
+          <div className="text-center py-12 border border-dashed border-hairline rounded-lg">
+            <p className="text-sm text-ink-subtle">Loading your documents…</p>
+          </div>
+        ) : analyses.length === 0 ? (
           <div className="text-center py-12 border border-dashed border-hairline rounded-lg">
             <FileTextIcon className="mx-auto h-12 w-12 text-ink-tertiary" />
             <h3 className="mt-2 text-sm font-semibold text-ink-muted">
