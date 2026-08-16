@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import type { ClauseAnalysis } from "@/types";
 import { RISK_COLORS } from "@/constants";
+import { findClauseInText } from "@/lib/diffDocument";
 
 type ClausePart = ClauseAnalysis & {
   originalIndex: number;
@@ -50,70 +51,6 @@ const DocumentView: React.FC<DocumentViewProps> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCitation?.key]);
-
-  const normalizeText = (text: string) =>
-    text
-      .replace(/\s+/g, " ")
-      .replace(/[^\w\s.,;:!?()-]/g, "")
-      .toLowerCase()
-      .trim();
-
-  const findActualPosition = (
-    originalText: string,
-    _normalizedText: string,
-    normalizedIndex: number,
-  ): number => {
-    let originalIndex = 0;
-    let normalizedIndexCount = 0;
-    for (
-      let i = 0;
-      i < originalText.length && normalizedIndexCount < normalizedIndex;
-      i++
-    ) {
-      const char = originalText[i];
-      const nc = normalizeText(char);
-      if (nc) normalizedIndexCount++;
-      originalIndex = i;
-    }
-    return originalIndex;
-  };
-
-  const findClauseInText = (
-    clauseText: string,
-    documentText: string,
-    usedPositions: Set<number>,
-  ): { start: number; end: number } | null => {
-    const nc = normalizeText(clauseText);
-    const nd = normalizeText(documentText);
-
-    const start = nd.indexOf(nc);
-    if (start !== -1) {
-      const actualStart = findActualPosition(documentText, nd, start);
-      const actualEnd = actualStart + clauseText.length;
-      if (!usedPositions.has(actualStart)) {
-        usedPositions.add(actualStart);
-        return { start: actualStart, end: actualEnd };
-      }
-    }
-
-    const clauseWords = nc.split(" ").filter((w) => w.length > 3);
-    if (clauseWords.length > 0) {
-      const firstWord = clauseWords[0];
-      const lastWord = clauseWords[clauseWords.length - 1];
-      const fi = nd.indexOf(firstWord);
-      const li = nd.indexOf(lastWord, fi);
-      if (fi !== -1 && li !== -1 && li > fi) {
-        const actualStart = findActualPosition(documentText, nd, fi);
-        const actualEnd =
-          findActualPosition(documentText, nd, li) + lastWord.length;
-        if (!usedPositions.has(actualStart)) {
-          usedPositions.add(actualStart);
-          return { start: actualStart, end: actualEnd };
-        }
-      }
-    }
-    return null;
-  };
 
   const parts: DocumentPart[] = useMemo(() => {
     if (!documentText || documentText.trim().length === 0) {
@@ -322,7 +259,10 @@ const DocumentView: React.FC<DocumentViewProps> = ({
                       : `${clause.riskLevel} Risk`
                   }: ${clause.simplifiedExplanation}`}
                 >
-                  {clause.clauseText}
+                  {/* Render the located span from the document itself, not the
+                      model's copy of the clause, so the original wording and
+                      spacing are preserved verbatim. */}
+                  {documentText.substring(clause.start, clause.end)}
                 </span>
               );
             })}

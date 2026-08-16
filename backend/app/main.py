@@ -25,6 +25,66 @@ logging.basicConfig(
 )
 
 
+# Baseline response headers for everything this app serves.
+#
+# The frontend already sets these in next.config.mjs, but that only covers
+# traffic proxied through the Next rewrite. Several responses reach the browser
+# from the backend origin directly — the HTML unsubscribe page in
+# reminder_routes, the SSE analysis stream, the upload endpoints — and those
+# were going out bare.
+#
+# Deliberately no Content-Security-Policy: the unsubscribe page is
+# self-contained HTML we serve ourselves and a restrictive default-src here
+# would have to be kept in sync with it (and with SSE's connect-src) from a
+# place nobody editing that page would look. The three headers below are
+# content-independent, so they are safe to apply blanket.
+SECURITY_HEADERS = {
+    # Stop the browser MIME-sniffing a JSON/text response into something
+    # executable — the path by which a user-supplied filename or contract text
+    # echoed back could be treated as HTML or script.
+    "X-Content-Type-Options": "nosniff",
+    # Never leak the API URL (which carries analysis ids) to third-party sites.
+    # Note the CSRF check in OriginValidationMiddleware only falls back to
+    # Referer when Origin is absent, and browsers always send Origin on
+    # cross-site state changes, so suppressing Referer doesn't weaken it.
+    "Referrer-Policy": "no-referrer",
+    # Nothing here is meant to be framed; this is what keeps the HTML
+    # unsubscribe page out of a clickjacking frame.
+    "X-Frame-Options": "DENY",
+}
+
+
+class SecurityHeadersMiddleware:
+    """Attach :data:`SECURITY_HEADERS` to every response.
+
+    Raw ASGI rather than ``BaseHTTPMiddleware`` so it only rewrites the
+    ``http.response.start`` message and never touches the body stream — the SSE
+    analysis endpoint must keep flushing chunk by chunk.
+
+    Existing headers are left alone, so a route that deliberately sets its own
+    value (or a stricter one) wins.
+    """
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                headers = message.setdefault("headers", [])
+                present = {name.lower() for name, _ in headers}
+                for name, value in SECURITY_HEADERS.items():
+                    key = name.lower().encode()
+                    if key not in present:
+                        headers.append((key, value.encode()))
+            await send(message)
+
+        return await self.app(scope, receive, send_with_headers)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -84,6 +144,10 @@ add_security_middleware(
     allow_origin_regex=cors_kwargs.get("allow_origin_regex"),
 )
 app.add_middleware(CORSMiddleware, **cors_kwargs)
+# Registered last and therefore outermost, so the headers land on *every*
+# response — including the 403/429/413 the security middleware generates itself
+# and the preflight replies CORSMiddleware short-circuits.
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(analysis_router, prefix="/api")

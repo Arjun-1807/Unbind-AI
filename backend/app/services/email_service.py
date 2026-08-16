@@ -2,6 +2,7 @@ import asyncio
 import html
 import logging
 import smtplib
+from decimal import ROUND_HALF_UP, Decimal
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -60,7 +61,15 @@ async def send_email(
     html_body: str,
     reply_to: str | None = None,
 ) -> None:
-    """Non-blocking email send. Errors are logged but never raised to callers."""
+    """Non-blocking email send. Errors are logged **and re-raised**.
+
+    Every caller wraps this in its own try/except because each one wants a
+    different outcome from a delivery failure — the lawyer-contact route reports
+    ``emailed: false`` and marks the request ``email_failed``, the receipt is
+    best-effort and swallowed, the reminder digest leaves ``sentLeads`` untouched
+    so the next run retries. Swallowing the error here would take that choice
+    away and make a silent SMTP outage look like a successful send.
+    """
     try:
         await asyncio.to_thread(_send_smtp, to_email, subject, html_body, reply_to)
     except Exception:
@@ -159,9 +168,13 @@ async def send_payment_receipt_email(
     """Send a payment confirmation / receipt to the user after a successful
     plan purchase. ``amount`` is in the smallest currency unit (paise for INR).
     """
-    # Format the amount for display, e.g. 45000 paise -> "₹450.00".
+    # Format the amount for display, e.g. 45000 paise -> "₹450.00". Decimal, not
+    # float division: this is a financial record, and binary floating point can't
+    # represent every hundredth exactly, so `amount / 100` would round off a
+    # value the payment processor holds as an exact integer.
     symbol = "₹" if currency.upper() == "INR" else ""
-    amount_display = f"{symbol}{amount / 100:,.2f} {currency.upper()}".strip()
+    major = (Decimal(amount) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    amount_display = f"{symbol}{major:,.2f} {currency.upper()}".strip()
     validity = f"Valid until {expires_at[:10]}" if expires_at else "Lifetime access — never expires"
 
     subject = f"Your UnBind AI receipt — {plan_label}"
@@ -193,11 +206,11 @@ async def send_payment_receipt_email(
         </div>
         <div class="body">
           <p style="font-size:15px; color:#9ca3af; margin:0;">Thank you for your purchase. Your plan is now active.</p>
-          <div class="amount">{amount_display}</div>
-          <div class="row"><span class="label">Plan</span><span class="value">{plan_label}</span></div>
-          <div class="row"><span class="label">Validity</span><span class="value">{validity}</span></div>
-          <div class="row"><span class="label">Payment ID</span><span class="value">{payment_id}</span></div>
-          <div class="row"><span class="label">Order ID</span><span class="value">{order_id}</span></div>
+          <div class="amount">{_esc(amount_display)}</div>
+          <div class="row"><span class="label">Plan</span><span class="value">{_esc(plan_label)}</span></div>
+          <div class="row"><span class="label">Validity</span><span class="value">{_esc(validity)}</span></div>
+          <div class="row"><span class="label">Payment ID</span><span class="value">{_esc(payment_id)}</span></div>
+          <div class="row"><span class="label">Order ID</span><span class="value">{_esc(order_id)}</span></div>
           <div class="badge">✓ Plan activated</div>
           <p style="margin-top:28px; font-size:13px; color:#6b7280; line-height:1.6;">
             Keep this email for your records. If you have any questions about your

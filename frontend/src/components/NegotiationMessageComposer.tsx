@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "@/services/api";
 import type {
   NegotiationDraft,
@@ -54,6 +54,15 @@ const NegotiationMessageComposer: React.FC<NegotiationMessageComposerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The "Copied!" reset must not fire after the composer unmounts.
+  useEffect(
+    () => () => {
+      if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+    },
+    [],
+  );
 
   const toggle = (index: number) => {
     setSelected((prev) => {
@@ -98,15 +107,24 @@ const NegotiationMessageComposer: React.FC<NegotiationMessageComposerProps> = ({
     }
   }, [candidates, selected, tone, format, counterparty, senderName, isLoading]);
 
-  const copyToClipboard = useCallback(() => {
+  const copyToClipboard = useCallback(async () => {
     if (!draft) return;
     const text =
       format === "email" && draft.subject
         ? `Subject: ${draft.subject}\n\n${draft.body}`
         : draft.body;
-    navigator.clipboard.writeText(text);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Permission denied, or a non-secure context where the API is unavailable.
+      setCopied(false);
+      setError("Could not copy. Please copy the text manually.");
+      return;
+    }
+    setError(null);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+    copyResetTimer.current = setTimeout(() => setCopied(false), 2000);
   }, [draft, format]);
 
   const selectedCount = selected.size;

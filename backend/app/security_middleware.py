@@ -10,6 +10,7 @@ docstring for the resulting request pipeline.
 
 import logging
 import math
+import os
 import re
 import time
 from collections import deque
@@ -139,6 +140,11 @@ RATE_LIMITS: tuple[RateLimitRule, ...] = (
     RateLimitRule("/api/auth/login", 10, 60),
     # 5 / hour — free-account farming, which drains the owner's Groq budget.
     RateLimitRule("/api/auth/signup", 5, 3600),
+    # 5 / hour — the SAME free-account farming as /signup. POST /api/auth/google
+    # inserts a brand-new user document on first sign-in (auth_routes.py), so it
+    # is a second, equally cheap account factory; leaving it unlisted made the
+    # signup rule above trivially bypassable by taking the Google path instead.
+    RateLimitRule("/api/auth/google", 5, 3600),
     # 10 / hour — current-password guessing against a hijacked session.
     RateLimitRule("/api/auth/update-password", 10, 3600),
     # 3 / hour — unauthenticated write.
@@ -169,21 +175,67 @@ def _path_matches(path: str, prefix: str) -> bool:
     return path == prefix or path.startswith(prefix + "/")
 
 
-def client_ip(request: Request) -> str:
-    """Best-effort client IP.
+def _read_trusted_proxy_hops() -> int:
+    """Number of proxies that append to ``X-Forwarded-For`` in front of us.
 
-    Deployed behind Vercel / a reverse proxy, so the socket peer is the proxy.
-    The first entry of ``X-Forwarded-For`` is the original client as appended by
-    the edge. Note this header is client-controllable if the app is ever exposed
-    without a proxy in front of it, which is one more reason the limiter below
-    is defence-in-depth rather than a hard guarantee.
+    Read straight from the environment rather than added to ``Settings``: this
+    is the only consumer, and ``client_ip`` is called on the hot path of every
+    throttled request, so it must not depend on the settings object being
+    importable/constructed (config.py raises on a missing JWT_SECRET).
+
+    ``0`` means "no proxy" — trust only the socket peer and ignore the header
+    entirely, which is the correct setting for a directly exposed deployment.
     """
+    raw = os.getenv("TRUSTED_PROXY_HOPS", "1")
+    try:
+        hops = int(raw)
+    except ValueError:
+        logger.warning("Invalid TRUSTED_PROXY_HOPS=%r; falling back to 1", raw)
+        return 1
+    return max(hops, 0)
+
+
+# Resolved once at import, like the rest of the module's configuration. Tests
+# override the module attribute directly.
+TRUSTED_PROXY_HOPS = _read_trusted_proxy_hops()
+
+
+def client_ip(request: Request) -> str:
+    """Best-effort client IP, read from the RIGHT of ``X-Forwarded-For``.
+
+    Deployed behind Vercel / a reverse proxy, so the socket peer is the proxy
+    and the real client has to come from the header. But proxies *append*: each
+    hop adds the address it saw to the end of whatever the request already
+    carried. So on a request the attacker crafted with
+    ``X-Forwarded-For: <anything>``, that forged value ends up FIRST and the
+    only trustworthy entries are the rightmost ones, written by our own
+    infrastructure. Taking ``parts[0]`` therefore let an attacker mint a fresh
+    rate-limit bucket per request by rotating the header, nullifying every rule
+    in ``RATE_LIMITS``.
+
+    Instead index back from the end by ``TRUSTED_PROXY_HOPS`` (default 1): with
+    one proxy the last entry is the peer address that proxy actually observed,
+    which the client cannot influence. Deployments with N chained proxies must
+    set the env var to N or they will key on the last proxy's own address.
+
+    Anything the header cannot answer — absent, all-empty, or fewer entries
+    than there are trusted hops (a request that never traversed the full proxy
+    chain) — falls back to the socket peer rather than to an attacker-supplied
+    value.
+    """
+    peer = request.client.host if request.client else "unknown"
+
+    hops = TRUSTED_PROXY_HOPS
+    if hops <= 0:
+        return peer
+
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        first = forwarded.split(",")[0].strip()
-        if first:
-            return first
-    return request.client.host if request.client else "unknown"
+        parts = [part.strip() for part in forwarded.split(",")]
+        parts = [part for part in parts if part]
+        if len(parts) >= hops:
+            return parts[-hops]
+    return peer
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

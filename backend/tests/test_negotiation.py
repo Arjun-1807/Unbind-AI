@@ -5,7 +5,15 @@ call monkeypatched so nothing hits the network (mirrors the direct-call style of
 the other tests).
 """
 
-from app.schemas import NegotiationDraftRequest, NegotiationPoint
+import pytest
+from pydantic import ValidationError
+
+from app.schemas import (
+    MAX_CLAUSE_CHARS,
+    MAX_NEGOTIATION_TOTAL_CHARS,
+    NegotiationDraftRequest,
+    NegotiationPoint,
+)
 from app.services import negotiation_service
 from app.services.negotiation_service import _parse_draft, draft_negotiation_message
 
@@ -72,6 +80,81 @@ async def test_empty_points_short_circuits(monkeypatch):
     )
     assert out == {"subject": "", "body": ""}
     assert called is False  # never call the model when there is nothing to draft
+
+
+# ── Aggregate size cap ───────────────────────────────────────────────────────
+#
+# The per-field caps multiply: 50 points x 4 x 20k chars is ~4M characters in
+# one request, which the drafter would concatenate into a single prompt.
+
+
+class TestAggregateCap:
+    def test_many_max_size_points_are_rejected(self):
+        """The old worst case: individually legal points, collectively absurd."""
+        point = NegotiationPoint(
+            clauseText="x" * MAX_CLAUSE_CHARS,
+            concern="y" * MAX_CLAUSE_CHARS,
+            request="z" * MAX_CLAUSE_CHARS,
+            desiredRewrite="w" * MAX_CLAUSE_CHARS,
+        )
+        with pytest.raises(ValidationError) as exc:
+            NegotiationDraftRequest(points=[point] * 50)
+        assert "exceeds" in str(exc.value)
+
+    def test_just_over_the_cap_is_rejected(self):
+        with pytest.raises(ValidationError):
+            NegotiationDraftRequest(
+                points=[
+                    NegotiationPoint(clauseText="a" * MAX_CLAUSE_CHARS)
+                    for _ in range(MAX_NEGOTIATION_TOTAL_CHARS // MAX_CLAUSE_CHARS + 1)
+                ]
+            )
+
+    def test_realistic_request_still_passes(self):
+        req = NegotiationDraftRequest(
+            points=[
+                NegotiationPoint(
+                    clauseText="The tenant forfeits the deposit on early exit.",
+                    concern="Disproportionate.",
+                    request="Pro-rate the forfeiture.",
+                )
+                for _ in range(10)
+            ]
+        )
+        assert len(req.points) == 10
+
+    def test_exactly_at_the_cap_is_allowed(self):
+        req = NegotiationDraftRequest(
+            points=[
+                NegotiationPoint(clauseText="a" * MAX_CLAUSE_CHARS)
+                for _ in range(MAX_NEGOTIATION_TOTAL_CHARS // MAX_CLAUSE_CHARS)
+            ]
+        )
+        assert req.points
+
+
+async def test_service_truncates_oversized_points_defensively(monkeypatch):
+    """Internal callers bypass FastAPI validation, so the service caps too."""
+    captured = {}
+
+    async def _fake_complete(messages, temperature=0.4):
+        captured["messages"] = messages
+        return "Subject: x\n\nbody"
+
+    monkeypatch.setattr(negotiation_service, "negotiation_complete", _fake_complete)
+
+    # Built without running the validator, the way an internal caller
+    # assembling the model field-by-field could.
+    req = NegotiationDraftRequest.model_construct(
+        points=[NegotiationPoint(clauseText="a" * MAX_CLAUSE_CHARS) for _ in range(50)],
+        tone="polite",
+        format="email",
+        counterparty="",
+        senderName="",
+    )
+    await draft_negotiation_message(req)
+    user_msg = captured["messages"][-1]["content"]
+    assert len(user_msg) < 2 * MAX_NEGOTIATION_TOTAL_CHARS
 
 
 async def test_draft_builds_prompt_and_parses(monkeypatch):

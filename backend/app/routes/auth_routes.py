@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -8,8 +8,10 @@ from pymongo.errors import DuplicateKeyError
 from app.auth import (
     clear_auth_cookie,
     create_access_token,
+    get_current_session,
     get_current_user_id,
     hash_password,
+    session_start_from_payload,
     set_auth_cookie,
     verify_password,
 )
@@ -17,6 +19,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.schemas import LoginRequest, SignupRequest, UpdatePasswordRequest, UserResponse
 from app.services.model_selector import select_model
+from app.services.plan_service import effective_plan
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -43,7 +46,7 @@ async def signup(body: SignupRequest, request: Request, response: Response):
         raise HTTPException(status_code=409, detail="An account with this email already exists")
 
     password_hash = hash_password(body.password)
-    now = datetime.datetime.now()
+    now = datetime.now(timezone.utc)
     doc = {
         "username": body.username,
         "email": body.email.lower(),
@@ -94,6 +97,7 @@ async def login(body: LoginRequest, request: Request, response: Response):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     user_id = str(user["_id"])
+    plan = effective_plan(user)
     token = create_access_token(user_id)
     set_auth_cookie(response, token, request)
 
@@ -102,7 +106,12 @@ async def login(body: LoginRequest, request: Request, response: Response):
         username=user["username"],
         email=user["email"],
         picture=user.get("picture"),
-        pro=user.get("pro", False),
+        # Derived from effective_plan, not the stored ``pro`` flag: nothing
+        # resets ``pro`` when a time-limited plan lapses, so returning it raw
+        # left the frontend showing Pro UI to expired subscribers until a
+        # request 403'd. Same source of truth as GET /plan and the rate limiter.
+        pro=bool(plan),
+        plan=plan,
         aiModel=select_model(user),
         accessToken=token,
         createdAt=user.get("createdAt"),
@@ -117,7 +126,8 @@ async def logout(request: Request, response: Response):
 
 @router.get("/me", response_model=UserResponse)
 async def me(request: Request):
-    user_id = await get_current_user_id(request)
+    payload = await get_current_session(request)
+    user_id = payload["userId"]
     db = get_db()
     from bson import ObjectId
 
@@ -125,14 +135,20 @@ async def me(request: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    token = create_access_token(user_id)
+    # This endpoint slides the session forward on every call. Carry the original
+    # session start into the new token so renewal can't outrun the absolute
+    # ceiling — otherwise a captured token stays alive forever by polling here.
+    token = create_access_token(user_id, session_start=session_start_from_payload(payload))
+    # See the note in login(): the stored ``pro``/``plan`` fields go stale when a
+    # time-limited plan lapses, so report what effective_plan says instead.
+    plan = effective_plan(user)
     return UserResponse(
         id=str(user["_id"]),
         username=user["username"],
         email=user["email"],
         picture=user.get("picture"),
-        pro=user.get("pro", False),
-        plan=user.get("plan"),
+        pro=bool(plan),
+        plan=plan,
         aiModel=select_model(user),
         createdAt=user.get("createdAt"),
         accessToken=token,
@@ -208,7 +224,7 @@ async def google_login(body: GoogleLoginRequest, request: Request, response: Res
         raise HTTPException(status_code=401, detail="Invalid Google credential")
 
     db = get_db()
-    now = datetime.datetime.now()
+    now = datetime.now(timezone.utc)
 
     # The Google subject is the stable identity; the email is not (it can be
     # changed on the Google side, and matching on it alone is what allowed the
@@ -236,7 +252,8 @@ async def google_login(body: GoogleLoginRequest, request: Request, response: Res
         user_id = str(user["_id"])
         username = user["username"]
         email = user["email"]
-        pro = user.get("pro", False)
+        # effective_plan, not the raw ``pro`` flag — see login().
+        pro = bool(effective_plan(user))
         created_at = user.get("createdAt", now)
     else:
         doc = {
@@ -267,7 +284,7 @@ async def google_login(body: GoogleLoginRequest, request: Request, response: Res
                 ) from e
             user_id = str(user["_id"])
             username = user["username"]
-            pro = user.get("pro", False)
+            pro = bool(effective_plan(user))
             created_at = user.get("createdAt", now)
         else:
             user_id = str(result.inserted_id)

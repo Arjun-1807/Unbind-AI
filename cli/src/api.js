@@ -2,19 +2,47 @@ import fs from 'fs';
 import path from 'path';
 import { getToken, setToken, getApiUrl } from './config.js';
 
+// ─── Timeouts ─────────────────────────────────────────────────────────────────
+
+// undici (Node's fetch) has no default response timeout: a server that accepts
+// the connection and then never replies would hang the spinner forever.
+const REQUEST_TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 180_000; // analysis is slow — give the model room
+
+/** True when a fetch rejection is our own AbortSignal.timeout() firing. */
+const isTimeout = (err) => err?.name === 'TimeoutError' || err?.name === 'AbortError';
+
 // ─── Cookie helper ────────────────────────────────────────────────────────────
+
+/** A JWT is three base64url segments separated by dots. */
+const JWT_RE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
 /**
  * The backend sets an httpOnly cookie named "unbind_token".
  * We parse it from the Set-Cookie response header and store it as a
  * Bearer token so every subsequent request can authenticate.
+ *
+ * Only ever called for a successful login/signup response — any other endpoint
+ * (or a hostile `--server` host answering 4xx) must not be able to pin a token
+ * of its choosing into the local config or clobber a valid session. The shape
+ * check is a second line of defence against storing arbitrary cookie junk.
  */
 function extractTokenFromCookie(header) {
   if (!header) return null;
   const raw = Array.isArray(header) ? header.join('; ') : header;
   const match = raw.match(/unbind_token=([^;,\s]+)/);
-  return match ? match[1] : null;
+  if (!match) return null;
+  return JWT_RE.test(match[1]) ? match[1] : null;
 }
+
+/** Stores the session cookie from an authentication response, if present. */
+function captureAuthToken(res) {
+  const newToken = extractTokenFromCookie(res.headers.get('set-cookie'));
+  if (newToken) setToken(newToken);
+}
+
+/** Endpoints allowed to (re)issue a session token. */
+const AUTH_PATHS = new Set(['/auth/login', '/auth/signup']);
 
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────
 
@@ -30,23 +58,27 @@ async function apiFetch(urlPath, options = {}) {
 
   let res;
   try {
-    res = await fetch(url, { ...options, headers });
+    res = await fetch(url, {
+      ...options,
+      headers,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
   } catch (err) {
+    if (isTimeout(err)) {
+      throw new Error(
+        `UnBindAI server at ${getApiUrl()} timed out after ${REQUEST_TIMEOUT_MS / 1000}s (no response).`
+      );
+    }
     if (err?.cause?.code === 'ECONNREFUSED' || err?.cause?.code === 'ENOTFOUND') {
       throw new Error(
         `Cannot connect to UnBindAI server at ${getApiUrl()}.\n` +
           '  → Make sure the backend is running.\n' +
-          '  → Override with: unbind --server http://your-server.com …\n' +
+          '  → Override with: unbind --server https://your-server.com …\n' +
           '  → Or set the UNBINDAI_API_URL environment variable.'
       );
     }
     throw err;
   }
-
-  // Capture the JWT when the server sets a new cookie (login / signup)
-  const setCookie = res.headers.get('set-cookie');
-  const newToken = extractTokenFromCookie(setCookie);
-  if (newToken) setToken(newToken);
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -54,6 +86,9 @@ async function apiFetch(urlPath, options = {}) {
       data.detail || data.error || data.message || `HTTP ${res.status}`
     );
   }
+
+  // Capture the JWT only from a successful login / signup
+  if (AUTH_PATHS.has(urlPath)) captureAuthToken(res);
 
   return res.json();
 }
@@ -112,8 +147,18 @@ export async function uploadAndAnalyze(filePath, role = '') {
 
   let res;
   try {
-    res = await fetch(url, { method: 'POST', headers, body: form });
+    res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: form,
+      signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
+    });
   } catch (err) {
+    if (isTimeout(err)) {
+      throw new Error(
+        `UnBindAI server at ${getApiUrl()} timed out after ${UPLOAD_TIMEOUT_MS / 1000}s while analysing the document.`
+      );
+    }
     if (err?.cause?.code === 'ECONNREFUSED' || err?.cause?.code === 'ENOTFOUND') {
       throw new Error(
         `Cannot connect to UnBindAI server at ${getApiUrl()}.`
@@ -122,9 +167,7 @@ export async function uploadAndAnalyze(filePath, role = '') {
     throw err;
   }
 
-  const setCookie = res.headers.get('set-cookie');
-  const newToken = extractTokenFromCookie(setCookie);
-  if (newToken) setToken(newToken);
+  // Not an auth endpoint — never accept a session token from this response.
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

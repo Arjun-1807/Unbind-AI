@@ -12,10 +12,17 @@ import re
 
 from langsmith import traceable
 
-from app.schemas import NegotiationDraftRequest
+from app.schemas import MAX_NEGOTIATION_TOTAL_CHARS, NegotiationDraftRequest
 from app.services.groq_service import negotiation_complete
 
 logger = logging.getLogger(__name__)
+
+# Second line of defence behind NegotiationDraftRequest's aggregate validator:
+# this service is also reachable from internal callers that build the request
+# object directly (bypassing FastAPI validation), and an unbounded prompt is an
+# unbounded bill. Slightly above the schema cap so a request that passed
+# validation is never silently trimmed.
+_MAX_PROMPT_CHARS = MAX_NEGOTIATION_TOTAL_CHARS + 5_000
 
 # How each tone should read. Kept human so the model has concrete direction.
 _TONE_GUIDANCE = {
@@ -124,6 +131,7 @@ async def draft_negotiation_message(req: NegotiationDraftRequest) -> dict:
     )
 
     asks = []
+    used = 0
     for i, point in enumerate(points, 1):
         block = [f"{i}. Clause: {point.clauseText.strip()}"]
         if point.concern.strip():
@@ -132,7 +140,24 @@ async def draft_negotiation_message(req: NegotiationDraftRequest) -> dict:
             block.append(f"   Requested change: {point.request.strip()}")
         if point.desiredRewrite and point.desiredRewrite.strip():
             block.append(f"   Preferred wording: {point.desiredRewrite.strip()}")
-        asks.append("\n".join(block))
+        ask = "\n".join(block)
+        if used + len(ask) > _MAX_PROMPT_CHARS:
+            # Drop whole points rather than cutting one mid-sentence — a
+            # half-quoted clause would make the model draft nonsense.
+            logger.warning(
+                "Negotiation prompt hit the %d char cap; dropping %d of %d points",
+                _MAX_PROMPT_CHARS,
+                len(points) - i + 1,
+                len(points),
+            )
+            break
+        used += len(ask)
+        asks.append(ask)
+
+    if not asks:
+        # The very first point alone blew the budget; send a truncated version of
+        # it so the user gets a draft rather than an empty response.
+        asks = [points[0].clauseText.strip()[:_MAX_PROMPT_CHARS]]
 
     user_prompt = (
         f"Write {fmt}\n\n"

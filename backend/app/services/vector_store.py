@@ -221,21 +221,29 @@ async def keyword_fallback(document_text: str, query_text: str, k: int = 6) -> l
     Used when the embedding provider is down or unconfigured: a degraded answer
     grounded in real excerpts beats no answer, and because offsets survive, the
     citations still jump to the right place in the document.
+
+    Returns [] when no query word matches anything. It used to hand back "the
+    first k chunks", which the answering prompt then presents as *the relevant
+    excerpts* — so a question the document is silent on came back confidently
+    cited to whatever happens to be on page one. No match is information; the
+    caller turns it into "I couldn't find anything about this".
     """
     chunks = chunk_text_with_offsets(document_text, CHUNK_SIZE, CHUNK_OVERLAP)
     if not chunks:
         return []
 
     words = {w for w in query_text.lower().split() if len(w) > 3}
-    if words:
-        scored = []
-        for chunk in chunks:
-            lowered = chunk["text"].lower()
-            hits = sum(1 for w in words if w in lowered)
-            if hits:
-                scored.append((hits, chunk))
-        if scored:
-            scored.sort(key=lambda pair: -pair[0])
-            return [{**chunk, "score": 0.0} for _, chunk in scored[:k]]
+    if not words:
+        return []
 
-    return [{**chunk, "score": 0.0} for chunk in chunks[:k]]
+    scored = []
+    for chunk in chunks:
+        lowered = chunk["text"].lower()
+        hits = sum(1 for w in words if w in lowered)
+        if hits:
+            scored.append((hits, chunk))
+    if not scored:
+        return []
+
+    scored.sort(key=lambda pair: -pair[0])
+    return [{**chunk, "score": 0.0} for _, chunk in scored[:k]]

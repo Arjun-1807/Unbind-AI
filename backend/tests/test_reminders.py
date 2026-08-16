@@ -159,7 +159,7 @@ async def test_generation_schedules_absolute_dates_and_flags_the_rest(reminders_
         today=TODAY,
     )
 
-    assert counts == {"scheduled": 1, "needsAttention": 1, "skipped": 1}
+    assert counts == {"scheduled": 1, "needsAttention": 1, "skipped": 1, "failed": 0}
     stored = await reminder_service.list_for_analysis("a1", "u1")
     assert len(stored) == 3
 
@@ -193,7 +193,7 @@ async def test_generation_keeps_the_original_wording(reminders_db):
 
 async def test_generation_handles_no_key_dates(reminders_db):
     counts = await reminder_service.generate_for_analysis("a1", "u1", "l.pdf", [], today=TODAY)
-    assert counts == {"scheduled": 0, "needsAttention": 0, "skipped": 0}
+    assert counts == {"scheduled": 0, "needsAttention": 0, "skipped": 0, "failed": 0}
 
 
 async def test_generation_caps_runaway_key_dates(reminders_db):
@@ -542,6 +542,17 @@ async def test_sweep_endpoint_accepts_the_right_secret(override_settings, monkey
     reminder_routes._require_sweep_secret(_Req(headers={"x-reminder-secret": "s3cret"}))
 
 
+async def test_sweep_endpoint_rejects_a_non_ascii_secret_header(override_settings, monkeypatch):
+    """Starlette decodes headers as latin-1, so a raw 0xe9 byte arrives as a
+    non-ASCII str. ``hmac.compare_digest`` refuses those with TypeError, which
+    would turn this 401 into a 500 for any unauthenticated caller."""
+    monkeypatch.setattr(override_settings, "REMINDER_SWEEP_SECRET", "s3cret")
+
+    with pytest.raises(HTTPException) as exc:
+        reminder_routes._require_sweep_secret(_Req(headers={"x-reminder-secret": "s3cret\xe9"}))
+    assert exc.value.status_code == 401
+
+
 async def test_sweep_endpoint_refuses_when_unconfigured(override_settings, monkeypatch):
     """An unset secret is a misconfiguration, not permission to run open."""
     monkeypatch.setattr(override_settings, "REMINDER_SWEEP_SECRET", "")
@@ -636,12 +647,30 @@ async def test_set_due_date_route_404s_for_an_unknown_reminder(override_settings
     assert exc.value.status_code == 404
 
 
-async def test_unsubscribe_turns_reminders_off(fake_db, seed_user):
+async def test_unsubscribe_get_only_confirms_and_does_not_mutate(fake_db, seed_user):
+    """The GET must stay side-effect free: mail scanners, link prefetchers and
+    corporate URL rewriters all fetch it, and GET is exempt from the CSRF check.
+    """
     user = seed_user(email="user@example.com")
     uid = str(user["_id"])
     token = reminder_service.build_unsubscribe_token(uid)
 
     response = await reminder_routes.unsubscribe(token=token)
+
+    assert response.status_code == 200
+    assert "reminderOptIn" not in fake_db.users._docs[uid]
+    assert reminders_enabled(fake_db.users._docs[uid]) is True
+    # The page offers a form that posts the same token back.
+    assert b'method="post"' in response.body
+    assert token.encode() in response.body
+
+
+async def test_unsubscribe_post_turns_reminders_off(fake_db, seed_user):
+    user = seed_user(email="user@example.com")
+    uid = str(user["_id"])
+    token = reminder_service.build_unsubscribe_token(uid)
+
+    response = await reminder_routes.confirm_unsubscribe(token=token)
 
     assert response.status_code == 200
     assert fake_db.users._docs[uid]["reminderOptIn"] is False
@@ -652,3 +681,15 @@ async def test_unsubscribe_with_a_bad_token_is_a_400_page(fake_db):
     response = await reminder_routes.unsubscribe(token="garbage")
     assert response.status_code == 400
     assert b"isn&#39;t valid" in response.body or b"isn't valid" in response.body
+
+
+async def test_unsubscribe_post_with_a_bad_token_is_a_400_page(fake_db, seed_user):
+    """The token is re-verified on the POST — the GET having seen a good one
+    proves nothing about this request."""
+    user = seed_user(email="user@example.com")
+    uid = str(user["_id"])
+
+    response = await reminder_routes.confirm_unsubscribe(token="garbage")
+
+    assert response.status_code == 400
+    assert "reminderOptIn" not in fake_db.users._docs[uid]

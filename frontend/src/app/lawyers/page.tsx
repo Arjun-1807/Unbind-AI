@@ -370,23 +370,34 @@ export default function LawyersPage() {
   }, [authReady, user, router]);
 
   // ── 2. Fetch lawyers once we know user is on Verdict ──────────────────────
-  const fetchLawyers = useCallback(async (spec?: string) => {
-    setLoading(true);
-    setFetchError(null);
-    try {
-      const data = await getLawyers(spec);
-      setLawyers(data);
-    } catch (err: any) {
-      setFetchError(err.message || "Failed to load lawyers.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // `isCancelled` lets a superseded request drop its result on the floor:
+  // switching filters quickly fires overlapping requests, and without this a
+  // slow response for an older filter can resolve last and overwrite the list.
+  const fetchLawyers = useCallback(
+    async (spec?: string, isCancelled: () => boolean = () => false) => {
+      setLoading(true);
+      setFetchError(null);
+      try {
+        const data = await getLawyers(spec);
+        if (isCancelled()) return;
+        setLawyers(data);
+      } catch (err: any) {
+        if (isCancelled()) return;
+        setFetchError(err.message || "Failed to load lawyers.");
+      } finally {
+        if (!isCancelled()) setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (isVerdict === true) {
-      fetchLawyers(activeFilter ?? undefined);
-    }
+    if (isVerdict !== true) return;
+    let cancelled = false;
+    fetchLawyers(activeFilter ?? undefined, () => cancelled);
+    return () => {
+      cancelled = true;
+    };
   }, [isVerdict, activeFilter, fetchLawyers]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────

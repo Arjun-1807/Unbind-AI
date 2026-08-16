@@ -165,7 +165,10 @@ def _verify_signature(order_id: str, payment_id: str, signature: str) -> bool:
     expected = hmac.new(
         key_secret.encode(), f"{order_id}|{payment_id}".encode(), hashlib.sha256
     ).hexdigest()
-    return hmac.compare_digest(expected, signature)
+    # Compared as bytes: compare_digest raises TypeError on a non-ASCII str, and
+    # the signature here is attacker-supplied, so comparing raw strs would let a
+    # caller turn the 400 below into a 500. See also the webhook.
+    return hmac.compare_digest(expected.encode(), signature.encode("latin-1", "ignore"))
 
 
 async def _send_receipt(
@@ -404,7 +407,11 @@ async def razorpay_webhook(request: Request):
     raw = await request.body()
     signature = request.headers.get("X-Razorpay-Signature", "")
     expected = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expected, signature):
+    # Bytes, not str: Starlette decodes headers as latin-1, so a signature header
+    # containing a non-ASCII byte produces a str that compare_digest rejects with
+    # TypeError — a 500 (and a stack trace) where an unauthenticated caller
+    # should only ever get the 400 below.
+    if not hmac.compare_digest(expected.encode(), signature.encode("latin-1", "ignore")):
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
     try:

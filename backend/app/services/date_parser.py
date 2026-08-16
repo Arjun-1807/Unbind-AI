@@ -70,10 +70,18 @@ _RELATIVE_MARKERS = re.compile(
 
 _CONDITIONAL_MARKERS = re.compile(
     r"\b(?:upon|on\s+termination|on\s+expiry|as\s+soon\s+as|at\s+the\s+end\s+of|"
-    r"end\s+of\s+(?:the\s+)?term|when\s+|if\s+|in\s+the\s+event|subject\s+to|"
+    r"end\s+of\s+(?:the\s+)?term|in\s+the\s+event|subject\s+to|"
     r"at\s+any\s+time|as\s+required|to\s+be\s+determined|tbd|n/?a)\b",
     re.I,
 )
+
+# Bare "if"/"when" are the weakest conditional signals: unlike the markers above
+# they routinely appear as ordinary subordinate clauses attached to a perfectly
+# fixed date ("due 31 December 2026 if the work is accepted"). Treating those as
+# conditional dropped a schedulable deadline the user could never recover, since
+# CONDITIONAL isn't offered for correction. So these are checked only after
+# absolute extraction fails — a real date always wins over them.
+_WEAK_CONDITIONAL_MARKERS = re.compile(r"\b(?:when|if)\s", re.I)
 
 # ── Absolute date patterns ───────────────────────────────────────────────────
 
@@ -170,6 +178,13 @@ def resolve_key_date(raw: str, *, today: date | None = None) -> ResolvedDate:
 
     found, reason = _extract_absolute(text)
     if found is None:
+        # Only now do bare "if"/"when" decide it: no date was found, so the
+        # clause really is all there is. Reported as conditional rather than
+        # unparseable so the UI says "no date exists here", not "we failed".
+        # An AMBIGUOUS reason keeps priority — there a date *is* present and the
+        # user can disambiguate it, which conditional would deny them.
+        if reason != AMBIGUOUS and _WEAK_CONDITIONAL_MARKERS.search(text):
+            return ResolvedDate(False, reason=CONDITIONAL)
         return ResolvedDate(False, reason=reason or UNPARSEABLE)
 
     # A deadline that has already passed can't be reminded about. Kept as a

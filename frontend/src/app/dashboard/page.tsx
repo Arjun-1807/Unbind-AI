@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 import * as api from "@/services/api";
+import { writeSessionStorage } from "@/lib/storage";
 import Footer from "@/components/footer";
 export default function DashboardPage() {
   const { user, authReady, analyses, analysesLoading, refreshAnalyses } =
@@ -30,8 +31,13 @@ export default function DashboardPage() {
           analyses={analyses}
           analysesLoading={analysesLoading}
           onSelectAnalysis={(a) => {
-            sessionStorage.setItem("currentAnalysis", JSON.stringify(a));
-            router.push("/analysis");
+            // The record can be too large for the ~5 MB sessionStorage cap; if
+            // the write is dropped, hand the id over the route instead and let
+            // /analysis refetch it rather than throwing QuotaExceededError.
+            const cached = writeSessionStorage("currentAnalysis", a);
+            router.push(
+              cached ? "/analysis" : `/analysis?id=${encodeURIComponent(a.id)}`,
+            );
           }}
           onNewAnalysis={() => router.push("/upload")}
           onDeleteAnalysis={async (id) => {

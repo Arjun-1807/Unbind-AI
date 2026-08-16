@@ -10,13 +10,32 @@ interface FileUploadProps {
   onBack: () => void;
 }
 
-// Keep in sync with the backend guard (_MAX_IMAGE_BYTES in analysis_routes.py).
+// Keep in sync with the backend guards in analysis_routes.py
+// (_MAX_IMAGE_BYTES / _MAX_DOCUMENT_BYTES). Checking here means an oversized
+// file is rejected instantly instead of after a full upload the server then
+// answers with FILE_TOO_LARGE.
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
 
 const isHeic = (f: File) =>
   /image\/hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test(f.name);
 const isImage = (f: File) =>
   f.type.startsWith("image/") || /\.(jpe?g|png|webp|tiff?|bmp)$/i.test(f.name);
+
+// Formats the backend can actually extract text from. The `accept` attribute
+// only filters the file picker — drag-and-drop bypasses it entirely — so the
+// same list is enforced in `processFile`.
+const ACCEPTED_EXTENSIONS = /\.(pdf|docx|txt|md|markdown)$/i;
+const ACCEPTED_DOCUMENT_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "text/markdown",
+];
+const isSupportedType = (f: File) =>
+  isImage(f) ||
+  ACCEPTED_EXTENSIONS.test(f.name) ||
+  ACCEPTED_DOCUMENT_TYPES.includes(f.type);
 
 const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
   const [dragActive, setDragActive] = useState(false);
@@ -51,8 +70,23 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
       );
       return;
     }
-    if (isImage(selectedFile) && selectedFile.size > MAX_IMAGE_BYTES) {
-      setError("That image is too large (max 15 MB). Try a smaller photo.");
+    if (!isSupportedType(selectedFile)) {
+      setError(
+        "That file type isn't supported. Upload a PDF, DOCX, TXT or MD file, " +
+          "or a photo/scan of the contract (JPG, PNG).",
+      );
+      return;
+    }
+    if (isImage(selectedFile)) {
+      if (selectedFile.size > MAX_IMAGE_BYTES) {
+        setError("That image is too large (max 15 MB). Try a smaller photo.");
+        return;
+      }
+    } else if (selectedFile.size > MAX_DOCUMENT_BYTES) {
+      setError(
+        "That file is too large (max 25 MB). Try splitting the document or " +
+          "uploading a smaller export.",
+      );
       return;
     }
     setFile(selectedFile);

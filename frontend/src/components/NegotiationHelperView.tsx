@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type {
   AnalysisResponse,
   ClauseAnalysis,
@@ -65,16 +65,35 @@ const ClauseModificationCard: React.FC<{
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customText, setCustomText] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The "Copied!" reset must not fire after the card unmounts.
+  useEffect(
+    () => () => {
+      if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+    },
+    [],
+  );
 
   const colors = RISK_COLORS[clause.riskLevel] || RISK_COLORS.Negligible;
   const currentChoice = modifiedClause?.userChoice || "keep_original";
   const finalText = modifiedClause?.finalText || clause.clauseText;
 
-  const handleCopy = (e: React.MouseEvent) => {
+  const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(clause.negotiationSuggestion);
+    try {
+      await navigator.clipboard.writeText(clause.negotiationSuggestion);
+    } catch {
+      // Permission denied, or a non-secure context where the API is unavailable.
+      setCopied(false);
+      setCopyError("Could not copy. Please copy the text manually.");
+      return;
+    }
+    setCopyError(null);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+    copyResetTimer.current = setTimeout(() => setCopied(false), 2000);
   };
 
   const handleChoice = (choice: "keep_original" | "use_ai" | "use_custom") => {
@@ -164,6 +183,7 @@ const ClauseModificationCard: React.FC<{
             {copied ? "Copied!" : "Copy"}
           </button>
         </div>
+        {copyError && <p className="text-sm text-danger mb-2">{copyError}</p>}
         <p className="text-sm text-ink-muted break-words mb-2">
           {clause.negotiationSuggestion}
         </p>
@@ -365,7 +385,11 @@ const NegotiationHelperView: React.FC<NegotiationHelperViewProps> = ({
       isModified: isModified,
     };
 
-    setModifiedClauses((prev) => new Map(prev.set(index, modifiedClause)));
+    setModifiedClauses((prev) => {
+      const next = new Map(prev);
+      next.set(index, modifiedClause);
+      return next;
+    });
   };
 
   const buildRephrasedDraft = (): string => {

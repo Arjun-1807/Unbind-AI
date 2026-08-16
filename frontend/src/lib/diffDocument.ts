@@ -19,36 +19,80 @@ const NO_OP_REWRITE_PATTERN =
 const isNoOpRewrite = (rewrite: string) =>
   NO_OP_REWRITE_PATTERN.test(rewrite.trim());
 
-const findActualPosition = (
-  originalText: string,
-  normalizedIndex: number,
-): number => {
-  let originalIndex = 0;
-  let normalizedIndexCount = 0;
-  for (
-    let i = 0;
-    i < originalText.length && normalizedIndexCount < normalizedIndex;
-    i++
-  ) {
-    const nc = normalizeText(originalText[i]);
-    if (nc) normalizedIndexCount++;
-    originalIndex = i;
+/**
+ * The same normalization as `normalizeText`, but performed character by
+ * character so every character of the result can be mapped back to the index
+ * it came from in the original text. Re-normalizing one character at a time
+ * cannot do this: `normalizeText(" ")` trims to `""`, so whitespace — which
+ * the normalized haystack *does* contain — would not be counted, shifting
+ * every mapped offset right by the number of preceding spaces.
+ */
+export const normalizeWithOffsets = (
+  text: string,
+): { normalized: string; offsets: number[] } => {
+  const chars: string[] = [];
+  const offsets: number[] = [];
+  let prevWasSpace = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (/\s/.test(char)) {
+      // `\s+` → a single space.
+      if (!prevWasSpace) {
+        chars.push(" ");
+        offsets.push(i);
+      }
+      prevWasSpace = true;
+      continue;
+    }
+    prevWasSpace = false;
+    // Characters outside the allowed class are dropped. Note this happens
+    // *after* whitespace collapsing, so a dropped character between two
+    // spaces leaves both of them — matching normalizeText exactly.
+    if (!/[\w.,;:!?()-]/.test(char)) continue;
+    chars.push(char.toLowerCase());
+    offsets.push(i);
   }
-  return originalIndex;
+
+  // `.trim()` — drop the leading/trailing collapsed spaces and their offsets.
+  let from = 0;
+  let to = chars.length;
+  while (from < to && chars[from] === " ") from++;
+  while (to > from && chars[to - 1] === " ") to--;
+
+  return {
+    normalized: chars.slice(from, to).join(""),
+    offsets: offsets.slice(from, to),
+  };
 };
 
-const findClauseInText = (
+/**
+ * Locates `clauseText` inside `documentText` as exact character offsets into
+ * the *original* text, skipping positions already claimed by another clause.
+ * Falls back to a first-word/last-word span when the whole clause can't be
+ * found verbatim. Shared with DocumentView so highlighting and rewriting
+ * always agree on where a clause lives.
+ */
+export const findClauseInText = (
   clauseText: string,
   documentText: string,
   usedPositions: Set<number>,
 ): { start: number; end: number } | null => {
   const nc = normalizeText(clauseText);
-  const nd = normalizeText(documentText);
+  const { normalized: nd, offsets } = normalizeWithOffsets(documentText);
 
-  const start = nd.indexOf(nc);
+  // Maps a normalized [start, end) range back to original-text offsets.
+  const toOriginalRange = (start: number, length: number) => ({
+    start: offsets[start],
+    end: offsets[Math.min(start + length, offsets.length) - 1] + 1,
+  });
+
+  const start = nc.length > 0 ? nd.indexOf(nc) : -1;
   if (start !== -1) {
-    const actualStart = findActualPosition(documentText, start);
-    const actualEnd = actualStart + clauseText.length;
+    const { start: actualStart, end: actualEnd } = toOriginalRange(
+      start,
+      nc.length,
+    );
     if (!usedPositions.has(actualStart)) {
       usedPositions.add(actualStart);
       return { start: actualStart, end: actualEnd };
@@ -60,10 +104,10 @@ const findClauseInText = (
     const firstWord = clauseWords[0];
     const lastWord = clauseWords[clauseWords.length - 1];
     const fi = nd.indexOf(firstWord);
-    const li = nd.indexOf(lastWord, fi);
+    const li = fi === -1 ? -1 : nd.indexOf(lastWord, fi);
     if (fi !== -1 && li !== -1 && li > fi) {
-      const actualStart = findActualPosition(documentText, fi);
-      const actualEnd = findActualPosition(documentText, li) + lastWord.length;
+      const actualStart = toOriginalRange(fi, firstWord.length).start;
+      const actualEnd = toOriginalRange(li, lastWord.length).end;
       if (!usedPositions.has(actualStart)) {
         usedPositions.add(actualStart);
         return { start: actualStart, end: actualEnd };
@@ -195,17 +239,42 @@ export interface DiffToken {
 }
 
 const tokenize = (text: string): string[] => text.match(/\S+|\s+/g) || [];
+const tokenizeLines = (text: string): string[] => text.match(/[^\n]*\n|[^\n]+/g) || [];
+
+/** Appends `text`, coalescing it into the previous token when the op matches. */
+const pushToken = (tokens: DiffToken[], op: DiffOp, text: string) => {
+  if (!text) return;
+  const last = tokens[tokens.length - 1];
+  if (last && last.op === op) last.text += text;
+  else tokens.push({ op, text });
+};
 
 /**
- * Computes a word-level diff between two texts using LCS, returning tokens
- * tagged as equal / delete (old-only) / insert (new-only) — the same shape
- * GitHub's split diff view highlights.
+ * Cap on LCS table cells (~16 MB of Uint32). The table is O(n×m), so without
+ * a cap a 20k-word contract (~40k tokens per side) would ask for ~6.4 GB and
+ * 1.6 billion iterations — enough to kill the tab.
  */
-export function diffWords(oldText: string, newText: string): DiffToken[] {
-  const a = tokenize(oldText);
-  const b = tokenize(newText);
-  const n = a.length;
-  const m = b.length;
+const MAX_LCS_CELLS = 4_000_000;
+
+/**
+ * LCS diff over two token arrays. Identical leading/trailing tokens are
+ * matched off first — that alone reduces most document-sized comparisons to
+ * the handful of tokens that actually changed. Returns null (rather than
+ * allocating) when what remains is still too large for the table.
+ */
+const diffTokenArrays = (a: string[], b: string[]): DiffToken[] | null => {
+  let lo = 0;
+  while (lo < a.length && lo < b.length && a[lo] === b[lo]) lo++;
+  let hiA = a.length;
+  let hiB = b.length;
+  while (hiA > lo && hiB > lo && a[hiA - 1] === b[hiB - 1]) {
+    hiA--;
+    hiB--;
+  }
+
+  const n = hiA - lo;
+  const m = hiB - lo;
+  if ((n + 1) * (m + 1) > MAX_LCS_CELLS) return null;
 
   // LCS length table
   const dp: Uint32Array[] = new Array(n + 1);
@@ -213,34 +282,83 @@ export function diffWords(oldText: string, newText: string): DiffToken[] {
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
       dp[i][j] =
-        a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+        a[lo + i] === b[lo + j]
+          ? dp[i + 1][j + 1] + 1
+          : Math.max(dp[i + 1][j], dp[i][j + 1]);
     }
   }
 
   const tokens: DiffToken[] = [];
-  const push = (op: DiffOp, text: string) => {
-    const last = tokens[tokens.length - 1];
-    if (last && last.op === op) last.text += text;
-    else tokens.push({ op, text });
-  };
+  for (let k = 0; k < lo; k++) pushToken(tokens, "equal", a[k]);
 
   let i = 0;
   let j = 0;
   while (i < n && j < m) {
-    if (a[i] === b[j]) {
-      push("equal", a[i]);
+    if (a[lo + i] === b[lo + j]) {
+      pushToken(tokens, "equal", a[lo + i]);
       i++;
       j++;
     } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      push("delete", a[i]);
+      pushToken(tokens, "delete", a[lo + i]);
       i++;
     } else {
-      push("insert", b[j]);
+      pushToken(tokens, "insert", b[lo + j]);
       j++;
     }
   }
-  while (i < n) push("delete", a[i++]);
-  while (j < m) push("insert", b[j++]);
+  while (i < n) pushToken(tokens, "delete", a[lo + i++]);
+  while (j < m) pushToken(tokens, "insert", b[lo + j++]);
 
+  for (let k = hiA; k < a.length; k++) pushToken(tokens, "equal", a[k]);
+  return tokens;
+};
+
+/**
+ * Computes a word-level diff between two texts using LCS, returning tokens
+ * tagged as equal / delete (old-only) / insert (new-only) — the same shape
+ * GitHub's split diff view highlights.
+ *
+ * Degrades gracefully on inputs too big for an exact word-level table: first
+ * to a line-level diff, then to a whole-text replace. Normal-sized documents
+ * always take the word-level path.
+ */
+export function diffWords(oldText: string, newText: string): DiffToken[] {
+  const wordDiff = diffTokenArrays(tokenize(oldText), tokenize(newText));
+  if (wordDiff) return wordDiff;
+
+  const lineDiff = diffTokenArrays(tokenizeLines(oldText), tokenizeLines(newText));
+  if (lineDiff) return lineDiff;
+
+  const tokens: DiffToken[] = [];
+  pushToken(tokens, "delete", oldText);
+  pushToken(tokens, "insert", newText);
+  return tokens;
+}
+
+/**
+ * Diffs a segmented document without ever comparing it to itself end to end:
+ * context runs are equal by construction, and only clauses whose rewrite is
+ * being applied are diffed — each against its own rewrite. Output matches
+ * `diffWords(documentText, applyDecisions(...))` for normal documents while
+ * costing O(clause size) instead of O(document²).
+ */
+export function diffSegments(
+  segments: DocSegment[],
+  decisions: Record<number, ClauseDecision>,
+): DiffToken[] {
+  const tokens: DiffToken[] = [];
+  segments.forEach((segment) => {
+    if (segment.type === "context") {
+      pushToken(tokens, "equal", segment.text);
+      return;
+    }
+    if (decisions[segment.originalIndex] === "original") {
+      pushToken(tokens, "equal", segment.original);
+      return;
+    }
+    diffWords(segment.original, segment.rewrite).forEach((t) =>
+      pushToken(tokens, t.op, t.text),
+    );
+  });
   return tokens;
 }

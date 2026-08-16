@@ -8,6 +8,11 @@ const PRO_PLAN = 'Verdict';
 /**
  * Checks that the authenticated user is subscribed to the Verdict Pro plan.
  * Exits the process with a friendly message if they are not.
+ *
+ * UX only — NOT a security control. The plan string comes from the server and
+ * is compared here purely so a free user gets a clear upgrade prompt instead of
+ * a 403 halfway through. Entitlement is enforced server-side on every billable
+ * endpoint; anyone can patch out this check locally and it buys them nothing.
  */
 export async function ensureProAccess() {
   let planInfo;

@@ -228,14 +228,27 @@ export function riskColor(level) {
 
 // ─── Layout primitives ────────────────────────────────────────────────────────
 
+// Server/LLM-supplied text is untrusted: strip C0/C1 control characters so a
+// hostile response can't inject ANSI escape sequences that rewrite the screen,
+// hide output or drive the terminal. \n and \t are kept because the formatting
+// below relies on them; \r is dropped (it can overwrite an already-printed
+// line). Applied to the raw input *before* chalk wraps it, so the CLI's own
+// colour codes are never touched.
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\x00-\x08\x0b-\x1f\x7f-\x9f]/g;
+
+function stripControl(text) {
+  return String(text ?? '').replace(CONTROL_CHARS, '');
+}
+
 function truncate(text, max = 100) {
   if (!text) return '';
-  const clean = text.replace(/\s+/g, ' ').trim();
+  const clean = stripControl(text).replace(/\s+/g, ' ').trim();
   return clean.length > max ? clean.slice(0, max) + '…' : clean;
 }
 
 function wrap(text, width = 76, indent = '    ') {
-  const words = text.split(' ');
+  const words = stripControl(text).split(' ');
   const lines = [];
   let line = '';
   for (const w of words) {

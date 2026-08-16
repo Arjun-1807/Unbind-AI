@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import FileUpload from "@/components/FileUpload";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -10,19 +10,31 @@ import Header from "@/components/Header";
 import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 import * as api from "@/services/api";
+import { writeSessionStorage } from "@/lib/storage";
 import type { StoredAnalysis, AnalysisProgressEvent } from "@/types";
 import Footer from "@/components/footer";
 export default function UploadPage() {
-  const { user, refreshAnalyses } = useAuth();
+  const { user, authReady, refreshAnalyses } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [toastError, setToastError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!user) router.replace("/");
-  }, [user, router]);
+    if (authReady && !user) {
+      router.replace("/");
+    }
+  }, [authReady, user, router]);
+
+  // Leaving the page mid-analysis must tear the SSE stream down: otherwise its
+  // reader keeps pulling frames and pushing progress into an unmounted page.
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   const handleStartAnalysis = useCallback(
     async (file: File, role: string) => {
@@ -35,18 +47,35 @@ export default function UploadPage() {
       setIsLoading(true);
       setLoadingMessage("Uploading and analyzing document...");
 
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       try {
         const result = await api.uploadAndAnalyzeStream(
           file,
           role,
           (event: AnalysisProgressEvent) => {
+            if (controller.signal.aborted) return;
             setLoadingMessage(event.message);
           },
+          controller.signal,
         );
+        if (controller.signal.aborted) return;
         await refreshAnalyses();
-        sessionStorage.setItem("currentAnalysis", JSON.stringify(result));
-        router.push("/analysis");
+        // The record carries the whole extracted document text, which can be
+        // larger than the ~5 MB sessionStorage cap. When the write is dropped,
+        // hand the id over the route instead and let /analysis refetch it.
+        const cached = writeSessionStorage<StoredAnalysis>(
+          "currentAnalysis",
+          result,
+        );
+        router.push(
+          cached ? "/analysis" : `/analysis?id=${encodeURIComponent(result.id)}`,
+        );
       } catch (err) {
+        // An abort is this page unmounting, not a failure to report.
+        if (controller.signal.aborted) return;
         const errorMessage =
           err instanceof Error ? err.message : "Unknown analysis error";
         // Map known error codes to friendly guidance; HEIC/unreadable-image
@@ -72,14 +101,16 @@ export default function UploadPage() {
           setError(errorMessage);
         }
       } finally {
-        setIsLoading(false);
-        setLoadingMessage("");
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+          setLoadingMessage("");
+        }
       }
     },
     [user, router, refreshAnalyses],
   );
 
-  if (!user) return null;
+  if (!authReady || !user) return null;
 
   if (isLoading) return <LoadingSpinner message={loadingMessage} />;
 
