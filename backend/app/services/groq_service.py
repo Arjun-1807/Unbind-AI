@@ -1,10 +1,11 @@
 import asyncio
 import logging
 import re
+from functools import lru_cache
 from typing import Any
 
 from bson import ObjectId
-from groq import RateLimitError
+from groq import APIConnectionError, APITimeoutError, InternalServerError, RateLimitError
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from langsmith import traceable
@@ -37,6 +38,24 @@ _OCR_SEMAPHORE = asyncio.Semaphore(2)
 
 _MAX_RETRIES = 5
 
+# Transient failures worth another attempt. A dropped connection, a read
+# timeout or a Groq-side 5xx says nothing about the request itself, and a long
+# analysis is dozens of sequential calls — failing the whole job on one blip
+# wastes every call already paid for. 4xx errors other than 429 stay fatal:
+# retrying a malformed request just burns time.
+_RETRYABLE_ERRORS = (
+    RateLimitError,
+    APIConnectionError,  # APITimeoutError subclasses this; listed for clarity
+    APITimeoutError,
+    InternalServerError,
+)
+
+# Ceiling on a server-supplied Retry-After. Groq occasionally advertises waits
+# measured in minutes or hours (e.g. a daily quota); honouring those verbatim
+# would hang the request — and the caller's HTTP request — for that long. Past
+# a minute it's better to exhaust the retries and surface the failure.
+_MAX_RETRY_AFTER_SECONDS = 60.0
+
 # HyDE (Hypothetical Document Embeddings): rather than embed the user's short,
 # keyword-y question, we first draft a plausible contract passage that would
 # answer it, then embed THAT. Its clause-style wording lands much closer to real
@@ -52,19 +71,52 @@ _HYDE_SYSTEM_PROMPT = (
 )
 
 
-def _retry_after_seconds(err: RateLimitError) -> float:
-    """Best-effort extraction of how long to wait before retrying a 429."""
+def _retry_after_seconds(err: Exception) -> float:
+    """Best-effort extraction of how long to wait before retrying, clamped.
+
+    The hint comes from upstream and is therefore untrusted input: it is capped
+    at ``_MAX_RETRY_AFTER_SECONDS`` so a large advertised wait can't stall the
+    process. Returns 0.0 when no hint is available, letting the caller fall back
+    to exponential backoff.
+    """
     # Groq sends a Retry-After header; fall back to the "try again in Xs" hint.
     try:
         header = err.response.headers.get("retry-after")
         if header:
-            return float(header)
+            return min(float(header), _MAX_RETRY_AFTER_SECONDS)
     except Exception:
         pass
     match = re.search(r"try again in ([\d.]+)s", str(err))
     if match:
-        return float(match.group(1))
+        return min(float(match.group(1)), _MAX_RETRY_AFTER_SECONDS)
     return 0.0
+
+
+# Bounded so a runaway variety of (key, model, temperature) triples can't grow
+# without limit; in practice only a handful of combinations are ever used.
+@lru_cache(maxsize=32)
+def _get_llm(api_key: str, model: str, temperature: float) -> ChatGroq:
+    """Return a shared ChatGroq for this (key, model, temperature) triple.
+
+    Constructing ChatGroq is not cheap or free-standing: its validator builds
+    BOTH a ``groq.Groq`` and a ``groq.AsyncGroq``, each owning an httpx client
+    and connection pool that nothing ever closes. Building one per LLM call
+    leaked hundreds of pooled clients per analysis (only reclaimed whenever GC
+    ran the finalizers), exhausted file descriptors under load, and forced a
+    fresh TLS handshake on every request. One instance per distinct
+    configuration keeps the pools alive and reused.
+
+    ``api_key`` is part of the key on purpose: each feature runs on its own
+    dedicated Groq key (HyDE / negotiation / vision) so it draws on a separate
+    per-key rate limit, and sharing one client across keys would collapse that.
+    """
+    return ChatGroq(model=model, temperature=temperature, api_key=api_key)
+
+
+def _reset_llm_cache() -> None:
+    """Drop every cached client. For tests — a client built against a patched
+    ChatGroq or patched settings must not leak into the next test."""
+    _get_llm.cache_clear()
 
 
 def _get_api_key() -> str:
@@ -141,29 +193,35 @@ async def _invoke_with_retry(
     lc_messages: list,
     semaphore: asyncio.Semaphore,
 ) -> str:
-    """Invoke the model under a concurrency gate, retrying on 429s.
+    """Invoke the model under a concurrency gate, retrying transient failures.
 
     Bounds concurrency + backs off on rate limits so a burst of calls doesn't
     blow the free-tier tokens-per-minute limit and fail the whole request.
     """
-    async with semaphore:
-        for attempt in range(_MAX_RETRIES):
-            try:
+    for attempt in range(_MAX_RETRIES):
+        try:
+            # The gate is held for the request only, never across the backoff
+            # sleep. With just a couple of permits process-wide, sleeping while
+            # holding one would park a large slice of the global concurrency
+            # doing nothing — one rate-limited call would stall unrelated ones
+            # that could have proceeded.
+            async with semaphore:
                 response = await llm.ainvoke(lc_messages)
-                return response.content
-            except RateLimitError as err:
-                if attempt == _MAX_RETRIES - 1:
-                    raise
-                # Honor the server's suggested wait; otherwise exponential backoff.
-                wait = _retry_after_seconds(err) or min(2**attempt, 30)
-                wait += 0.5  # small cushion so we're clear of the window
-                logger.warning(
-                    "Groq rate limited (attempt %d/%d); retrying in %.1fs",
-                    attempt + 1,
-                    _MAX_RETRIES,
-                    wait,
-                )
-                await asyncio.sleep(wait)
+            return response.content
+        except _RETRYABLE_ERRORS as err:
+            if attempt == _MAX_RETRIES - 1:
+                raise
+            # Honor the server's suggested wait; otherwise exponential backoff.
+            wait = _retry_after_seconds(err) or min(2**attempt, 30)
+            wait += 0.5  # small cushion so we're clear of the window
+            logger.warning(
+                "Groq call failed with %s (attempt %d/%d); retrying in %.1fs",
+                type(err).__name__,
+                attempt + 1,
+                _MAX_RETRIES,
+                wait,
+            )
+            await asyncio.sleep(wait)
     # Unreachable: the loop either returns or raises on the final attempt.
     raise RuntimeError("chat completion failed without a response")
 
@@ -193,11 +251,7 @@ async def chat_complete(
     """Chat completion using LangChain's ChatGroq."""
     resolved_model = model or await resolve_model(user_id)
     api_key = _get_api_key()
-    llm = ChatGroq(
-        model=resolved_model,
-        temperature=temperature,
-        api_key=api_key,
-    )
+    llm = _get_llm(api_key, resolved_model, temperature)
     lc_messages = _to_lc_messages(messages)
     return await _invoke_with_retry(llm, lc_messages, _CHAT_SEMAPHORE)
 
@@ -215,11 +269,7 @@ async def generate_hypothetical_document(
     main analysis/summary calls for the same quota.
     """
     api_key = _get_hyde_api_key()
-    llm = ChatGroq(
-        model=FREE_MODEL,
-        temperature=temperature,
-        api_key=api_key,
-    )
+    llm = _get_llm(api_key, FREE_MODEL, temperature)
     lc_messages = _to_lc_messages(
         [
             {"role": "system", "content": _HYDE_SYSTEM_PROMPT},
@@ -247,11 +297,7 @@ async def negotiation_complete(
     higher default temperature suits natural-sounding prose.
     """
     api_key = _get_negotiation_api_key()
-    llm = ChatGroq(
-        model=FREE_MODEL,
-        temperature=temperature,
-        api_key=api_key,
-    )
+    llm = _get_llm(api_key, FREE_MODEL, temperature)
     lc_messages = _to_lc_messages(messages)
     return await _invoke_with_retry(llm, lc_messages, _NEGOTIATION_SEMAPHORE)
 
@@ -271,11 +317,7 @@ async def ocr_complete(
     faithful transcription.
     """
     api_key = _get_ocr_api_key()
-    llm = ChatGroq(
-        model=get_settings().OCR_MODEL,
-        temperature=temperature,
-        api_key=api_key,
-    )
+    llm = _get_llm(api_key, get_settings().OCR_MODEL, temperature)
     # Multimodal message: a text instruction plus the image. Built directly
     # because _to_lc_messages only handles plain string content.
     lc_messages = [

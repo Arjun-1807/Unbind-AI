@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User, AnalysisSummary, ReminderPreferences } from "@/types";
@@ -81,6 +81,15 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
   const [pwMessage, setPwMessage] = useState<Feedback | null>(null);
+  const pwCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The auto-close must not fire after the user navigates away.
+  useEffect(
+    () => () => {
+      if (pwCloseTimer.current) clearTimeout(pwCloseTimer.current);
+    },
+    [],
+  );
 
   // ── Plan / subscription ──
   const [planState, setPlanState] = useState<PlanState | null>(null);
@@ -238,7 +247,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setTimeout(() => {
+      if (pwCloseTimer.current) clearTimeout(pwCloseTimer.current);
+      pwCloseTimer.current = setTimeout(() => {
         setShowPasswordForm(false);
         setPwMessage(null);
       }, 2000);

@@ -40,6 +40,10 @@ COLLECTION = "reminders"
 # email rather than a burst of three.
 DEFAULT_LEAD_DAYS = [14, 7, 1]
 
+# The longest lead a user is allowed to configure. `lead_days_for` rejects
+# anything outside 0..365, so nothing further out than this can ever fire.
+MAX_LEAD_DAYS = 365
+
 # Guard against a pathological analysis generating hundreds of reminders.
 MAX_REMINDERS_PER_ANALYSIS = 50
 
@@ -62,7 +66,9 @@ def lead_days_for(user: dict[str, Any] | None) -> list[int]:
     raw = (user or {}).get("reminderLeadDays")
     if not isinstance(raw, list):
         return list(DEFAULT_LEAD_DAYS)
-    leads = sorted({int(d) for d in raw if isinstance(d, int) and 0 <= d <= 365}, reverse=True)
+    leads = sorted(
+        {int(d) for d in raw if isinstance(d, int) and 0 <= d <= MAX_LEAD_DAYS}, reverse=True
+    )
     return leads or list(DEFAULT_LEAD_DAYS)
 
 
@@ -90,13 +96,14 @@ async def generate_for_analysis(
     That matters because an analysis can be re-run and this is called from
     several paths.
 
-    Returns counts: ``{"scheduled": n, "needsAttention": n, "skipped": n}``.
+    Returns counts:
+    ``{"scheduled": n, "needsAttention": n, "skipped": n, "failed": n}``.
     """
     if today is None:
         today = datetime.now(timezone.utc).date()
 
     db = get_db()
-    counts = {"scheduled": 0, "needsAttention": 0, "skipped": 0}
+    counts = {"scheduled": 0, "needsAttention": 0, "skipped": 0, "failed": 0}
     now = datetime.now(timezone.utc)
 
     for entry in (key_dates or [])[:MAX_REMINDERS_PER_ANALYSIS]:
@@ -105,11 +112,11 @@ async def generate_for_analysis(
         resolved = resolve_key_date(raw, today=today)
 
         if resolved.schedulable and resolved.due:
-            counts["scheduled"] += 1
+            bucket = "scheduled"
         elif resolved.needs_user_input:
-            counts["needsAttention"] += 1
+            bucket = "needsAttention"
         else:
-            counts["skipped"] += 1
+            bucket = "skipped"
 
         doc = {
             "userId": user_id,
@@ -127,10 +134,20 @@ async def generate_for_analysis(
         try:
             await db[COLLECTION].insert_one(doc)
         except DuplicateKeyError:
-            # Already generated for this analysis — nothing to do.
+            # Already generated for this analysis — the row exists, so it still
+            # counts as scheduled: a re-run reports the same totals as the first.
+            counts[bucket] += 1
             continue
         except Exception:
+            # Count it as failed, never as scheduled. The caller shows these
+            # numbers to the user, and telling someone a deadline reminder
+            # exists when the write was lost is the one failure this module
+            # exists to prevent.
+            counts["failed"] += 1
             logger.exception("Failed to store reminder for analysis %s", analysis_id)
+            continue
+
+        counts[bucket] += 1
 
     logger.info("Generated reminders for analysis %s: %s", analysis_id, counts)
     return counts
@@ -225,7 +242,15 @@ def due_lead(days_until: int, leads: list[int], sent_leads: list[int]) -> int | 
 async def _collect_due(today: date) -> dict[str, list[dict[str, Any]]]:
     """Group due reminders by user id, skipping opted-out users."""
     db = get_db()
-    horizon = _as_utc_midnight(today + timedelta(days=max(DEFAULT_LEAD_DAYS) + 1))
+    # Widen to the *maximum configurable* lead, not the default one: a user who
+    # asked for 90 days notice must be loaded 90 days out, and the horizon is
+    # computed before we know whose reminders these are. Reading the actual
+    # per-user maxima would mean a scan of `users` on every sweep to shave a
+    # window that is already tiny — reminders are one row per contract deadline,
+    # bounded by MAX_REMINDERS_PER_ANALYSIS, and `due_lead` below still does the
+    # real per-user filtering. The index on dueDate makes the wider range cost
+    # the same lookup, just a few more rows.
+    horizon = _as_utc_midnight(today + timedelta(days=MAX_LEAD_DAYS + 1))
     cursor = db[COLLECTION].find(
         {
             "schedulable": True,

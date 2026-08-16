@@ -149,6 +149,46 @@ def test_conditional_dates_are_flagged(raw):
     assert result.needs_user_input is False
 
 
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("Final payment due 31 December 2026 if the work is accepted", date(2026, 12, 31)),
+        ("Deliverables due 2026-09-30 when the client signs off", date(2026, 9, 30)),
+        ("If approved, renewal takes effect December 1, 2026", date(2026, 12, 1)),
+    ],
+)
+def test_absolute_date_beats_a_bare_if_or_when(raw, expected):
+    """A fixed date with a conditional aside is still a fixed date.
+
+    Classifying these CONDITIONAL dropped them entirely: conditional isn't
+    offered for user correction, so a schedulable deadline was unrecoverable.
+    """
+    result = _resolve(raw)
+    assert result.schedulable is True
+    assert result.due == expected
+    assert result.reason is None
+
+
+def test_bare_if_still_wins_when_no_date_is_present():
+    """The weakened markers only yield to an actual date, never unconditionally."""
+    result = _resolve("if the tenant defaults")
+    assert result.reason == CONDITIONAL
+
+
+def test_strong_conditional_marker_still_beats_an_absolute_date():
+    """ "upon" and friends are unchanged — they override a date as before."""
+    result = _resolve("upon termination of the agreement signed 31 December 2026")
+    assert result.schedulable is False
+    assert result.reason == CONDITIONAL
+
+
+def test_ambiguous_numeric_date_is_not_masked_by_a_bare_if():
+    """The user can fix an ambiguous date; calling it conditional would deny that."""
+    result = _resolve("payment due 01/02/2026 if invoiced")
+    assert result.reason == AMBIGUOUS
+    assert result.needs_user_input is True
+
+
 @pytest.mark.parametrize("raw", ["", "   ", "see clause 4", "the agreed date", "2026"])
 def test_unparseable_input_is_refused(raw):
     result = _resolve(raw)

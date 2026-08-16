@@ -285,13 +285,25 @@ export function exportAnalysis(analysis, opts = {}) {
       // remote/untrusted input, and the containment check below rejects any
       // resolution outside cwd before the path is used.
       const resolved = path.resolve(opts.outputPath); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
-      const cwd = process.cwd();
-      const rel = path.relative(cwd, resolved);
-      // If the resolved path is outside cwd, reject it
-      if (rel.startsWith('..') || path.isAbsolute(rel) && rel !== '') {
+      // Resolve symlinks on the parent directory before the containment test:
+      // a lexically-contained path can still be a symlink inside cwd pointing
+      // at something like ~/.ssh/config, which writeFileSync would follow.
+      let realParent;
+      try {
+        realParent = fs.realpathSync(path.dirname(resolved));
+      } catch {
+        throw new Error('Invalid output path: parent directory does not exist');
+      }
+      const cwd = fs.realpathSync(process.cwd());
+      const target = path.join(realParent, path.basename(resolved));
+      const rel = path.relative(cwd, target);
+      // If the real path is outside cwd, reject it. Compare against '..' and
+      // '../' specifically — a plain startsWith('..') would also reject a
+      // legitimate file named e.g. "..notes.md" inside cwd.
+      if (rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) {
         throw new Error('Invalid output path: must be inside the current working directory');
       }
-      return resolved;
+      return target;
     }
     // defaultName is built from path.basename()/path.extname() of the
     // document's own filename with a fixed "-unbind-report.<ext>" suffix
@@ -304,7 +316,18 @@ export function exportAnalysis(analysis, opts = {}) {
     format === 'txt' ? buildPlainText(analysis) : buildMarkdown(analysis);
 
   try {
-    fs.writeFileSync(outputPath, content, 'utf8');
+    // 0600 — the report embeds the full contract text, so keep it as private
+    // as the session token in config.js rather than at the ambient umask.
+    // O_NOFOLLOW (POSIX only) refuses to write through a symlinked report path.
+    fs.writeFileSync(outputPath, content, {
+      encoding: 'utf8',
+      mode: 0o600,
+      flag:
+        fs.constants.O_WRONLY |
+        fs.constants.O_CREAT |
+        fs.constants.O_TRUNC |
+        (fs.constants.O_NOFOLLOW ?? 0),
+    });
   } catch (err) {
     throw new Error(`Could not write report: ${err.message}`);
   }

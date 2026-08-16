@@ -2,24 +2,54 @@
 
 import React, { useState } from "react";
 import type { AnalysisResponse } from "@/types";
+import ErrorMessage from "./ErrorMessage";
 
 interface OverlayRephrasedPdfProps {
   analysisResult: AnalysisResponse;
 }
+
+// The file is held in memory twice (raw bytes plus the pdf-lib document), so a
+// very large PDF would exhaust the tab. Cap it before we read anything.
+const MAX_PDF_BYTES = 25 * 1024 * 1024;
+const MAX_PDF_LABEL = "25 MB";
 
 const OverlayRephrasedPdf: React.FC<OverlayRephrasedPdfProps> = ({
   analysisResult,
 }) => {
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
+    setError(null);
+
+    if (!f) {
+      setSourceFile(null);
+      return;
+    }
+    // Some browsers report an empty type, so fall back to the extension.
+    const isPdf = f.type
+      ? f.type === "application/pdf"
+      : f.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      setSourceFile(null);
+      setError("That file isn't a PDF. Please choose the original PDF.");
+      return;
+    }
+    if (f.size > MAX_PDF_BYTES) {
+      setSourceFile(null);
+      setError(
+        `That PDF is too large. Please choose a file under ${MAX_PDF_LABEL}.`,
+      );
+      return;
+    }
     setSourceFile(f);
   };
 
   const exportOverlay = async () => {
     if (!sourceFile) return;
+    setError(null);
     try {
       setIsBuilding(true);
       const pdfLib = await import("pdf-lib");
@@ -199,9 +229,8 @@ const OverlayRephrasedPdf: React.FC<OverlayRephrasedPdfProps> = ({
       a.download = "UnBind-Balanced-Rephrased-from-Extracted.pdf";
       a.click();
       URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
-      alert("Failed to generate rephrased PDF from extracted text.");
+    } catch {
+      setError("Failed to generate rephrased PDF from extracted text.");
     } finally {
       setIsBuilding(false);
     }
@@ -230,6 +259,14 @@ const OverlayRephrasedPdf: React.FC<OverlayRephrasedPdfProps> = ({
       >
         {isBuilding ? "Generating…" : "Export Rephrased (Overlay)"}
       </button>
+      {error && (
+        <ErrorMessage
+          message={error}
+          onRetry={() => setError(null)}
+          title="Rephrased PDF Failed"
+          retryLabel="Dismiss"
+        />
+      )}
     </div>
   );
 };

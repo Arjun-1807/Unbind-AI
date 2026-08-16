@@ -224,10 +224,19 @@ async def test_keyword_fallback_prefers_chunks_containing_query_words():
     assert "ubletting" in results[0]["text"]
 
 
-async def test_keyword_fallback_returns_leading_chunks_when_nothing_matches():
+async def test_keyword_fallback_returns_nothing_when_no_word_matches():
+    """Arbitrary leading chunks would be presented to the model as *the* excerpts.
+
+    That produced confidently-cited answers grounded in whatever happened to be
+    at the top of the document. No match has to read as no match.
+    """
     text = "Payment terms are net thirty. " * 100
-    results = await vector_store.keyword_fallback(text, "zzzz nonexistent", k=3)
-    assert len(results) == 3
+    assert await vector_store.keyword_fallback(text, "zzzz nonexistent", k=3) == []
+
+
+async def test_keyword_fallback_returns_nothing_for_a_query_of_only_short_words():
+    text = "Payment terms are net thirty. " * 100
+    assert await vector_store.keyword_fallback(text, "is it ok", k=3) == []
 
 
 async def test_keyword_fallback_preserves_offsets():

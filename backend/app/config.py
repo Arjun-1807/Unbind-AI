@@ -1,9 +1,38 @@
 from functools import lru_cache
 from os import environ
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings
+
+# 32 characters is the floor for an HS256 signing key: below that a GPU/cloud
+# brute force of a captured token is cheap, and the key is what stands between
+# an attacker and a self-issued session token for any account.
+_MIN_JWT_SECRET_LENGTH = 32
+
+# Placeholders that appear in example .env files and tutorials. They are long
+# enough to be worth naming explicitly, since the length check alone would let
+# something like "changeme-changeme-changeme-change" through.
+_WEAK_JWT_SECRETS = frozenset(
+    {
+        "secret",
+        "changeme",
+        "change-me",
+        "changethis",
+        "password",
+        "jwt_secret",
+        "jwtsecret",
+        "your-secret-key",
+        "your_jwt_secret",
+        "supersecret",
+        "test",
+    }
+)
+
+# Hosts that only ever mean "this machine". A production FRONTEND_URL naming any
+# of them means the env var was forgotten, not that the deploy is local.
+_LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"})
 
 
 class Settings(BaseSettings):
@@ -79,6 +108,12 @@ class Settings(BaseSettings):
     # to verify the X-Razorpay-Signature on server-to-server payment callbacks —
     # the reliable source of truth even if the browser never calls /verify.
     RAZORPAY_WEBHOOK_SECRET: str = ""
+    # The single origin the API trusts: it is the only entry in main.py's
+    # `allowed_origins`, which feeds BOTH the CORS allowlist (allow_credentials
+    # =True) and the Origin/CSRF allowlist. The localhost default is a dev
+    # convenience only — the production validator below rejects it, because a
+    # deploy that forgot this var would otherwise hand any page on
+    # http://localhost:3000 credentialed, CSRF-passing access to production.
     FRONTEND_URL: str = "http://localhost:3000"
     # Optional opt-in regex for Vercel preview deployments (e.g.
     # r"https://myproject-.*\.vercel\.app"). Left as None so the broad
@@ -120,6 +155,48 @@ class Settings(BaseSettings):
         errors: list[str] = []
         if not self.GROQ_API_KEY:
             errors.append("GROQ_API_KEY is empty. Set it to a valid Groq API key.")
+
+        # JWT_SECRET being merely *present* is not enough. Tokens are HS256 and
+        # every user is handed one, so a short or guessable key is crackable
+        # offline — and forging {"userId": ..., "purpose": "session"} is a
+        # complete account takeover for any account the attacker names.
+        secret = self.JWT_SECRET.strip()
+        if len(secret) < _MIN_JWT_SECRET_LENGTH:
+            errors.append(
+                f"JWT_SECRET is too short ({len(secret)} chars). Use at least "
+                f"{_MIN_JWT_SECRET_LENGTH} characters of high-entropy randomness "
+                "(e.g. `openssl rand -hex 32`)."
+            )
+        elif secret.lower() in _WEAK_JWT_SECRETS:
+            errors.append(
+                "JWT_SECRET is a well-known placeholder value. Replace it with "
+                "high-entropy randomness (e.g. `openssl rand -hex 32`)."
+            )
+
+        # FRONTEND_URL is the sole trusted origin for CORS (with credentials) and
+        # for the Origin/CSRF check, so an unset or non-production value here is
+        # not cosmetic — it decides who may make authenticated cross-site calls
+        # against this deploy. Same fail-closed rule as ENVIRONMENT: a forgotten
+        # env var must stop the boot, not silently trust localhost.
+        frontend = self.FRONTEND_URL.strip()
+        parts = urlsplit(frontend)
+        host = (parts.hostname or "").lower()
+        if not frontend or not parts.scheme or not parts.netloc:
+            errors.append(
+                "FRONTEND_URL is not set to an absolute URL. Set it explicitly to "
+                "the production frontend origin (e.g. https://app.example.com)."
+            )
+        elif parts.scheme != "https":
+            errors.append(
+                f"FRONTEND_URL uses {parts.scheme!r}. A production origin must be "
+                "https:// — the auth cookie is Secure and only travels over TLS."
+            )
+        elif host in _LOCAL_HOSTS:
+            errors.append(
+                f"FRONTEND_URL points at the local host {host!r}. In production this "
+                "would let any page served on that host make credentialed, "
+                "CSRF-passing calls against this API."
+            )
 
         if errors:
             raise ValueError(

@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { AnalysisResponse } from "@/types";
+import { escapeIcsText } from "@/lib/ics";
 import DeadlineRemindersPanel from "./DeadlineRemindersPanel";
 import { CalendarIcon } from "./Icons";
 
@@ -39,6 +40,14 @@ const generateIcsFile = (dateStr: string, description: string) => {
     return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
   };
 
+  // `description` and `dateStr` are model output derived from the uploaded
+  // contract, so they must be escaped before they touch a property line — see
+  // the note in @/lib/ics.
+  const summary = escapeIcsText(description);
+  const details = escapeIcsText(
+    `Key date from contract: ${description}. Date mentioned: ${dateStr}.`,
+  );
+
   const icsContent = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -47,8 +56,8 @@ const generateIcsFile = (dateStr: string, description: string) => {
     `UID:${Date.now()}@unbind.app`,
     `DTSTAMP:${formatDate(new Date())}`,
     `DTSTART;VALUE=DATE:${formatDate(startDate).substring(0, 8)}`,
-    `SUMMARY:${description}`,
-    `DESCRIPTION:Key date from contract: ${description}. Date mentioned: ${dateStr}.`,
+    `SUMMARY:${summary}`,
+    `DESCRIPTION:${details}`,
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n");
@@ -84,6 +93,9 @@ const generateGoogleCalendarUrl = (dateStr: string, description: string): string
   const endDate = new Date(startDate);
   endDate.setUTCDate(endDate.getUTCDate() + 1);
 
+  // No RFC 5545 escaping here: this is a query string, not a line-oriented
+  // iCalendar body, and URLSearchParams percent-encodes newlines and separators
+  // so model output cannot break out of its parameter.
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: description,

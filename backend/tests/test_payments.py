@@ -350,6 +350,26 @@ async def test_webhook_bad_signature_400(override_settings):
     assert exc.value.detail == "Invalid webhook signature"
 
 
+async def test_webhook_non_ascii_signature_is_400_not_500(override_settings):
+    """Starlette decodes headers as latin-1, so a raw 0xe9 byte in the signature
+    header reaches us as a non-ASCII str. ``hmac.compare_digest`` refuses those
+    with TypeError, which an unauthenticated caller could use to turn this 400
+    into a 500 plus a stack trace."""
+    raw = json.dumps({"event": "payment.captured"}).encode()
+    req = _WebhookRequest(raw, "\xe9" + _webhook_sig(raw))
+    with pytest.raises(HTTPException) as exc:
+        await plan_routes.razorpay_webhook(req)
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "Invalid webhook signature"
+
+
+def test_verify_signature_false_for_non_ascii(override_settings):
+    """Same TypeError trap on the /verify path, where the signature is a body field."""
+    assert plan_routes._verify_signature("order_1", "pay_1", "d\xe9adbeef") is False
+    # Beyond latin-1 too — a JSON body can carry any code point.
+    assert plan_routes._verify_signature("order_1", "pay_1", "deadbeef€") is False
+
+
 async def test_webhook_ignored_event(override_settings):
     raw = json.dumps({"event": "payment.failed"}).encode()
     req = _WebhookRequest(raw, _webhook_sig(raw))

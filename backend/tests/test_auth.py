@@ -175,3 +175,179 @@ async def test_get_current_user_id_valid_token(override_settings):
     token = auth.create_access_token("user-abc")
     req = _ReqWithCookiesHeaders(cookies={override_settings.COOKIE_NAME: token})
     assert await auth.get_current_user_id(req) == "user-abc"
+
+
+# ── Absolute session lifetime ────────────────────────────────────────────────
+#
+# /auth/me re-mints a token on every call. Without a ceiling that makes any
+# captured token immortal, so ``sst`` is stamped once and carried through every
+# re-issue.
+
+
+def test_new_token_stamps_session_start():
+    payload = auth.decode_access_token(auth.create_access_token("u1"))
+    assert payload["sst"] == pytest.approx(datetime.now(timezone.utc).timestamp(), abs=5)
+
+
+def test_reissue_preserves_session_start():
+    started = datetime.now(timezone.utc) - timedelta(days=10)
+    payload = auth.decode_access_token(auth.create_access_token("u1", session_start=started))
+    assert payload["sst"] == int(started.timestamp())
+
+
+def test_reissue_expiry_is_clamped_to_the_absolute_ceiling(override_settings):
+    """A session 28 days old may only slide 2 more days, not a fresh 7."""
+    started = datetime.now(timezone.utc) - timedelta(days=auth.JWT_ABSOLUTE_EXPIRE_DAYS - 2)
+    payload = auth.decode_access_token(auth.create_access_token("u1", session_start=started))
+    ceiling = started + timedelta(days=auth.JWT_ABSOLUTE_EXPIRE_DAYS)
+    assert payload["exp"] == pytest.approx(ceiling.timestamp(), abs=5)
+    # ...and that is strictly earlier than the sliding window would allow.
+    assert (
+        payload["exp"]
+        < (
+            datetime.now(timezone.utc) + timedelta(days=override_settings.JWT_EXPIRE_DAYS)
+        ).timestamp()
+    )
+
+
+def test_fresh_session_uses_the_sliding_window(override_settings):
+    payload = auth.decode_access_token(auth.create_access_token("u1"))
+    expected = datetime.now(timezone.utc) + timedelta(days=override_settings.JWT_EXPIRE_DAYS)
+    assert payload["exp"] == pytest.approx(expected.timestamp(), abs=5)
+
+
+async def test_token_past_absolute_ceiling_is_rejected(override_settings):
+    """Even with a far-future exp, a session older than the ceiling is dead."""
+    started = datetime.now(timezone.utc) - timedelta(days=auth.JWT_ABSOLUTE_EXPIRE_DAYS + 1)
+    forged = jwt.encode(
+        {
+            "userId": "507f1f77bcf86cd799439011",
+            "purpose": "session",
+            "sst": int(started.timestamp()),
+            "exp": datetime.now(timezone.utc) + timedelta(days=7),
+        },
+        override_settings.JWT_SECRET,
+        algorithm=override_settings.JWT_ALGORITHM,
+    )
+    with pytest.raises(HTTPException) as exc:
+        await auth.get_current_user_id(_bare_request(forged))
+    assert exc.value.status_code == 401
+
+
+async def test_token_without_sst_still_authenticates(override_settings):
+    """Backward compatibility: already-issued tokens predate the claim."""
+    legacy = jwt.encode(
+        {
+            "userId": "507f1f77bcf86cd799439011",
+            "purpose": "session",
+            "exp": datetime.now(timezone.utc) + timedelta(days=1),
+        },
+        override_settings.JWT_SECRET,
+        algorithm=override_settings.JWT_ALGORITHM,
+    )
+    assert await auth.get_current_user_id(_bare_request(legacy)) == "507f1f77bcf86cd799439011"
+
+
+def test_session_start_missing_claim_is_treated_as_now():
+    assert auth.session_start_from_payload({}).timestamp() == pytest.approx(
+        datetime.now(timezone.utc).timestamp(), abs=5
+    )
+
+
+def test_session_start_garbage_claim_is_treated_as_now():
+    assert auth.session_start_from_payload({"sst": "not-a-number"}).timestamp() == pytest.approx(
+        datetime.now(timezone.utc).timestamp(), abs=5
+    )
+
+
+# ── /auth/login and /auth/me report the *effective* plan ─────────────────────
+
+
+class _FakeResponse:
+    """Stand-in for fastapi.Response — set_auth_cookie only needs set_cookie."""
+
+    def __init__(self):
+        self.cookies = {}
+
+    def set_cookie(self, key, value, **kwargs):
+        self.cookies[key] = value
+
+
+async def test_login_pro_is_false_when_plan_has_expired(seed_user, override_settings):
+    from app.routes import auth_routes
+    from app.schemas import LoginRequest
+
+    seed_user(
+        username="lapsed",
+        email="lapsed@example.com",
+        passwordHash=auth.hash_password("correct-horse"),
+        # The stored flag is stale: _grant_plan sets it and nothing clears it.
+        pro=True,
+        plan="Brief",
+        planExpiresAt=datetime.now(timezone.utc) - timedelta(days=1),
+    )
+
+    out = await auth_routes.login(
+        LoginRequest(email="lapsed@example.com", password="correct-horse"),
+        _ReqWithCookiesHeaders(),
+        _FakeResponse(),
+    )
+    assert out.pro is False
+    assert out.plan is None
+
+
+async def test_login_pro_is_true_for_a_live_plan(seed_user, override_settings):
+    from app.routes import auth_routes
+    from app.schemas import LoginRequest
+
+    seed_user(
+        username="paid",
+        email="paid@example.com",
+        passwordHash=auth.hash_password("correct-horse"),
+        plan="Motion",
+        planExpiresAt=datetime.now(timezone.utc) + timedelta(days=10),
+    )
+
+    out = await auth_routes.login(
+        LoginRequest(email="paid@example.com", password="correct-horse"),
+        _ReqWithCookiesHeaders(),
+        _FakeResponse(),
+    )
+    assert out.pro is True
+    assert out.plan == "Motion"
+
+
+async def test_me_pro_is_false_when_plan_has_expired(seed_user, override_settings):
+    from app.routes import auth_routes
+
+    user = seed_user(
+        username="lapsed",
+        pro=True,
+        plan="Brief",
+        planExpiresAt=datetime.now(timezone.utc) - timedelta(days=1),
+    )
+    token = auth.create_access_token(str(user["_id"]))
+    out = await auth_routes.me(
+        _ReqWithCookiesHeaders(cookies={override_settings.COOKIE_NAME: token})
+    )
+    assert out.pro is False
+    assert out.plan is None
+
+
+async def test_me_reissued_token_keeps_the_original_session_start(seed_user, override_settings):
+    from app.routes import auth_routes
+
+    user = seed_user(username="someone")
+    started = datetime.now(timezone.utc) - timedelta(days=28)
+    token = auth.create_access_token(str(user["_id"]), session_start=started)
+
+    out = await auth_routes.me(
+        _ReqWithCookiesHeaders(cookies={override_settings.COOKIE_NAME: token})
+    )
+    reissued = auth.decode_access_token(out.accessToken)
+    assert reissued["sst"] == int(started.timestamp())
+    # 28 days in, only 2 remain — polling /auth/me cannot buy a fresh 7 days
+    # beyond the ceiling.
+    assert reissued["exp"] == pytest.approx(
+        (started + timedelta(days=auth.JWT_ABSOLUTE_EXPIRE_DAYS)).timestamp(), abs=5
+    )

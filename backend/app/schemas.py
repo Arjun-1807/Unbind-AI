@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 # Upper bounds for free-text that gets forwarded to an LLM. These are generous
 # (a 200-page contract is roughly 500k characters) but finite: without a cap,
@@ -10,6 +10,12 @@ MAX_DOCUMENT_CHARS = 600_000
 MAX_SCENARIO_CHARS = 2_000
 MAX_CLAUSE_CHARS = 20_000
 MAX_NEGOTIATION_POINTS = 50
+# Per-field and per-list caps multiply: 50 points x 4 fields x 20k chars is ~4
+# million characters in one request, all of which the negotiation drafter
+# concatenates into a single prompt. The aggregate cap is what actually bounds
+# the bill. Sized for the realistic case (a handful of clauses quoted in full),
+# not the theoretical maximum.
+MAX_NEGOTIATION_TOTAL_CHARS = 40_000
 
 # Password policy, enforced server-side on every path that sets a password.
 # The 72-byte ceiling is bcrypt's: it silently truncates anything longer, so a
@@ -28,7 +34,10 @@ class SignupRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    # No min_length (an old account may predate the policy) but the bcrypt
+    # ceiling still applies: anything longer can't be a real password, and
+    # handing an unbounded string to bcrypt is free work for an attacker.
+    password: str = Field(max_length=MAX_PASSWORD_LENGTH)
 
 
 class UserResponse(BaseModel):
@@ -44,7 +53,9 @@ class UserResponse(BaseModel):
 
 
 class UpdatePasswordRequest(BaseModel):
-    currentPassword: str
+    # Bounded for the same reason as LoginRequest.password: it goes straight to
+    # verify_password, which truncates at bcrypt's 72 bytes anyway.
+    currentPassword: str = Field(max_length=MAX_PASSWORD_LENGTH)
     newPassword: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
 
 
@@ -164,6 +175,24 @@ class NegotiationDraftRequest(BaseModel):
     format: str = "email"  # email | message | letter
     counterparty: str = Field("", max_length=200)  # who it's addressed to (e.g. "Landlord")
     senderName: str = Field("", max_length=200)  # optional name to sign off with
+
+    @model_validator(mode="after")
+    def _cap_total_length(self) -> "NegotiationDraftRequest":
+        """Reject requests whose points sum to more than the prompt budget.
+
+        The per-field caps bound one clause; this bounds the whole prompt, which
+        is what the LLM actually gets billed for.
+        """
+        total = sum(
+            len(p.clauseText) + len(p.concern) + len(p.request) + len(p.desiredRewrite or "")
+            for p in self.points
+        )
+        if total > MAX_NEGOTIATION_TOTAL_CHARS:
+            raise ValueError(
+                f"Selected clauses total {total} characters, which exceeds the "
+                f"{MAX_NEGOTIATION_TOTAL_CHARS} character limit. Select fewer clauses."
+            )
+        return self
 
 
 class NegotiationDraftResponse(BaseModel):

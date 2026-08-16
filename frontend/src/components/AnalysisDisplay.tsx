@@ -103,12 +103,16 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         </div>
       </div>
 
-      <CompareDocumentsModal
-        open={compareOpen}
-        documentText={documentText}
-        clauses={analysisResult.clauses}
-        onClose={() => setCompareOpen(false)}
-      />
+      {/* Mounted only while open — the modal segments and diffs the whole
+          document, which is wasted work for anyone who never opens it. */}
+      {compareOpen && (
+        <CompareDocumentsModal
+          open={compareOpen}
+          documentText={documentText}
+          clauses={analysisResult.clauses}
+          onClose={() => setCompareOpen(false)}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
         {/* Left Panel: Document View */}

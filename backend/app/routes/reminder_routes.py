@@ -3,10 +3,11 @@
 import hmac
 import logging
 from datetime import date
+from html import escape
 
 from bson import ObjectId
 from bson.errors import InvalidId
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from app.auth import get_current_user_id
@@ -34,7 +35,11 @@ def _require_sweep_secret(request: Request) -> None:
             detail="Reminder sweep is not configured. Set REMINDER_SWEEP_SECRET.",
         )
     provided = request.headers.get("x-reminder-secret", "")
-    if not hmac.compare_digest(provided, expected):
+    # Compared as bytes, not str: Starlette decodes headers as latin-1, so a
+    # header carrying a non-ASCII byte yields a str that compare_digest refuses
+    # with TypeError — which would turn this clean 401 into a 500 for any
+    # unauthenticated caller who sends one.
+    if not hmac.compare_digest(provided.encode("latin-1", "ignore"), expected.encode()):
         raise HTTPException(status_code=401, detail="Invalid sweep credentials")
 
 
@@ -131,22 +136,48 @@ async def set_reminder_due_date(reminder_id: str, body: ReminderDueDateRequest, 
 
 @router.get("/unsubscribe", response_class=HTMLResponse)
 async def unsubscribe(token: str = Query(...)):
-    """One-click opt-out from a link in the email — no login required.
+    """Confirmation page for the opt-out link in the email — no login required.
+
+    Deliberately changes NOTHING. A GET is followed by things that are not the
+    recipient: link prefetchers, mail-client and antivirus URL scanners,
+    corporate link rewriters. It is also exempt from the Origin/CSRF check,
+    which only covers mutating verbs. So the write lives behind the POST below,
+    and reaching this URL merely offers the button.
 
     Reached from a mail client, so it answers with a small HTML page rather than
     JSON. Every outbound digest carries this link; without a working one, sending
     scheduled mail isn't legitimate.
     """
+    if not reminder_service.read_unsubscribe_token(token):
+        return HTMLResponse(_expired_page(), status_code=400)
+
+    return HTMLResponse(
+        _page(
+            "Turn off reminder emails?",
+            "Confirm and you'll stop getting deadline reminder emails. "
+            "You can turn them back on any time in your profile settings.",
+            confirm_token=token,
+        )
+    )
+
+
+@router.post("/unsubscribe", response_class=HTMLResponse)
+async def confirm_unsubscribe(token: str = Form(...)):
+    """Actually opt the user out. Submitted by the button on the page above.
+
+    The signed, purpose-scoped token is the whole authorization: there is no
+    session cookie in play, so the Origin check adds nothing here — anyone able
+    to forge this request already holds the token, and holding the token *is*
+    the permission. It passes that check anyway, because the confirmation page
+    is served from FRONTEND_URL (see ``reminder_service.build_unsubscribe_url``)
+    and so the browser sends an allowed Origin.
+
+    Re-verified rather than trusted from the GET, since the form field is just
+    as client-supplied as the query parameter was.
+    """
     user_id = reminder_service.read_unsubscribe_token(token)
     if not user_id:
-        return HTMLResponse(
-            _page(
-                "Link expired",
-                "This unsubscribe link isn't valid. "
-                "You can turn reminders off in your profile settings.",
-            ),
-            status_code=400,
-        )
+        return HTMLResponse(_expired_page(), status_code=400)
 
     try:
         db = get_db()
@@ -169,8 +200,26 @@ async def unsubscribe(token: str = Query(...)):
     )
 
 
-def _page(title: str, message: str) -> str:
+def _expired_page() -> str:
+    return _page(
+        "Link expired",
+        "This unsubscribe link isn't valid. You can turn reminders off in your profile settings.",
+    )
+
+
+def _page(title: str, message: str, confirm_token: str | None = None) -> str:
     frontend = get_settings().FRONTEND_URL.rstrip("/")
+    # An empty action posts back to this very URL, which is what keeps the page
+    # working behind the frontend's /api proxy without having to know the
+    # deployed path. The token is escaped even though a JWT is base64url only —
+    # it arrived from the client, so it is never interpolated raw.
+    action = ""
+    if confirm_token is not None:
+        action = f"""
+<form method="post" action="">
+  <input type="hidden" name="token" value="{escape(confirm_token, quote=True)}"/>
+  <button type="submit">Turn off reminder emails</button>
+</form>"""
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><title>{title} · UnBind AI</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -180,8 +229,11 @@ def _page(title: str, message: str) -> str:
   .card {{ max-width:440px; background:#1a1a2e; border:1px solid #2d2d44; border-radius:12px; padding:32px; text-align:center; }}
   h1 {{ font-size:20px; margin:0 0 12px; }}
   p {{ color:#9ca3af; line-height:1.6; margin:0 0 24px; }}
-  a {{ display:inline-block; background:#4f46e5; color:#fff; text-decoration:none;
-       padding:10px 22px; border-radius:8px; font-weight:600; font-size:15px; }}
+  a, button {{ display:inline-block; background:#4f46e5; color:#fff; text-decoration:none;
+       padding:10px 22px; border-radius:8px; font-weight:600; font-size:15px;
+       border:0; cursor:pointer; font-family:inherit; }}
+  form {{ margin:0 0 16px; }}
+  form + a {{ background:transparent; color:#9ca3af; font-weight:500; }}
 </style></head>
-<body><div class="card"><h1>{title}</h1><p>{message}</p>
+<body><div class="card"><h1>{title}</h1><p>{message}</p>{action}
 <a href="{frontend}/profile">Go to my profile</a></div></body></html>"""

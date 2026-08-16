@@ -253,11 +253,17 @@ async function* parseSseStream(
  * Streams contract analysis progress over SSE while uploading a file.
  * Calls `onProgress` for each intermediate event and resolves with the final
  * stored analysis once the `result` event arrives.
+ *
+ * Pass `signal` to cancel the upload and tear the stream down — without it the
+ * reader keeps pulling frames (and calling `onProgress`) long after the caller
+ * has unmounted, because the loop only ends when the server closes the body.
+ * Aborting rejects this promise with the usual `AbortError`.
  */
 export const uploadAndAnalyzeStream = async (
   file: File,
   role: string,
   onProgress: (event: AnalysisProgressEvent) => void,
+  signal?: AbortSignal,
 ): Promise<StoredAnalysis> => {
   const form = new FormData();
   form.append("file", file);
@@ -271,6 +277,7 @@ export const uploadAndAnalyzeStream = async (
     method: "POST",
     credentials: "include",
     body: form,
+    signal,
   });
   if (!res.ok || !res.body) {
     throw await toApiError(res);

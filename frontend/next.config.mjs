@@ -90,6 +90,31 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
+  // Denies the powerful features this app never uses, so an injected iframe
+  // (Google Identity / Razorpay both frame third-party origins into the page)
+  // cannot prompt for them under our origin's name. `camera=(self)` stays
+  // allowed: src/components/FileUpload.tsx offers a photo-capture affordance on
+  // small screens via <input type="file" capture="environment">. That path goes
+  // through the OS picker rather than getUserMedia, so it is not strictly
+  // gated by this header today — but keeping self-permission avoids breaking it
+  // if that ever moves to an in-page capture.
+  {
+    key: "Permissions-Policy",
+    value: "camera=(self), microphone=(), geolocation=()",
+  },
+  // Production only. `upgrade-insecure-requests` in the CSP above only rewrites
+  // subresource URLs; the *first* navigation to http:// is still downgradeable
+  // until the browser has seen this header, hence the preload directive. Never
+  // sent in dev: it would pin localhost to HTTPS in the developer's browser for
+  // two years, breaking every other local project on the same origin.
+  ...(IS_DEV
+    ? []
+    : [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+      ]),
 ];
 
 const nextConfig = {

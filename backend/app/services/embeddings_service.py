@@ -9,6 +9,7 @@ deployment stays small and cold starts stay fast.
 
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 
 from langchain_core.embeddings import Embeddings
@@ -28,6 +29,28 @@ EMBEDDING_DIM = 384
 # provider's rate limit.
 _EMBED_CONCURRENCY = 8
 
+# Hard ceiling on how long one embedding HTTP call may take. InferenceClient
+# defaults to timeout=None, i.e. wait forever: a stalled provider would park a
+# worker thread permanently, and nothing would ever be logged.
+_EMBED_TIMEOUT_SECONDS = 30.0
+
+
+# Embeddings get their own executor instead of the default one behind
+# asyncio.to_thread. That default pool is shared process-wide — outbound SMTP in
+# email_service runs on it too — and it holds only ~min(32, cpu+4) threads. With
+# up to _EMBED_CONCURRENCY blocking calls in flight per document, a slow HF
+# provider would otherwise soak up the shared threads and stall unrelated work.
+# Sized to the concurrency gate: more threads than that can never be busy.
+_embed_executor = ThreadPoolExecutor(
+    max_workers=_EMBED_CONCURRENCY,
+    thread_name_prefix="embeddings",
+)
+
+
+async def _run_embed(fn, *args):
+    """Run a blocking embedding call on the dedicated executor."""
+    return await asyncio.get_running_loop().run_in_executor(_embed_executor, fn, *args)
+
 
 class _HFInferenceEmbeddings(Embeddings):
     """LangChain embeddings backed by huggingface_hub's InferenceClient.
@@ -42,7 +65,12 @@ class _HFInferenceEmbeddings(Embeddings):
         from huggingface_hub import InferenceClient
 
         self._model = model
-        self._client = InferenceClient(model=model, token=token, provider="hf-inference")
+        self._client = InferenceClient(
+            model=model,
+            token=token,
+            provider="hf-inference",
+            timeout=_EMBED_TIMEOUT_SECONDS,
+        )
 
     def _embed_one(self, text: str) -> list[float]:
         import numpy as np
@@ -80,15 +108,15 @@ def get_embeddings() -> Embeddings:
 async def embed_query(text: str) -> list[float]:
     """Embed a single query string off the event loop."""
     client = get_embeddings()
-    return await asyncio.to_thread(client.embed_query, text)
+    return await _run_embed(client.embed_query, text)
 
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:
     """Embed many texts concurrently, preserving input order.
 
-    Each call is a blocking HTTP request, so they run in threads with a bounded
-    gate. Order is preserved by writing into a pre-sized list rather than relying
-    on completion order.
+    Each call is a blocking HTTP request, so they run on the dedicated embedding
+    executor behind a bounded gate. Order is preserved by writing into a
+    pre-sized list rather than relying on completion order.
     """
     if not texts:
         return []
@@ -99,7 +127,7 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
 
     async def one(index: int, text: str) -> None:
         async with gate:
-            results[index] = await asyncio.to_thread(client.embed_query, text)
+            results[index] = await _run_embed(client.embed_query, text)
 
     await asyncio.gather(*(one(i, t) for i, t in enumerate(texts)))
 

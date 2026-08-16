@@ -1,4 +1,5 @@
 import logging
+from typing import NamedTuple
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
@@ -10,54 +11,107 @@ _client: AsyncIOMotorClient | None = None
 _db: AsyncIOMotorDatabase | None = None
 
 
-async def _ensure_indexes(db: AsyncIOMotorDatabase) -> None:
-    """Create the indexes the app relies on. Idempotent and best-effort: a
-    failure here (e.g. a pre-existing conflicting index) is logged, not fatal.
+class _IndexSpec(NamedTuple):
+    """One index to build.
 
-    Two of these are correctness guarantees, not just speed:
+    ``critical`` marks an index that application code *relies on for
+    correctness* rather than for speed — see :func:`_ensure_indexes`.
+    """
+
+    collection: str
+    args: tuple
+    kwargs: dict
+    critical: bool = False
+
+
+async def _ensure_indexes(db: AsyncIOMotorDatabase) -> None:
+    """Create the indexes the app relies on. Idempotent.
+
+    Failure handling is deliberately split by what the index is *for*:
+
+    * Performance-only indexes are best-effort — a failure (e.g. a pre-existing
+      conflicting index) is logged and the app still starts, because the worst
+      case is a slow query.
+    * ``critical=True`` indexes ARE the correctness guarantee, and code
+      elsewhere has no second line of defence. Swallowing those failures means
+      booting a healthy-looking app with the guarantee silently off, so they
+      abort startup instead.
+
+    The critical ones, and what depends on them:
 
     * ``payments.razorpayPaymentId`` unique is the race-safe backstop that lets a
       Razorpay payment be recorded at most once, so a replayed /verify or a
-      duplicate webhook can't grant a plan twice.
+      duplicate webhook can't grant a plan twice. plan_routes' webhook handler
+      catches ``DuplicateKeyError`` as its *sole* concurrency guard.
     * ``users.email`` unique closes the check-then-insert race in signup, where
       two concurrent requests could each find no existing account and both
       insert one for the same address.
+    * The remaining unique indexes are the same shape of guarantee for vector
+      stores, chats, reminders and lawyer accounts: without them a concurrent
+      double-write leaves duplicates that read back non-deterministically (or,
+      for reminders, send duplicate emails).
 
-    Each index is created independently so one failure (a pre-existing duplicate
-    blocking a unique build, say) doesn't silently skip the rest.
+    Each index is created independently so one failure doesn't silently skip the
+    rest; critical failures are collected and raised together at the end, so the
+    logs name every broken guarantee rather than only the first.
     """
-    specs: list[tuple[str, tuple, dict]] = [
-        ("payments", ("razorpayPaymentId",), {"unique": True}),
-        ("payments", ([("userId", 1), ("createdAt", -1)],), {}),
+    specs: list[_IndexSpec] = [
+        _IndexSpec("payments", ("razorpayPaymentId",), {"unique": True}, critical=True),
+        _IndexSpec("payments", ([("userId", 1), ("createdAt", -1)],), {}),
         # Every dashboard load queries analyses by owner, newest first.
-        ("analyses", ([("userId", 1), ("analysisDate", -1)],), {}),
-        ("users", ("email",), {"unique": True}),
+        _IndexSpec("analyses", ([("userId", 1), ("analysisDate", -1)],), {}),
+        _IndexSpec("users", ("email",), {"unique": True}, critical=True),
         # One vector index and one conversation per (analysis, owner). Unique so a
         # concurrent double-build can't leave two records that read back
         # non-deterministically.
-        ("document_vectors", ([("analysisId", 1), ("userId", 1)],), {"unique": True}),
-        ("document_chats", ([("analysisId", 1), ("userId", 1)],), {"unique": True}),
+        _IndexSpec(
+            "document_vectors",
+            ([("analysisId", 1), ("userId", 1)],),
+            {"unique": True},
+            critical=True,
+        ),
+        _IndexSpec(
+            "document_chats",
+            ([("analysisId", 1), ("userId", 1)],),
+            {"unique": True},
+            critical=True,
+        ),
         # Unique on the identity of a deadline, so re-generating for an analysis
         # can't create duplicate reminders (and duplicate emails).
-        (
+        _IndexSpec(
             "reminders",
             ([("userId", 1), ("analysisId", 1), ("description", 1), ("dueDate", 1)],),
             {"unique": True},
+            critical=True,
         ),
         # The sweep's query: schedulable reminders inside the lead-time window.
-        ("reminders", ([("schedulable", 1), ("dueDate", 1)],), {}),
-        ("lawyers", ("email",), {"unique": True}),
-        ("lawyers", ("specializations",), {}),
+        _IndexSpec("reminders", ([("schedulable", 1), ("dueDate", 1)],), {}),
+        _IndexSpec("lawyers", ("email",), {"unique": True}, critical=True),
+        _IndexSpec("lawyers", ("specializations",), {}),
     ]
-    for collection, args, kwargs in specs:
+    failed_critical: list[str] = []
+    for spec in specs:
         try:
-            await db[collection].create_index(*args, **kwargs)
+            await db[spec.collection].create_index(*spec.args, **spec.kwargs)
         except Exception:
             logger.exception(
                 "Failed to create index %s on %s — the guarantee it provides is NOT in effect",
-                args[0],
-                collection,
+                spec.args[0],
+                spec.collection,
             )
+            if spec.critical:
+                failed_critical.append(f"{spec.collection}.{spec.args[0]}")
+
+    if failed_critical:
+        # Refuse to serve. A missing unique index doesn't degrade a feature, it
+        # removes the only thing preventing double-granted plans and duplicate
+        # accounts — failing the boot is how that stays visible.
+        raise RuntimeError(
+            "Could not create correctness-critical unique index(es): "
+            + ", ".join(failed_critical)
+            + ". Resolve the conflict (usually pre-existing duplicate documents) "
+            "before starting the app."
+        )
 
 
 async def connect_db() -> None:

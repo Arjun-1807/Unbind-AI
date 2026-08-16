@@ -6,10 +6,17 @@ import type { ClauseAnalysis } from "@/types";
 import {
   applyDecisions,
   buildDocumentSegments,
-  diffWords,
+  diffSegments,
   type ClauseDecision,
   type ClauseSegment,
+  type DocSegment,
 } from "@/lib/diffDocument";
+
+/** Stable empty result so the closed-modal memos don't churn identities. */
+const NO_SEGMENTS: { segments: DocSegment[]; unmatchedCount: number } = {
+  segments: [],
+  unmatchedCount: 0,
+};
 
 const XIcon = () => (
   <svg
@@ -84,9 +91,13 @@ const CompareDocumentsModal: React.FC<CompareDocumentsModalProps> = ({
     };
   }, [open]);
 
+  // All of the work below runs on every render, including the ones before the
+  // `!open` bail-out at the bottom — so it stays gated on `open`. Otherwise
+  // merely rendering an analysis would pay for segmenting and diffing the
+  // whole document.
   const { segments, unmatchedCount } = useMemo(
-    () => buildDocumentSegments(documentText, clauses),
-    [documentText, clauses],
+    () => (open ? buildDocumentSegments(documentText, clauses) : NO_SEGMENTS),
+    [open, documentText, clauses],
   );
 
   const changedSegments = useMemo(
@@ -108,9 +119,12 @@ const CompareDocumentsModal: React.FC<CompareDocumentsModalProps> = ({
     [segments, decisions],
   );
 
+  // Diff clause by clause rather than document against document: context runs
+  // are unchanged by construction, so an O(n×m) table over the whole contract
+  // would be both quadratic and pointless.
   const tokens = useMemo(
-    () => diffWords(documentText, finalText),
-    [documentText, finalText],
+    () => diffSegments(segments, decisions),
+    [segments, decisions],
   );
 
   const additions = tokens.filter((t) => t.op === "insert").length;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 
 // ─── X close icon (matches ContactModal) ────────────────────────────────────
 const XIcon = () => (
@@ -54,34 +54,39 @@ const Toast: React.FC<ToastProps> = ({
 }) => {
   const [isVisible, setIsVisible] = React.useState(true);
 
+  // Callers pass `onRetry` as an inline arrow, so its identity changes on every
+  // render. Keeping it in a ref lets the effects below depend only on real
+  // inputs — otherwise the auto-close timer would be torn down and restarted on
+  // each render and might never fire.
+  const onRetryRef = useRef(onRetry);
+  useEffect(() => {
+    onRetryRef.current = onRetry;
+  }, [onRetry]);
+
+  const close = useCallback(() => {
+    setIsVisible(false);
+    onRetryRef.current();
+  }, []);
+
   useEffect(() => {
     if (autoClose) {
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-        onRetry();
-      }, autoCloseDuration);
+      const timer = setTimeout(close, autoCloseDuration);
       return () => clearTimeout(timer);
     }
-  }, [autoClose, autoCloseDuration, onRetry]);
+  }, [autoClose, autoCloseDuration, close]);
 
   // Escape key closes the modal
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsVisible(false);
-        onRetry();
-      }
+      if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onRetry]);
+  }, [close]);
 
   if (!isVisible) return null;
 
-  const handleClose = () => {
-    setIsVisible(false);
-    onRetry();
-  };
+  const handleClose = close;
 
   return (
     // Backdrop — identical to ContactModal
