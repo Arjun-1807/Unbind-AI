@@ -295,7 +295,11 @@ export function exportAnalysis(analysis, opts = {}) {
         throw new Error('Invalid output path: parent directory does not exist');
       }
       const cwd = fs.realpathSync(process.cwd());
-      const target = path.join(realParent, path.basename(resolved));
+      // realParent is already symlink-resolved and the basename cannot contain
+      // a separator, so this join is what *closes* the symlink escape rather
+      // than opening one — and `target` is only computed here, never used
+      // before the containment check below rejects anything outside cwd.
+      const target = path.join(realParent, path.basename(resolved)); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       const rel = path.relative(cwd, target);
       // If the real path is outside cwd, reject it. Compare against '..' and
       // '../' specifically — a plain startsWith('..') would also reject a
