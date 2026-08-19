@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/footer";
 import BackLink from "@/components/BackLink";
+import {
+  GOVERNING_LAW_JURISDICTION,
+  JURISDICTION_COURTS,
+  LEGAL_CONTACT_EMAIL,
+} from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms of Service | UnBind",
@@ -152,15 +157,26 @@ export default function TermsPage() {
                 processing caused by Razorpay or your bank or card issuer.
               </p>
               <p>
-                Subscriptions renew automatically for successive billing
-                periods unless cancelled before the renewal date. You may
-                change or cancel your plan at any time through your account
-                settings; changes take effect as described at the time of
-                cancellation or downgrade. Refunds, if any, are handled on a
-                case-by-case basis in accordance with the plan terms
-                presented to you at purchase and at UnBind&rsquo;s sole
-                discretion. We do not guarantee refunds for partial billing
-                periods or unused features.
+                <span className="font-semibold text-ink">
+                  Paid plans do not renew automatically.
+                </span>{" "}
+                Brief and Motion are one-time purchases that grant access for
+                30 days from the date of purchase. When that period ends, your
+                account reverts to the free tier and its usage limits; to
+                continue on a paid plan you must purchase it again. We do not
+                store a payment mandate and we will never charge your payment
+                method again without a new purchase you initiate. Verdict is a
+                one-time purchase with no expiry.
+              </p>
+              <p>
+                You may stop using a paid plan at any time; because nothing
+                renews, there is no recurring charge to cancel. Cancelling an
+                active plan through your account settings ends its benefits
+                immediately and does not entitle you to a refund of the unused
+                period. Refunds, if any, are handled on a case-by-case basis in
+                accordance with the plan terms presented to you at purchase and
+                at UnBind&rsquo;s sole discretion. We do not guarantee refunds
+                for partial periods or unused features.
               </p>
             </Section>
 
@@ -385,18 +401,12 @@ export default function TermsPage() {
             >
               <p>
                 These Terms are governed by and construed in accordance with
-                the laws of{" "}
-                <span className="font-semibold text-ink bg-primary/10 px-1.5 py-0.5 rounded">
-                  [Governing Law Jurisdiction — to be finalized by Legal]
-                </span>
-                , without regard to conflict-of-laws principles. Any dispute
-                arising out of or relating to these Terms or the Service will
-                be subject to the exclusive jurisdiction of the courts
-                located in{" "}
-                <span className="font-semibold text-ink bg-primary/10 px-1.5 py-0.5 rounded">
-                  [Governing Law Jurisdiction — to be finalized by Legal]
-                </span>
-                , unless otherwise required by applicable law.
+                the laws of {GOVERNING_LAW_JURISDICTION}, without regard to
+                conflict-of-laws principles. Any dispute arising out of or
+                relating to these Terms or the Service will be subject to the
+                exclusive jurisdiction of the courts located in{" "}
+                {JURISDICTION_COURTS}, unless otherwise required by applicable
+                law.
               </p>
             </Section>
 
@@ -420,16 +430,12 @@ export default function TermsPage() {
                 If you have questions about these Terms, please contact us
                 at{" "}
                 <a
-                  href="mailto:legal@unbind.ai"
+                  href={`mailto:${LEGAL_CONTACT_EMAIL}`}
                   className="text-primary font-medium hover:underline"
                 >
-                  legal@unbind.ai
+                  {LEGAL_CONTACT_EMAIL}
                 </a>
                 .
-              </p>
-              <p className="text-xs text-ink-subtle italic">
-                Placeholder contact — replace with your real support/legal
-                contact before publishing.
               </p>
             </Section>
           </div>
