@@ -11,8 +11,9 @@ import * as api from "@/services/api";
 import { readSessionStorage, writeSessionStorage } from "@/lib/storage";
 import type { AnalysisSummary, StoredAnalysis } from "@/types";
 import Footer from "@/components/footer";
+import AppLoader from "@/components/AppLoader";
 export default function AnalysisPage() {
-  const { user, authReady } = useAuth();
+  const { user, authReady, authError, retryAuth } = useAuth();
   const router = useRouter();
   const [analysis, setAnalysis] = useState<StoredAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +22,13 @@ export default function AnalysisPage() {
     // Wait for /auth/me: `user` is null until it resolves, and acting on that
     // would both bounce a signed-in user home and skip the stored analysis.
     if (!authReady) return;
+    // authError means the session check never reached the backend, so "no
+    // user" is not evidence of being signed out — hold rather than bounce.
+    if (authError) return;
     if (!user) {
-      router.replace("/");
+      // /login rather than "/": see the note in dashboard/page.tsx — an expired
+      // cookie still satisfies middleware.ts, so "/" would loop.
+      router.replace("/login");
       return;
     }
     const stored =
@@ -66,9 +72,18 @@ export default function AnalysisPage() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, user, router]);
+  }, [authReady, authError, user, router]);
 
-  if (!authReady || !user || !analysis) return null;
+  if (authError)
+    return (
+      <ErrorMessage
+        title="Can't reach UnBind"
+        message="We couldn't confirm your session. This is usually a connection problem, not a sign-out."
+        onRetry={retryAuth}
+        retryLabel="Retry"
+      />
+    );
+  if (!authReady || !user || !analysis) return <AppLoader />;
 
   return (
     <div className="min-h-screen font-sans">

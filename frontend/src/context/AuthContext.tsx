@@ -13,6 +13,14 @@ import * as api from "@/services/api";
 interface AuthContextValue {
   user: User | null;
   authReady: boolean;
+  /**
+   * Set when the boot session check could not reach the backend. Distinct from
+   * `user === null`, which means "definitely signed out" — this means "we do
+   * not know", and route guards must not redirect on it.
+   */
+  authError: boolean;
+  /** Retry the boot session check after an `authError`. */
+  retryAuth: () => void;
   analyses: AnalysisSummary[];
   analysesLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -27,6 +35,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState(false);
+  const [authAttempt, setAuthAttempt] = useState(0);
   const [analyses, setAnalyses] = useState<AnalysisSummary[]>([]);
   const [analysesLoading, setAnalysesLoading] = useState(true);
 
@@ -51,22 +61,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // on boot is to purge what they left on disk.
   useEffect(() => {
     api.purgeLegacyBrowserCredentials();
+    let cancelled = false;
     (async () => {
-      const remoteUser = await api.getCurrentUser();
-      if (remoteUser) {
-        setUser(remoteUser);
-        await refreshAnalyses();
-        setAuthReady(true);
-        return;
-      }
+      try {
+        const remoteUser = await api.getCurrentUser();
+        if (cancelled) return;
+        setAuthError(false);
+        if (remoteUser) {
+          setUser(remoteUser);
+          // Flip authReady as soon as the session is known. The analyses list
+          // is a dashboard detail with its own `analysesLoading` flag, so
+          // awaiting it here would keep every route blocked on a second
+          // round-trip.
+          setAuthReady(true);
+          void refreshAnalyses();
+          return;
+        }
 
-      // No valid backend session.
-      setUser(null);
-      setAnalyses([]);
-      setAnalysesLoading(false);
-      setAuthReady(true);
+        // The backend explicitly said there is no session.
+        setUser(null);
+        setAnalyses([]);
+        setAnalysesLoading(false);
+        setAuthReady(true);
+      } catch {
+        // We could not reach the backend, so we do not know whether there is a
+        // session. Treating that as "signed out" would end a valid session on
+        // a transient blip, so hold the user as-is and let the UI offer a
+        // retry. authReady still flips: the app must stop showing a loader.
+        if (cancelled) return;
+        setAuthError(true);
+        setAnalysesLoading(false);
+        setAuthReady(true);
+      }
     })();
+    return () => {
+      cancelled = true;
+    };
+    // refreshAnalyses is a stable useCallback([]); listing it satisfies the
+    // exhaustive-deps rule without re-running the session check.
+  }, [authAttempt, refreshAnalyses]);
+
+  const retryAuth = useCallback(() => {
+    setAuthReady(false);
+    setAuthError(false);
+    setAuthAttempt((n) => n + 1);
   }, []);
+
+  // A 401 from any endpoint means the cookie expired mid-session. Clear the
+  // session once, centrally, rather than leaving every screen rendering as
+  // signed-in while each action fails with a raw backend error.
+  useEffect(
+    () =>
+      api.onUnauthorized(() => {
+        setUser(null);
+        setAnalyses([]);
+        setAnalysesLoading(false);
+        setAuthReady(true);
+      }),
+    [],
+  );
 
   const loginHandler = useCallback(
     async (email: string, password: string) => {
@@ -106,6 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         authReady,
+        authError,
+        retryAuth,
         analyses,
         analysesLoading,
         login: loginHandler,
