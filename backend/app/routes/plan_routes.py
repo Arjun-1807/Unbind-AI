@@ -29,10 +29,15 @@ RAZORPAY_API = "https://api.razorpay.com/v1"
 # the client — the browser only ever tells us *which* plan; we look up the price
 # here so a tampered request can't buy a plan for less. Amounts are in paise
 # (₹1 = 100 paise), which is the smallest unit Razorpay charges in.
+#
+# Brief and Motion are both 30-day passes that lapse and must be repurchased —
+# nothing auto-renews, and the Terms page says so. They differ by daily quota
+# (see plan_service.PLAN_LIMITS), not by duration. Verdict is bought once and
+# never expires, which is why its duration_days is None.
 PLAN_CATALOGUE = {
     "Brief": {"amount": 10000, "duration_days": 30, "label": "UnBind Brief (1 month)"},
-    "Motion": {"amount": 45000, "duration_days": 90, "label": "UnBind Motion (3 months)"},
-    "Verdict": {"amount": 150000, "duration_days": None, "label": "UnBind Verdict (Lifetime)"},
+    "Motion": {"amount": 45000, "duration_days": 30, "label": "UnBind Motion (1 month)"},
+    "Verdict": {"amount": 250000, "duration_days": None, "label": "UnBind Verdict (Lifetime)"},
 }
 
 # Plan tiers, worst → best (free tier is None → 0). A purchase may extend or
@@ -508,9 +513,21 @@ async def get_plan(request: Request):
     daily_count = user.get("dailyAnalysisCount", 0) if user.get("lastAnalysisDate") == today else 0
     query_count = user.get("dailyQueryCount", 0) if user.get("lastQueryDate") == today else 0
 
+    # Brief and Motion are 30-day passes that lapse and must be repurchased —
+    # nothing auto-renews. The UI needs two things this endpoint is the only
+    # place to get: when an active plan runs out (so it can warn before the
+    # user hits a 429), and which plan just ended (so a lapsed user is told
+    # what happened instead of silently dropping to free-tier quota).
+    stored_plan = user.get("plan")
+    expires_at = _as_utc(user.get("planExpiresAt"))
+    lapsed_plan = stored_plan if stored_plan and plan is None else None
+
     return {
         "plan": plan,
         "isPro": bool(plan),
+        # ISO-8601, or null for a lifetime plan / no plan at all.
+        "expiresAt": expires_at.isoformat() if expires_at else None,
+        "lapsedPlan": lapsed_plan,
         "aiModel": select_model(user),
         "dailyCount": daily_count,
         "dailyLimit": limit,  # None means unlimited

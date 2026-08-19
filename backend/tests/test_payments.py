@@ -9,7 +9,7 @@ network.
 import hashlib
 import hmac
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
 import pytest
@@ -503,3 +503,46 @@ async def test_list_payments_unauthenticated_401(override_settings):
     with pytest.raises(HTTPException) as exc:
         await plan_routes.list_payments(_ReqWithCookiesHeaders())
     assert exc.value.status_code == 401
+
+
+# ── get_plan: expiry surfacing ─────────────────────────────────────────────────
+#
+# Brief and Motion are 30-day passes that lapse and must be repurchased. The UI
+# warns before expiry and prompts after it, and GET /api/user/plan is the only
+# place it can learn either fact.
+
+
+async def test_get_plan_reports_expiry_for_an_active_timed_plan(override_settings, seed_user):
+    expires = datetime.now(timezone.utc) + timedelta(days=3)
+    user = seed_user(plan="Motion", planExpiresAt=expires)
+
+    result = await plan_routes.get_plan(_authed_request(override_settings, str(user["_id"])))
+
+    assert result["plan"] == "Motion"
+    assert result["expiresAt"] == expires.isoformat()
+    # Still active, so there is nothing to prompt about.
+    assert result["lapsedPlan"] is None
+
+
+async def test_get_plan_reports_the_lapsed_plan_after_expiry(override_settings, seed_user):
+    expired = datetime.now(timezone.utc) - timedelta(days=1)
+    user = seed_user(plan="Motion", planExpiresAt=expired)
+
+    result = await plan_routes.get_plan(_authed_request(override_settings, str(user["_id"])))
+
+    # Reverted to free-tier treatment...
+    assert result["plan"] is None
+    assert result["dailyLimit"] == 1
+    # ...but the user is told which plan ended, rather than silently dropping.
+    assert result["lapsedPlan"] == "Motion"
+    assert result["expiresAt"] == expired.isoformat()
+
+
+async def test_get_plan_has_no_expiry_for_a_lifetime_plan(override_settings, seed_user):
+    user = seed_user(plan="Verdict", planExpiresAt=None)
+
+    result = await plan_routes.get_plan(_authed_request(override_settings, str(user["_id"])))
+
+    assert result["plan"] == "Verdict"
+    assert result["expiresAt"] is None
+    assert result["lapsedPlan"] is None
