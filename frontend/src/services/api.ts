@@ -2,7 +2,6 @@ import type {
   User,
   AnalysisSummary,
   StoredAnalysis,
-  AnalysisResponse,
   LawyerProfile,
   AnalysisProgressEvent,
   Citation,
@@ -273,37 +272,6 @@ export const updatePassword = async (
 
 // ─── Analysis ───
 
-export const analyzeText = async (
-  text: string,
-  role: string,
-  fileName: string,
-): Promise<StoredAnalysis> => {
-  return apiFetch<StoredAnalysis>("/analysis/analyze", {
-    method: "POST",
-    body: JSON.stringify({ text, role, fileName }),
-  });
-};
-
-export const uploadAndAnalyze = async (
-  file: File,
-  role: string,
-): Promise<StoredAnalysis> => {
-  const form = new FormData();
-  form.append("file", file);
-  form.append("role", role);
-  const res = await fetch(`${API_BASE}/analysis/upload`, {
-    method: "POST",
-    // Authenticated by the httpOnly auth cookie. Do not set Content-Type: the
-    // browser must generate the multipart boundary itself.
-    credentials: "include",
-    body: form,
-  });
-  if (!res.ok) {
-    throw await toApiError(res);
-  }
-  return res.json() as Promise<StoredAnalysis>;
-};
-
 /**
  * Parses a text/event-stream body into `{event, data}` frames as they arrive.
  * SSE frames are separated by a blank line; each frame carries an `event:`
@@ -570,10 +538,6 @@ export const getLawyers = async (
     ? `?specialization=${encodeURIComponent(specialization)}`
     : "";
   return apiFetch<LawyerProfile[]>(`/lawyers/${qs}`);
-};
-
-export const getLawyerById = async (id: string): Promise<LawyerProfile> => {
-  return apiFetch<LawyerProfile>(`/lawyers/${id}`);
 };
 
 export const contactLawyer = async (
