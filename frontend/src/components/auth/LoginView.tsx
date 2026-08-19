@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { LogoIcon } from "../Icons";
@@ -15,13 +15,28 @@ const LoginView: React.FC = () => {
   const [error, setError] = useState("");
   const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  /**
+   * Where to land after a successful sign-in.
+   *
+   * /pricing sends users here as `/login?next=/pricing` when they try to buy
+   * while signed out; ignoring it dropped them on the dashboard and quietly
+   * ended the purchase. Only same-origin paths are honoured — an absolute URL
+   * in `next` would make this an open redirect.
+   */
+  const nextPath = (() => {
+    const raw = searchParams.get("next");
+    if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
+    return raw;
+  })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     try {
       await login(email, password);
-      router.push("/dashboard");
+      router.push(nextPath);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "An unknown error occurred.",
@@ -34,7 +49,7 @@ const LoginView: React.FC = () => {
     setError("");
     try {
       await loginWithGoogle(response.credential);
-      router.push("/dashboard");
+      router.push(nextPath);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Google sign-in failed.",
