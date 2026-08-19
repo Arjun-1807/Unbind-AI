@@ -195,8 +195,3 @@ export async function askQuestion(documentText, question) {
 export async function getAnalysisHistory() {
   return apiFetch('/analysis/history');
 }
-
-/** GET /api/analysis/history/:id — returns a single stored analysis. */
-export async function getAnalysisById(id) {
-  return apiFetch(`/analysis/history/${id}`);
-}
