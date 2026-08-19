@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.database import close_db, connect_db, ping_db
+from app.routes.admin_routes import router as admin_router
 from app.routes.analysis_routes import router as analysis_router
 from app.routes.auth_routes import router as auth_router
 from app.routes.lawyer_registration_routes import router as lawyer_registration_router
@@ -155,6 +156,7 @@ app.include_router(plan_router, prefix="/api")
 app.include_router(lawyer_router, prefix="/api")
 app.include_router(lawyer_registration_router, prefix="/api")
 app.include_router(reminder_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
 
 
 @app.get("/api/health")
