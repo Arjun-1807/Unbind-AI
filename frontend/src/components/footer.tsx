@@ -1,4 +1,3 @@
-import React from "react";
 import Link from "next/link";
 import { LogoIcon } from "./Icons";
 import { APP_NAME } from "@/constants";

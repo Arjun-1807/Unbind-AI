@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import DashboardView from "@/components/DashboardView";
 import Header from "@/components/Header";
-import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 import * as api from "@/services/api";
 import { writeSessionStorage } from "@/lib/storage";

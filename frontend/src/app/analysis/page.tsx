@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import AnalysisDisplay from "@/components/AnalysisDisplay";
 import ErrorMessage from "@/components/ErrorMessage";
 import Header from "@/components/Header";
-import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 import * as api from "@/services/api";
 import { readSessionStorage, writeSessionStorage } from "@/lib/storage";

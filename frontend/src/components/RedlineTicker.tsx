@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 
 const REDLINES: { label: string; before: string; after: string }[] = [
   { label: "Late Payment Penalty", before: "$200/day, compounding, no cap", after: "$50 one-time fee, capped at 1 month's rent" },

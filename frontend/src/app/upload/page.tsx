@@ -7,7 +7,6 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorMessage from "@/components/ErrorMessage";
 import Toast from "@/components/Toast";
 import Header from "@/components/Header";
-import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 import * as api from "@/services/api";
 import { writeSessionStorage } from "@/lib/storage";

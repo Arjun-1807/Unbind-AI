@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 
 /**
  * An interactive mock of the real UnBind analysis UI — rendered from live
