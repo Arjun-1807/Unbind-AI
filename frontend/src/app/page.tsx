@@ -4,25 +4,35 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import LandingPage from "@/components/LandingPage";
 import Header from "@/components/Header";
-import { LogoIcon } from "@/components/Icons";
 import { useAuth } from "@/context/AuthContext";
 import Footer from "@/components/footer";
+import AppLoader from "@/components/AppLoader";
+
 export default function HomePage() {
   const { user, authReady } = useAuth();
   const router = useRouter();
 
-  // If the user is already authenticated, always send them to the real dashboard
-  // so all dashboard actions (analysis navigation, new analysis, etc.) work correctly.
-  // Wait for authReady so a valid session cookie doesn't flash the landing page
-  // before redirecting.
+  // Signed-in visitors belong on the dashboard, where the real actions live.
+  //
+  // `middleware.ts` already redirects anyone carrying a session cookie before
+  // this page renders at all, so this is the fallback for the cases it can't
+  // see — chiefly a client-side navigation to `/`, which never touches the
+  // middleware.
   useEffect(() => {
     if (authReady && user) {
       router.replace("/dashboard");
     }
   }, [authReady, user, router]);
 
-  // While the auth check is pending, or while redirecting, render nothing.
-  if (!authReady || user) return null;
+  // Deliberately NOT gated on `authReady`.
+  //
+  // Waiting for `/auth/me` before painting meant the server-rendered HTML for
+  // this route was a loader — so every crawler and every link-preview scraper
+  // saw a spinner instead of the marketing page, on the one route whose whole
+  // job is being found. Signed-out visitors are the overwhelming majority here
+  // and their content needs no session, so render it immediately and let the
+  // effect above move the rare signed-in arrival.
+  if (authReady && user) return <AppLoader />;
 
   return (
     <div className="min-h-screen font-sans">
