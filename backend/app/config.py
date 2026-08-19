@@ -38,6 +38,20 @@ _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"})
 class Settings(BaseSettings):
     PORT: int = 8000
     MONGODB_URI: str = "mongodb://localhost:27017/unbindai"
+    # ── Mongo client tuning ──────────────────────────────────────────────────
+    # The driver defaults (100 connections per instance, 30s server selection)
+    # assume one long-lived process. Under serverless the instance count is
+    # elastic, so a small per-instance pool is what keeps the cluster's
+    # connection limit out of reach, and short timeouts are what make an outage
+    # surface as a 503 instead of a hang.
+    MONGO_MAX_POOL_SIZE: int = 10
+    MONGO_MAX_IDLE_TIME_MS: int = 30_000
+    MONGO_SERVER_SELECTION_TIMEOUT_MS: int = 5_000
+    MONGO_CONNECT_TIMEOUT_MS: int = 5_000
+    # Index creation is a deploy step (`python -m app.scripts.ensure_indexes`),
+    # not a per-request cost — see connect_db. Turn this on for local dev or a
+    # first boot against a brand-new cluster.
+    RUN_INDEX_CREATION_ON_BOOT: bool = False
     # Which deployment this is. Every security-relevant relaxation (insecure
     # defaults, non-Secure cookies) is gated on this single explicit switch
     # rather than inferred from FRONTEND_URL — a forgotten env var must fail

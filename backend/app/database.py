@@ -61,6 +61,10 @@ async def _ensure_indexes(db: AsyncIOMotorDatabase) -> None:
         # Every dashboard load queries analyses by owner, newest first.
         _IndexSpec("analyses", ([("userId", 1), ("analysisDate", -1)],), {}),
         _IndexSpec("users", ("email",), {"unique": True}, critical=True),
+        # Every Google sign-in looks the account up by googleSub before falling
+        # back to email; without this it is a collection scan on the hot path.
+        # Sparse: only Google-linked accounts carry the field.
+        _IndexSpec("users", ("googleSub",), {"sparse": True}),
         # One vector index and one conversation per (analysis, owner). Unique so a
         # concurrent double-build can't leave two records that read back
         # non-deterministically.
@@ -115,14 +119,50 @@ async def _ensure_indexes(db: AsyncIOMotorDatabase) -> None:
 
 
 async def connect_db() -> None:
+    """Open the Mongo client. Deliberately does NOT build indexes.
+
+    Index creation used to run here, which meant ten ``create_index``
+    round-trips on *every* cold start. On serverless that is not a startup
+    cost paid once, it is a per-instance cost paid constantly: a measured
+    ``GET /api/health`` against production took ~11s cold versus ~0.7s warm,
+    and the cross-region hop to Atlas multiplied every one of those round
+    trips. Indexes are a deploy-time concern, so they moved to
+    ``app.scripts.ensure_indexes`` (see :func:`ensure_indexes_once`).
+
+    Set ``RUN_INDEX_CREATION_ON_BOOT=true`` to restore the old behaviour —
+    useful for local development and for a first boot against a brand-new
+    cluster, where nobody has run the deploy step yet.
+    """
     global _client, _db
     settings = get_settings()
-    _client = AsyncIOMotorClient(settings.MONGODB_URI)
+    # Explicit pool and timeout options. The default client holds up to 100
+    # connections per instance and waits 30s for server selection; with an
+    # elastic number of serverless instances that is a good way to exhaust an
+    # Atlas connection limit, and a good way to make a Mongo outage look like a
+    # hang rather than an error.
+    _client = AsyncIOMotorClient(
+        settings.MONGODB_URI,
+        maxPoolSize=settings.MONGO_MAX_POOL_SIZE,
+        minPoolSize=0,
+        maxIdleTimeMS=settings.MONGO_MAX_IDLE_TIME_MS,
+        serverSelectionTimeoutMS=settings.MONGO_SERVER_SELECTION_TIMEOUT_MS,
+        connectTimeoutMS=settings.MONGO_CONNECT_TIMEOUT_MS,
+    )
     _db = _client.get_default_database(default="unbindai")
     # Verify connection
     await _client.admin.command("ping")
-    await _ensure_indexes(_db)
+    if settings.RUN_INDEX_CREATION_ON_BOOT:
+        await _ensure_indexes(_db)
     logger.info("Connected to MongoDB")
+
+
+async def ensure_indexes_once(db: AsyncIOMotorDatabase | None = None) -> None:
+    """Build every index the app relies on. Entry point for the deploy step.
+
+    Idempotent, so it is safe to run on every deploy. Raises if a
+    correctness-critical index cannot be built — see :func:`_ensure_indexes`.
+    """
+    await _ensure_indexes(db if db is not None else get_db())
 
 
 async def close_db() -> None:
