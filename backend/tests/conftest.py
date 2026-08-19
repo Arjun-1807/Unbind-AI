@@ -6,12 +6,11 @@ test values and the async Mongo ``get_db()`` is backed by a tiny fake.
 """
 
 import copy
+import os
 
 import pytest
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
-
-from app import config, database
 
 # ── Settings override ────────────────────────────────────────────────────────
 
@@ -31,7 +30,36 @@ TEST_SETTINGS_OVERRIDES = {
     "RAZORPAY_KEY_ID": "rzp_test_key",
     "RAZORPAY_KEY_SECRET": "test_secret",
     "RAZORPAY_WEBHOOK_SECRET": "test_webhook_secret",
+    # Unreachable by construction. Nothing in the suite should ever open a real
+    # connection — the Mongo fake stands in for the database and email sends are
+    # mocked — but leaving these unset let them fall through to the developer's
+    # `.env`, which points at the production cluster and a live mail account. A
+    # single test that forgets to patch would then hit real infrastructure.
+    "MONGODB_URI": "mongodb://mongo.invalid:27017/unbindai_test",
+    "SMTP_HOST": "smtp.invalid",
+    "SMTP_USER": "tests@example.com",
+    "SMTP_PASSWORD": "test-smtp-password",
 }
+
+# The `override_settings` fixture below patches `get_settings`, which covers
+# every module that calls it at *request* time. It cannot help a module that
+# builds its settings at *import* time — `app.main` does exactly that, so
+# importing it (as the TestClient-based suites must) would construct a real
+# `Settings` and fail on the missing JWT_SECRET.
+#
+# Locally that went unnoticed because pydantic-settings falls back to the
+# developer's `backend/.env`, which is also how real credentials ended up in
+# test output. CI has no `.env`, so collection failed there instead.
+#
+# Seeding the environment before any app module is imported fixes both: the
+# suite becomes genuinely independent of `.env` (as this module's docstring
+# always claimed), and it never reads a real secret. Environment variables take
+# priority over the dotenv file in pydantic-settings, so this wins even on a
+# machine that has one.
+for _key, _value in TEST_SETTINGS_OVERRIDES.items():
+    os.environ[_key] = str(_value)
+
+from app import config, database  # noqa: E402  (must follow the env seeding above)
 
 
 @pytest.fixture(autouse=True)

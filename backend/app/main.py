@@ -179,7 +179,14 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     already holds.
     """
     response = JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
-    if exc.status_code == 401 and request.url.path.rstrip("/").endswith("/auth/me"):
+    if (
+        exc.status_code == 401
+        and request.url.path.rstrip("/").endswith("/auth/me")
+        # Only when one was actually sent. Every signed-out page load calls
+        # this endpoint, and answering each with a Set-Cookie that deletes a
+        # cookie the browser never had is noise on the hot path.
+        and settings.COOKIE_NAME in request.cookies
+    ):
         clear_auth_cookie(response, request)
     return response
 
