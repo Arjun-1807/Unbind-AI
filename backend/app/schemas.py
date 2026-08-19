@@ -60,51 +60,6 @@ class UpdatePasswordRequest(BaseModel):
 
 
 # ---------- Analysis ----------
-class ClauseAnalysis(BaseModel):
-    clauseText: str
-    simplifiedExplanation: str
-    riskLevel: str
-    riskReason: str
-    negotiationSuggestion: str
-    suggestedRewrite: str | None = None
-
-
-class KeyTerm(BaseModel):
-    term: str
-    definition: str
-
-
-class KeyDate(BaseModel):
-    date: str
-    description: str
-
-
-class MissingClause(BaseModel):
-    clauseName: str
-    reason: str
-
-
-class ChunkSummary(BaseModel):
-    chunkIndex: int
-    summary: str
-
-
-class AnalysisResponse(BaseModel):
-    summary: str
-    clauses: list[ClauseAnalysis]
-    keyTerms: list[KeyTerm]
-    keyDates: list[KeyDate]
-    missingClauses: list[MissingClause]
-    chunkSummaries: list[ChunkSummary] | None = None
-
-
-class StoredAnalysis(BaseModel):
-    id: str
-    userId: str
-    fileName: str
-    analysisDate: str
-    analysisResult: AnalysisResponse
-    documentText: str
 
 
 class AnalyzeRequest(BaseModel):
@@ -124,25 +79,6 @@ class SimulateRequest(BaseModel):
 # ---------- Document Q&A ----------
 class DocumentQuestionRequest(BaseModel):
     question: str = Field(min_length=1, max_length=MAX_SCENARIO_CHARS)
-
-
-class ChatCitation(BaseModel):
-    id: int
-    snippet: str
-    startIndex: int
-    endIndex: int
-
-
-class ChatMessageResponse(BaseModel):
-    role: str
-    content: str
-    citations: list[ChatCitation] = []
-    createdAt: datetime | None = None
-
-
-class DocumentAnswerResponse(BaseModel):
-    answer: str
-    citations: list[ChatCitation] = []
 
 
 # ---------- Deadline reminders ----------
@@ -193,11 +129,6 @@ class NegotiationDraftRequest(BaseModel):
                 f"{MAX_NEGOTIATION_TOTAL_CHARS} character limit. Select fewer clauses."
             )
         return self
-
-
-class NegotiationDraftResponse(BaseModel):
-    subject: str = ""  # empty for non-email formats
-    body: str
 
 
 # ---------- Lawyer Referral ----------
