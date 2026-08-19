@@ -13,7 +13,6 @@
     "@react-oauth/google": "^0.13.4",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "file-saver": "^2.0.5",
     "framer-motion": "^13.1.0",
     "jspdf": "^4.2.1",
     "next": "^15.1.0",
@@ -24,7 +23,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
-    "@types/file-saver": "^2.0.7",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
