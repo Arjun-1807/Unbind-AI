@@ -199,14 +199,17 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ─── Auth ───
 
+/**
+ * Create an account. No display name is collected — the server derives one
+ * from the email address, matching how Google sign-in names accounts.
+ */
 export const signup = async (
-  username: string,
   email: string,
   password: string,
 ): Promise<User> => {
   const user = await apiFetch<User & { accessToken?: string }>("/auth/signup", {
     method: "POST",
-    body: JSON.stringify({ username, email, password }),
+    body: JSON.stringify({ email, password }),
   });
   return withoutAccessToken(user);
 };
@@ -404,6 +407,13 @@ export const getDocumentChat = async (
   const data = await apiFetch<ChatMessage[]>(`/analysis/${analysisId}/chat`);
   return data.map((m) => ({ ...m, citations: m.citations ?? [] }));
 };
+
+/** Rename the signed-in account. Returns the updated user. */
+export const updateName = async (username: string): Promise<User> =>
+  apiFetch<User>("/auth/update-name", {
+    method: "POST",
+    body: JSON.stringify({ username }),
+  });
 
 export const clearDocumentChat = async (analysisId: string): Promise<void> => {
   await apiFetch(`/analysis/${analysisId}/chat`, { method: "DELETE" });

@@ -27,7 +27,11 @@ MAX_PASSWORD_LENGTH = 72
 
 # ---------- Auth ----------
 class SignupRequest(BaseModel):
-    username: str = Field(min_length=1, max_length=100)
+    # Optional. The web signup form no longer asks for a display name, so the
+    # route derives one from the email address — the same fallback the Google
+    # sign-in path already uses, so both routes name accounts identically. The
+    # CLI still prompts for one, and anything supplied here wins.
+    username: str | None = Field(default=None, max_length=100)
     email: EmailStr
     password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
 
@@ -57,6 +61,12 @@ class UpdatePasswordRequest(BaseModel):
     # verify_password, which truncates at bcrypt's 72 bytes anyway.
     currentPassword: str = Field(max_length=MAX_PASSWORD_LENGTH)
     newPassword: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+
+
+class UpdateNameRequest(BaseModel):
+    # Same bound signup used to enforce. Whitespace is stripped in the route
+    # before the emptiness check, so "   " is rejected rather than stored.
+    username: str = Field(min_length=1, max_length=100)
 
 
 # ---------- Analysis ----------

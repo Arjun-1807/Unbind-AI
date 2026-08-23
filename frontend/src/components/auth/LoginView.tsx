@@ -62,7 +62,7 @@ const LoginView: React.FC = () => {
       <div className="w-full max-w-3xl mb-4 text-left">
         <BackLink href="/" />
       </div>
-      <div className="w-full max-w-md p-6 sm:p-8 space-y-6 ln-card">
+      <div className="fade-in w-full max-w-md p-6 sm:p-8 space-y-6 ln-card">
         <div className="flex flex-col items-center space-y-2">
           <LogoIcon className="h-12 w-12 text-primary" />
           <h2 className="text-2xl sm:text-3xl font-semibold text-center text-ink">

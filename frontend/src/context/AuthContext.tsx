@@ -24,10 +24,13 @@ interface AuthContextValue {
   analyses: AnalysisSummary[];
   analysesLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (username: string, email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshAnalyses: () => Promise<void>;
+  /** Rename the account. Updates the cached user so the header and
+   *  dashboard greeting change with it, not just the profile page. */
+  updateName: (username: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -131,13 +134,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signupHandler = useCallback(
-    async (username: string, email: string, password: string) => {
-      const u = await api.signup(username, email, password);
+    async (email: string, password: string) => {
+      const u = await api.signup(email, password);
       setUser(u);
       void refreshAnalyses();
     },
     [refreshAnalyses],
   );
+
+  const updateNameHandler = useCallback(async (username: string) => {
+    const updated = await api.updateName(username);
+    setUser(updated);
+  }, []);
 
   const loginWithGoogleHandler = useCallback(
     async (credential: string) => {
@@ -168,6 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithGoogle: loginWithGoogleHandler,
         logout: logoutHandler,
         refreshAnalyses,
+        updateName: updateNameHandler,
       }}
     >
       {children}

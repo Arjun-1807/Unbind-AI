@@ -17,7 +17,13 @@ from app.auth import (
 )
 from app.config import get_settings
 from app.database import get_db
-from app.schemas import LoginRequest, SignupRequest, UpdatePasswordRequest, UserResponse
+from app.schemas import (
+    LoginRequest,
+    SignupRequest,
+    UpdateNameRequest,
+    UpdatePasswordRequest,
+    UserResponse,
+)
 from app.services.model_selector import select_model
 from app.services.plan_service import effective_plan
 
@@ -47,9 +53,14 @@ async def signup(body: SignupRequest, request: Request, response: Response):
 
     password_hash = hash_password(body.password)
     now = datetime.now(timezone.utc)
+    # A blank or absent display name falls back to the email's local part,
+    # matching the Google path. There is no endpoint to rename an account, so
+    # this is the name the user keeps — deriving it beats storing "".
+    email = body.email.lower()
+    username = (body.username or "").strip() or email.split("@")[0]
     doc = {
-        "username": body.username,
-        "email": body.email.lower(),
+        "username": username,
+        "email": email,
         "passwordHash": password_hash,
         "picture": None,
         "createdAt": now,
@@ -70,8 +81,11 @@ async def signup(body: SignupRequest, request: Request, response: Response):
 
     return UserResponse(
         id=user_id,
-        username=body.username,
-        email=body.email.lower(),
+        # The derived name, not body.username — that is now optional, and
+        # returning null here would hand the client a user whose display name
+        # is missing while the stored one is fine.
+        username=username,
+        email=email,
         pro=False,
         aiModel=select_model(doc),
         accessToken=token,
@@ -180,6 +194,47 @@ async def update_password(body: UpdatePasswordRequest, request: Request):
     )
 
     return {"ok": True, "message": "Password updated successfully"}
+
+
+@router.post("/update-name", response_model=UserResponse)
+async def update_name(body: UpdateNameRequest, request: Request):
+    """Rename the signed-in account.
+
+    Email signup stopped collecting a display name — the server derives one
+    from the email address — so this is the only way to change what the app
+    calls you. Without it that derived name is permanent.
+    """
+    user_id = await get_current_user_id(request)
+    db = get_db()
+    from bson import ObjectId
+
+    username = body.username.strip()
+    if not username:
+        # min_length=1 on the model accepts "   "; the stored name must not be
+        # blank, because the UI reads username.charAt(0) for the avatar.
+        raise HTTPException(status_code=400, detail="Name cannot be empty")
+
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)}, {"$set": {"username": username}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Same derivation as /me: the stored `pro` flag goes stale, so the response
+    # reports the effective plan instead.
+    plan = effective_plan(user)
+    return UserResponse(
+        id=user_id,
+        username=username,
+        email=user["email"],
+        pro=bool(plan),
+        aiModel=select_model(user),
+        createdAt=user.get("createdAt"),
+    )
 
 
 @router.post("/google", response_model=UserResponse)
