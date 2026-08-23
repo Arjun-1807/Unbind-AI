@@ -7,7 +7,11 @@ export const TABS = {
   // Answers both plain questions ("what's the notice period?") and what-if
   // scenarios ("what if I leave early?"). These were once separate tabs, which
   // made the user classify their own question for no benefit.
-  ASK_ANYTHING: "Ask Anything",
+  //
+  // The label carries the assistant's name so the persona is visible from the
+  // tab strip, not just once you are inside the panel. Safe to rename: the tab
+  // value is compared via this constant and is never persisted.
+  ASK_ANYTHING: "Ask Saul",
   NEGOTIATION_HELPER: "Negotiation Helper",
   KEY_TERMS_GLOSSARY: "Key Terms Glossary",
   KEY_DATES: "Key Dates",
