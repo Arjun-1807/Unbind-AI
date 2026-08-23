@@ -37,9 +37,14 @@ export default function HomePage() {
   return (
     <div className="min-h-screen font-sans">
       <Header />
-      {/* No overflow-x-hidden here: it would create a scroll container and
+      {/* Full-bleed on purpose. The landing page owns its own gutters (via
+          .ln-shell) so individual sections can paint edge-to-edge bands while
+          their contents stay aligned to one column; wrapping it in a padded
+          container here also double-padded every section that sets its own.
+
+          No overflow-x-hidden either: it would create a scroll container and
           break the sticky-pinned "How it works" flow section below. */}
-      <main className="container mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+      <main className="w-full">
         <LandingPage />
       </main>
       <Footer />

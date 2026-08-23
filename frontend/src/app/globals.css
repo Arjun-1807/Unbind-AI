@@ -29,6 +29,9 @@
   --ln-success: #27a644;
   --ln-danger: #f87171;
   --ln-warning: #fbbf24;
+  /* The success green that reads on near-black; --ln-success is too dark
+     for text on the canvas and is reserved for fills and status dots. */
+  --ln-success-bright: #4ade80;
 }
 
 /* ── Light theme override ──
@@ -36,52 +39,72 @@
    on <html>). Dark (the block above) remains the default whenever no
    data-theme attribute is set, preserving today's look for existing users. */
 :root[data-theme="light"] {
-  --ln-canvas: #ffffff;
-  --ln-surface-1: #f7f7f8;
-  --ln-surface-2: #f0f0f2;
-  --ln-surface-3: #e9e9ec;
-  --ln-surface-4: #e2e2e6;
+  /* Bone white, not #ffffff. Pure white is the brightest thing a display can
+     emit, and these are documents people read for an hour at a stretch — the
+     glare is what makes long review sessions tiring. A trace of warmth takes
+     the edge off without reading as a colour; it should feel like paper, not
+     like a cream theme. Everything below is warmed to match, because a warm
+     canvas under cool greys makes the greys look dirty. */
+  --ln-canvas: #faf9f6;
+  --ln-surface-1: #f3f2ee;
+  --ln-surface-2: #ecebe6;
+  --ln-surface-3: #e5e4de;
+  --ln-surface-4: #dfddd7;
   /* Hairline borders */
-  --ln-hairline: #e2e2e6;
-  --ln-hairline-strong: #cfcfd6;
-  --ln-hairline-tertiary: #b9b9c2;
+  --ln-hairline: #dfddd7;
+  --ln-hairline-strong: #d0cdc6;
+  --ln-hairline-tertiary: #bcb8b0;
   /* Ink (text) ramp */
-  --ln-ink: #101113;
-  --ln-ink-muted: #3a3d45;
-  --ln-ink-subtle: #6b6f78;
-  --ln-ink-tertiary: #8a8f98;
-  /* Lavender-blue accent — darkened slightly for AA contrast on white */
+  --ln-ink: #131210;
+  --ln-ink-muted: #403e37;
+  --ln-ink-subtle: #6f6c63;
+  --ln-ink-tertiary: #8f8c82;
+  /* Lavender-blue accent — darkened slightly for AA contrast on the canvas */
   --ln-primary: #4550c8;
   --ln-primary-hover: #5e6ad2;
   --ln-primary-focus: #4550c8;
   /* Semantic — used sparingly for risk/status only */
   --ln-success: #16803d;
-  --ln-danger: #dc2626;
+  --ln-danger: #b91c1c;  /* red-700, not red-600: on the off-white canvas
+                          #dc2626 sat at 4.59:1 — over the AA floor at
+                          rest, but any tinted hover state pushed it under.
+                          This holds 6.15:1 resting and 5.21:1 on a 10%
+                          tint, so destructive controls stay legible in
+                          every state. */
   --ln-warning: #b45309;
+  --ln-success-bright: #15803d;
 }
 
 /* OS-level fallback: only honored when the user hasn't made an explicit
    choice (no data-theme attribute present at all). */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    --ln-canvas: #ffffff;
-    --ln-surface-1: #f7f7f8;
-    --ln-surface-2: #f0f0f2;
-    --ln-surface-3: #e9e9ec;
-    --ln-surface-4: #e2e2e6;
-    --ln-hairline: #e2e2e6;
-    --ln-hairline-strong: #cfcfd6;
-    --ln-hairline-tertiary: #b9b9c2;
-    --ln-ink: #101113;
-    --ln-ink-muted: #3a3d45;
-    --ln-ink-subtle: #6b6f78;
-    --ln-ink-tertiary: #8a8f98;
+    /* Same bone-white canvas as the explicit opt-in above — arriving at light
+       mode via the OS must not give you a different, harsher product. */
+    --ln-canvas: #faf9f6;
+    --ln-surface-1: #f3f2ee;
+    --ln-surface-2: #ecebe6;
+    --ln-surface-3: #e5e4de;
+    --ln-surface-4: #dfddd7;
+    --ln-hairline: #dfddd7;
+    --ln-hairline-strong: #d0cdc6;
+    --ln-hairline-tertiary: #bcb8b0;
+    --ln-ink: #131210;
+    --ln-ink-muted: #403e37;
+    --ln-ink-subtle: #6f6c63;
+    --ln-ink-tertiary: #8f8c82;
     --ln-primary: #4550c8;
     --ln-primary-hover: #5e6ad2;
     --ln-primary-focus: #4550c8;
     --ln-success: #16803d;
-    --ln-danger: #dc2626;
+    --ln-danger: #b91c1c;  /* red-700, not red-600: on the off-white canvas
+                          #dc2626 sat at 4.59:1 — over the AA floor at
+                          rest, but any tinted hover state pushed it under.
+                          This holds 6.15:1 resting and 5.21:1 on a 10%
+                          tint, so destructive controls stay legible in
+                          every state. */
     --ln-warning: #b45309;
+    --ln-success-bright: #15803d;
   }
 }
 
@@ -108,12 +131,22 @@
   --color-success: var(--ln-success);
   --color-danger: var(--ln-danger);
   --color-warning: var(--ln-warning);
+  --color-success-bright: var(--ln-success-bright);
 }
 
 body {
   font-family: "Inter", sans-serif;
   background-color: var(--ln-canvas);
   color: var(--ln-ink);
+}
+
+/* Jumping to a section from the navbar should read as travelling down the
+   page. A hard teleport costs the reader their sense of where the section
+   they landed on sits relative to everything else, which on a long marketing
+   page is most of what the nav is for. Sections carry their own
+   scroll-margin so they don't come to rest under the sticky header. */
+html {
+  scroll-behavior: smooth;
 }
 
 /* ── Linear component primitives ──
@@ -204,7 +237,10 @@ body {
     transparent
   );
   pointer-events: none;
-  z-index: 0;
+  /* Negative, not 0: a fixed element at z-index 0 establishes a stacking
+     context that paints above non-positioned block content, so the glow
+     was washing over the text it was meant to sit behind. */
+  z-index: -1;
 }
 
 .glass-card {
@@ -228,7 +264,13 @@ body {
 }
 
 .fade-in {
-  animation: fadeIn 0.5s ease-in-out forwards;
+  /* Deliberately NOT `forwards`. The keyframe's end state (opacity 1,
+     translateY(0)) is identical to the element's natural style, so holding
+     it buys nothing — but a retained `transform`, even translateY(0),
+     permanently makes the element a containing block for `position: fixed`
+     descendants and promotes a page-tall compositing layer. Letting the
+     animation release avoids both. */
+  animation: fadeIn 0.5s ease-in-out;
 }
 
 .scroll-reveal {
@@ -430,7 +472,595 @@ body {
   animation: marquee 28s linear infinite;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Landing page layout primitives
+
+   The marketing route renders LandingPage full-bleed and lets it own its
+   own gutters, so a section can paint edge-to-edge while its contents stay
+   aligned to the same column as every other section.
+   ───────────────────────────────────────────────────────────────── */
+
+.ln-shell {
+  width: 100%;
+  max-width: var(--ln-shell-max, 80rem);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+/* Narrower measures for text-led sections.
+   These set a variable rather than max-width directly, and Tailwind's
+   max-w-* utilities are deliberately NOT used alongside .ln-shell: the
+   utilities live in @layer utilities while these rules are unlayered, so an
+   unlayered .ln-shell wins the cascade no matter what order they appear in
+   or how specific the utility looks. Driving one variable sidesteps the
+   fight entirely. */
+.ln-measure-lg { --ln-shell-max: 64rem; }
+.ln-measure-md { --ln-shell-max: 56rem; }
+.ln-measure-sm { --ln-shell-max: 48rem; }
+@media (min-width: 640px) {
+  .ln-shell { padding-inline: 1.5rem; }
+}
+@media (min-width: 1024px) {
+  .ln-shell { padding-inline: 2rem; }
+}
+
+/* One vertical rhythm for every section, so the page breathes consistently
+   instead of each section inventing its own padding. */
+.ln-section {
+  /* 96px at the top end. The reference site's sections measure 64–96px of
+     vertical padding and lean on full-viewport moments for breathing room
+     rather than on ever-larger gaps between blocks. */
+  padding-block: clamp(3.5rem, 7vw, 6rem);
+}
+
+/* A section that lifts onto surface-1. DESIGN.md's rule for separating
+   sections on a dark canvas: lift, don't gap. */
+.ln-band {
+  background: var(--ln-surface-1);
+  border-block: 1px solid var(--ln-hairline);
+}
+
+/* Section taxonomy label. Positive tracking marks it as taxonomy against the
+   negative-tracked display type below it. */
+.ln-eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ln-ink-tertiary);
+}
+
+/* Visible keyboard focus. The page previously had none, which left every CTA
+   invisible to keyboard users the moment it took focus. */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ln-primary-hover);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Collapsible disclosure. Animating grid-template-rows 0fr→1fr opens a panel
+   to its natural height with no JS measurement; browsers without it just snap
+   open. Used by the FAQ and by the chat's history panel. */
+.ln-disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ln-disclosure[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+.ln-disclosure > div {
+  overflow: hidden;
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   Motion system
+
+   One rule governs everything below: continuous animation touches
+   `transform` and `opacity` ONLY. Those two are handed to the
+   compositor and never hit layout or paint, which is the whole
+   difference between motion that glides and motion that stutters.
+
+   Blur, gradients and shadows are expensive to recompute, so where
+   they appear they are applied ONCE at rest and then transformed —
+   never re-derived per frame. One-shot transitions (a panel blurring
+   in over 400ms) may animate `filter`, because the cost is paid once
+   on a small surface rather than every frame forever.
+
+   Every effect here is switched off under prefers-reduced-motion at
+   the bottom of this file.
+   ═════════════════════════════════════════════════════════════════ */
+
+/* ── Ambient field ───────────────────────────────────────────────
+   A fixed spatial backdrop: perspective grid, two slowly drifting
+   aurora masses, and a static grain plate. Fixed rather than
+   absolute so scrolling never repaints it, and z-index -1 so it
+   sits above the canvas background but beneath all page content. */
+.atmos {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.atmos__grid {
+  position: absolute;
+  inset: -5%;
+  background-image:
+    linear-gradient(to right, var(--ln-hairline) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ln-hairline) 1px, transparent 1px);
+  background-size: 68px 68px;
+  opacity: 0.55;
+  /* Fade the lattice out toward the edges so it reads as depth
+     rather than as graph paper taped over the page. */
+  -webkit-mask-image: radial-gradient(ellipse 90% 55% at 50% 0%, #000 0%, transparent 78%);
+  mask-image: radial-gradient(ellipse 90% 55% at 50% 0%, #000 0%, transparent 78%);
+}
+
+.atmos__aurora {
+  position: absolute;
+  border-radius: 9999px;
+  will-change: transform;
+  /* NO `filter: blur()` here, deliberately.
+     A large-radius blur on a viewport-scale layer was measured at ~65ms per
+     frame during scroll (≈15fps) versus 16.7ms (a locked 60) without it — and
+     it stayed expensive even with the drift animation paused, so the cost is
+     rasterising the blur, not moving the layer. It was also redundant: these
+     masses are radial gradients, which are already perfectly smooth. The
+     multi-stop falloff below reproduces the Gaussian shape the blur was
+     producing, for free. */
+}
+.atmos__aurora--a {
+  left: -20rem;
+  top: -16rem;
+  width: 64rem;
+  height: 42rem;
+  background: radial-gradient(
+    closest-side,
+    rgba(94, 106, 210, 0.30) 0%,
+    rgba(94, 106, 210, 0.18) 38%,
+    rgba(94, 106, 210, 0.06) 67%,
+    transparent 100%
+  );
+  animation: auroraDriftA 32s ease-in-out infinite;
+}
+.atmos__aurora--b {
+  right: -22rem;
+  top: 30vh;
+  width: 58rem;
+  height: 38rem;
+  background: radial-gradient(
+    closest-side,
+    rgba(130, 143, 255, 0.19) 0%,
+    rgba(130, 143, 255, 0.11) 40%,
+    rgba(130, 143, 255, 0.04) 68%,
+    transparent 100%
+  );
+  animation: auroraDriftB 41s ease-in-out infinite;
+}
+@keyframes auroraDriftA {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(9vw, 7vh, 0); }
+}
+@keyframes auroraDriftB {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-8vw, -9vh, 0); }
+}
+
+/* Film grain. Static — a moving grain plate is a full-viewport
+   repaint every frame and the single most common cause of a
+   "premium" backdrop tanking a scroll. */
+.atmos__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Bands become translucent so the field reads through them. */
+.ln-band {
+  background: color-mix(in srgb, var(--ln-surface-1) 80%, transparent);
+}
+
+/* ── Reading-progress bar ────────────────────────────────────────
+   Driven by --p (0→1) written from one rAF-coalesced scroll
+   listener; scaleX is a compositor transform, so this costs
+   essentially nothing per frame. */
+.ln-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 2px;
+  z-index: 50;
+  transform: scaleX(var(--p, 0));
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--ln-primary), var(--ln-primary-hover));
+  will-change: transform;
+}
+
+/* ── Pointer spotlight ───────────────────────────────────────────
+   A single composited overlay per container tracking --mx/--my.
+   One overlay for a whole grid, not one per tile: nine tracking
+   gradients is nine repaint regions, this is one. */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    22rem circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--ln-primary) 16%, transparent),
+    transparent 70%
+  );
+}
+.spotlight[data-glow="on"]::after {
+  opacity: 1;
+}
+
+/* ── Lit edge ────────────────────────────────────────────────────
+   A hairline that brightens toward the top of a panel, so cards
+   read as lit from above instead of outlined. */
+.lit-edge {
+  position: relative;
+}
+.lit-edge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--ln-primary) 45%, transparent),
+    transparent 42%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.7;
+}
+
+/* ── Rotating conic border ───────────────────────────────────────
+   Reserved for exactly one element on the page (the featured plan).
+   An animated conic gradient repaints its own box every frame, so
+   it stays affordable only while it stays rare. */
+@property --ln-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.conic-ring {
+  position: relative;
+}
+.conic-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--ln-angle),
+    transparent 0deg,
+    var(--ln-primary) 40deg,
+    var(--ln-primary-hover) 70deg,
+    transparent 130deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+/* Animated only while hovered — see the note above. */
+.conic-ring:hover::before {
+  animation: conicSpin 4s linear infinite;
+}
+@keyframes conicSpin {
+  to { --ln-angle: 360deg; }
+}
+
+/* ── Scan sweep ──────────────────────────────────────────────────
+   A light bar crossing a panel once, replayed by remounting the
+   element with a new React key when the active stage changes. */
+.scan-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.scan-sweep::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--ln-primary-hover) 22%, transparent),
+    transparent
+  );
+  transform: translateX(-140%) skewX(-14deg);
+  animation: scanAcross 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes scanAcross {
+  to { transform: translateX(320%) skewX(-14deg); }
+}
+
+/* ── Pipeline rail ───────────────────────────────────────────────
+   The vertical progress spine of the "how it works" section.
+   --p (0→1) is written by React; both children read it, and both
+   express it as a transform. */
+.rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--ln-hairline);
+  border-radius: 2px;
+}
+.rail__beam {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, var(--ln-primary), var(--ln-primary-hover));
+  transform: scaleY(var(--p, 0));
+  transform-origin: top center;
+  will-change: transform;
+}
+/* Full-height carrier: translating it by a percentage of ITS OWN
+   height moves the head exactly --p of the way down the rail, with
+   no JS measurement of the rail. */
+.rail__carrier {
+  position: absolute;
+  inset: 0;
+  transform: translateY(calc(var(--p, 0) * 100%));
+  will-change: transform;
+}
+.rail__head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 9px;
+  width: 9px;
+  margin-left: -4.5px;
+  margin-top: -4.5px;
+  border-radius: 9999px;
+  background: var(--ln-primary-hover);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ln-primary) 22%, transparent),
+    0 0 16px 2px color-mix(in srgb, var(--ln-primary-hover) 55%, transparent);
+}
+
+/* ── Stage viewport ──────────────────────────────────────────────
+   Three panels stacked in one frame; only the active one resolves. */
+.stage-layer {
+  transition:
+    opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
+  transform: scale(0.965) translateY(14px);
+  filter: blur(5px);
+  pointer-events: none;
+}
+.stage-layer[data-active="true"] {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+  pointer-events: auto;
+}
+
+/* ── Fading divider ──────────────────────────────────────────────
+   Replaces hard border-t rules: a hairline that dissolves at both
+   ends instead of hitting the viewport edge. */
+.ln-rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, var(--ln-hairline-strong), transparent);
+}
+
+/* ── Tilt ────────────────────────────────────────────────────────
+   Pointer parallax on the hero panel. Rotation values arrive as
+   CSS variables so the transform is the only thing that changes. */
+.tilt {
+  transform: perspective(1400px)
+    rotateX(var(--rx, 0deg))
+    rotateY(var(--ry, 0deg))
+    translate3d(0, 0, 0);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+.tilt[data-tilting="true"] {
+  /* Follow the cursor closely while it is over the panel; the longer
+     easing above then takes over for the settle on exit. */
+  transition: transform 0.12s linear;
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   Editorial type scale
+
+   Calibrated against the measured type ramp of the reference site
+   (scale.com at 1440x900): display 116px/400, section 64px/400,
+   sub 40px/400, card 24px/500, body 14px, mono label 11px — with
+   letter-spacing pinned at a constant -0.01em at every size and
+   line-height tightening as size grows (1.0 at 116px, 1.05 at 64px,
+   1.25 at 40px, 1.5 at 24px).
+
+   Two deliberate departures. Weight sits at 500 rather than 400,
+   because Inter is a touch lighter than Aeonik and light weights
+   bloom on a near-black canvas rather than holding their edge. And
+   tracking runs slightly tighter (-0.018em on display) since Inter
+   sets wider than Aeonik at the same size.
+   ═════════════════════════════════════════════════════════════════ */
+
+.t-display {
+  /* Capped at 88px rather than pushed to the reference's 116px: the headline
+     animates through a longer transient phrase that is set `nowrap`, and above
+     this size that phrase forces a third line which then collapses away —
+     trading a layout shift on first paint for 16px of display size. */
+  font-size: clamp(2.5rem, 6.2vw, 5.5rem);
+  font-weight: 500;
+  line-height: 1.0;
+  letter-spacing: -0.018em;
+}
+
+.t-statement {
+  font-size: clamp(2rem, 5.4vw, 4.75rem);
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: -0.016em;
+}
+
+.t-section {
+  font-size: clamp(1.875rem, 4.2vw, 3.5rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.014em;
+}
+
+.t-sub {
+  font-size: clamp(1.375rem, 2.4vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+}
+
+.t-card {
+  font-size: 1.3125rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.t-lead {
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+  line-height: 1.55;
+  letter-spacing: -0.005em;
+}
+
+/* Mono taxonomy label. Positive tracking, matching the reference's
+   11px/0.05em treatment — the one place tracking goes positive. */
+.t-label {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--ln-ink-tertiary);
+}
+
+/* ── Scroll-linked scene lifecycle ───────────────────────────────
+   Registered so `calc()` treats them as real numbers, and inherited
+   so a container's phase reaches the words inside it. The initial
+   values are the fully-arrived state, which is what renders with no
+   JavaScript at all — a crawler, a failed hydration, or reduced
+   motion all get finished content rather than a blank screen. */
+@property --enter {
+  syntax: "<number>";
+  initial-value: 1;
+  inherits: true;
+}
+@property --exit {
+  syntax: "<number>";
+  initial-value: 0;
+  inherits: true;
+}
+@property --wt {
+  syntax: "<number>";
+  initial-value: 1;
+  inherits: false;
+}
+
+/* A block that rises in as it enters the reading zone and lifts away
+   as it leaves. Animating the exit as well as the entrance is what
+   stops a long page reading as a list of things that pop in once and
+   then sit there. */
+.scene {
+  opacity: calc(var(--enter) * (1 - var(--exit)));
+  transform: translate3d(
+    0,
+    calc((1 - var(--enter)) * 3.25rem + var(--exit) * -2rem),
+    0
+  );
+}
+
+/* Entrance only — for blocks that should stay put once arrived
+   (pricing, FAQ: content you may scroll back up to re-read). */
+.scene--hold {
+  opacity: var(--enter);
+  transform: translate3d(0, calc((1 - var(--enter)) * 3.25rem), 0);
+}
+
+/* The hero artwork receding as the page moves past it — the camera
+   pulling back off the product rather than the product simply
+   scrolling out of frame. */
+.hero-depart {
+  transform: translate3d(0, calc(var(--exit) * -2.5rem), 0)
+    scale(calc(1 - var(--exit) * 0.055));
+  transform-origin: center top;
+  opacity: calc(1 - var(--exit) * 0.72);
+}
+
+/* Artwork that unfolds into place: tipped back and slightly small,
+   righting itself as it arrives. */
+.unfold {
+  transform: perspective(1400px) rotateX(calc((1 - var(--enter)) * 7deg))
+    scale(calc(1 - (1 - var(--enter)) * 0.055));
+  transform-origin: center bottom;
+  opacity: calc(0.35 + 0.65 * var(--enter));
+}
+
+/* ── Scroll-scrubbed word reveal ─────────────────────────────────
+   A line of text split into words, each interpolating its own
+   opacity and a small horizontal offset from scroll position, so the
+   sentence resolves left to right as it rises — as if being read.
+
+   One JS write per frame drives the whole thing. React sets a single
+   `--reveal` (0→1) on the container; each word derives `--wt`, its
+   own 0→1 progress, from that value and its index, then expresses it
+   as opacity and a transform. Thirty words cost one custom-property
+   update, not thirty style mutations.
+
+       head = reveal * (wordCount + feather)   [in word units]
+       wt   = clamp(0, (head - index) / feather, 1)
+
+   `--reveal` defaults to 1 so the sentence renders fully legible
+   without JavaScript. */
+.words {
+  --reveal: 1;
+  --feather: 6;
+  --rest: 0.16;
+}
+.words .word {
+  --wt: clamp(
+    0,
+    calc((var(--reveal) * (var(--n) + var(--feather)) - var(--i)) / var(--feather)),
+    1
+  );
+  display: inline-block;
+  opacity: calc((var(--rest) + (1 - var(--rest)) * var(--wt)) * (1 - var(--exit)));
+  transform: translate3d(
+    calc((1 - var(--wt)) * 1.35rem),
+    calc(var(--exit) * -0.7rem),
+    0
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   .scroll-reveal,
   .reveal {
     opacity: 1;
@@ -442,6 +1072,9 @@ body {
   }
   .rise-in {
     opacity: 1;
+    animation: none;
+  }
+  .fade-in {
     animation: none;
   }
   .animate-float-y,
@@ -459,5 +1092,40 @@ body {
   }
   .btn-sheen::before {
     display: none;
+  }
+  .ln-disclosure {
+    transition: none;
+  }
+  .atmos__aurora,
+  .conic-ring::before,
+  .scan-sweep::after {
+    animation: none;
+  }
+  .atmos__grid,
+  .atmos__grain {
+    opacity: 0.25;
+  }
+  .spotlight::after {
+    display: none;
+  }
+  .stage-layer {
+    transition: opacity 0.2s linear;
+    transform: none;
+    filter: none;
+  }
+  .rail__beam,
+  .rail__carrier,
+  .ln-progress,
+  .tilt {
+    transition: none;
+  }
+  /* Everything renders in its arrived state; nothing moves. */
+  .words .word,
+  .scene,
+  .scene--hold,
+  .unfold,
+  .hero-depart {
+    opacity: 1;
+    transform: none;
   }
 }

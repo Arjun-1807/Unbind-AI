@@ -74,7 +74,7 @@ export default function RedlineHeadline({
               <motion.span
                 key="after"
                 className="relative inline-block whitespace-nowrap"
-                style={{ color: "#4ade80" }}
+                style={{ color: "var(--ln-success-bright)" }}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, ease: EASE, delay: 0.15 }}
