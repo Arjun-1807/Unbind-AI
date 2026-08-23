@@ -92,6 +92,24 @@ class Settings(BaseSettings):
     # model (llama-4-scout/maverick were deprecated in 2026). Verify against
     # Groq's model list before changing — vision model IDs churn over time.
     OCR_MODEL: str = "qwen/qwen3.6-27b"
+    # Chat / analysis models, by plan tier.
+    #
+    # Settings rather than constants for the same reason OCR_MODEL is one:
+    # Groq retires model IDs on its own schedule. `llama-3.3-70b-versatile`
+    # vanished from every key and took the entire analysis pipeline down with
+    # it — every clause extraction, summary, HyDE expansion, negotiation draft
+    # and chat answer returned 404. Keeping these in the environment means
+    # recovering from the next deprecation is a config change, not a deploy.
+    #
+    # Verify against Groq's live model list before changing:
+    #   curl -H "Authorization: Bearer $GROQ_API_KEY" \
+    #        https://api.groq.com/openai/v1/models
+    #
+    # Avoid the `groq/compound*` models here: they are agentic and can reach
+    # the open web, which would silently break the guarantee that answers come
+    # only from the user's document.
+    CHAT_MODEL_FREE: str = "openai/gpt-oss-120b"
+    CHAT_MODEL_PRO: str = "openai/gpt-oss-120b"
     HUGGINGFACEHUB_API_TOKEN: str = ""  # Free token from huggingface.co/settings/tokens
     LANGCHAIN_TRACING_V2: bool = Field(
         default=False,
