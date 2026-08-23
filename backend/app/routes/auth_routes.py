@@ -214,9 +214,7 @@ async def update_name(body: UpdateNameRequest, request: Request):
         # blank, because the UI reads username.charAt(0) for the avatar.
         raise HTTPException(status_code=400, detail="Name cannot be empty")
 
-    result = await db.users.update_one(
-        {"_id": ObjectId(user_id)}, {"$set": {"username": username}}
-    )
+    result = await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"username": username}})
     if result.matched_count == 0:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
