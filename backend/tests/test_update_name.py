@@ -10,8 +10,8 @@ never reaches a real cluster (see test_auth_cookie_clearing for the rationale).
 
 from starlette.testclient import TestClient
 
-from app.main import app
 from app.auth import create_access_token
+from app.main import app
 
 
 def _client() -> TestClient:
