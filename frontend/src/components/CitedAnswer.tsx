@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { Citation } from "@/types";
+import { parseAnswer, type Block, type Inline } from "@/lib/answerMarkdown";
 
 interface CitedAnswerProps {
   answer: string;
@@ -13,8 +14,16 @@ interface CitedAnswerProps {
 }
 
 /**
- * Renders a grounded answer: inline `[S#]` markers become clickable chips that
- * jump to the exact cited passage in the document.
+ * Renders a grounded answer: light Markdown becomes real formatting, and
+ * inline `[S#]` markers become clickable chips that jump to the exact cited
+ * passage in the document.
+ *
+ * The two are parsed together rather than in sequence — citations routinely
+ * land inside emphasis (`**capped at 2% [S3]**`), so a Markdown pass followed
+ * by a citation pass would lose one or the other. See lib/answerMarkdown.
+ *
+ * Model output is untrusted, so it is parsed into a data structure and
+ * rendered as React elements. Nothing is ever handed to dangerouslySetInnerHTML.
  *
  * Shared by the impact simulator and document Q&A — both produce answers under
  * the same citation contract, and the marker-parsing plus the not-locatable
@@ -50,29 +59,78 @@ const CitedAnswer: React.FC<CitedAnswerProps> = ({
     );
   };
 
-  const nodes: React.ReactNode[] = [];
-  const regex = /\[S(\d+)\]/g;
-  let last = 0;
-  let match: RegExpExecArray | null;
-  let k = 0;
-  while ((match = regex.exec(answer)) !== null) {
-    if (match.index > last) nodes.push(answer.slice(last, match.index));
-    const id = parseInt(match[1], 10);
-    const cite = byId.get(id);
-    if (cite) {
-      nodes.push(chip(cite, String(id), `cite-${k++}`));
-    } else {
-      // Marker with no matching source — plain text, never a dead link.
-      nodes.push(match[0]);
+  const renderInline = (nodes: Inline[], keyPrefix: string): React.ReactNode[] =>
+    nodes.map((node, i) => {
+      const key = `${keyPrefix}-${i}`;
+      switch (node.type) {
+        case "text":
+          return <React.Fragment key={key}>{node.value}</React.Fragment>;
+        case "bold":
+          return (
+            <strong key={key} className="font-semibold text-ink">
+              {renderInline(node.children, key)}
+            </strong>
+          );
+        case "italic":
+          return <em key={key}>{renderInline(node.children, key)}</em>;
+        case "code":
+          return (
+            <code
+              key={key}
+              className="rounded bg-surface-3 px-1 py-0.5 font-mono text-[0.9em] text-ink"
+            >
+              {node.value}
+            </code>
+          );
+        case "break":
+          return <br key={key} />;
+        case "cite": {
+          const cite = byId.get(node.id);
+          // Marker with no matching source — plain text, never a dead link.
+          return cite ? (
+            chip(cite, String(node.id), key)
+          ) : (
+            <React.Fragment key={key}>{node.raw}</React.Fragment>
+          );
+        }
+      }
+    });
+
+  const renderBlock = (block: Block, i: number): React.ReactNode => {
+    const key = `b${i}`;
+    switch (block.type) {
+      case "heading": {
+        const Tag = (`h${Math.min(block.level + 3, 6)}`) as "h4" | "h5" | "h6";
+        return (
+          <Tag key={key} className="mt-1 font-semibold text-ink">
+            {renderInline(block.children, key)}
+          </Tag>
+        );
+      }
+      case "list": {
+        const Tag = block.ordered ? "ol" : "ul";
+        return (
+          <Tag
+            key={key}
+            className={`space-y-1.5 pl-5 ${block.ordered ? "list-decimal" : "list-disc"}`}
+          >
+            {block.items.map((item, j) => (
+              <li key={`${key}-${j}`} className="pl-1 marker:text-primary">
+                {renderInline(item, `${key}-${j}`)}
+              </li>
+            ))}
+          </Tag>
+        );
+      }
+      case "paragraph":
+        return <p key={key}>{renderInline(block.children, key)}</p>;
     }
-    last = regex.lastIndex;
-  }
-  if (last < answer.length) nodes.push(answer.slice(last));
+  };
 
   return (
     <>
-      <div className="text-ink-muted whitespace-pre-wrap break-words leading-relaxed">
-        {nodes}
+      <div className="space-y-3 break-words leading-relaxed text-ink-muted">
+        {parseAnswer(answer).map(renderBlock)}
       </div>
       {showSources && citations.length > 0 && (
         <div className="mt-4 border-t border-hairline pt-4">

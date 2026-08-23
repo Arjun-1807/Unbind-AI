@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/footer";
 import BackLink from "@/components/BackLink";
+import { PRIVACY_CONTACT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | UnBind",
@@ -304,14 +305,13 @@ export default function PrivacyPage() {
                 deletion of your account and associated data, or answers to
                 other privacy questions by contacting us at{" "}
                 <a
-                  href="mailto:privacy@unbind.ai"
+                  href={`mailto:${PRIVACY_CONTACT_EMAIL}`}
                   className="text-primary font-medium hover:underline"
                 >
-                  privacy@unbind.ai
-                </a>{" "}
-                (placeholder — replace with your real privacy contact before
-                publishing). We will respond to verifiable requests within a
-                reasonable timeframe.
+                  {PRIVACY_CONTACT_EMAIL}
+                </a>
+                . We will respond to verifiable requests within a reasonable
+                timeframe.
               </p>
             </Section>
 
@@ -376,16 +376,12 @@ export default function PrivacyPage() {
                 If you have questions about this Privacy Policy or how we
                 handle your information, please contact us at{" "}
                 <a
-                  href="mailto:privacy@unbind.ai"
+                  href={`mailto:${PRIVACY_CONTACT_EMAIL}`}
                   className="text-primary font-medium hover:underline"
                 >
-                  privacy@unbind.ai
+                  {PRIVACY_CONTACT_EMAIL}
                 </a>
                 .
-              </p>
-              <p className="text-xs text-ink-subtle italic">
-                Placeholder contact — replace with your real privacy/support
-                contact before publishing.
               </p>
             </Section>
           </div>

@@ -40,6 +40,12 @@ const DocumentWarningIcon = () => (
 );
 
 interface ToastProps {
+  /**
+   * Headline for the dialog. Required: this component used to hardcode "Not a
+   * Legal Document" for every message, so an oversized file or an unreadable
+   * scan was reported to the user as the wrong problem entirely.
+   */
+  title: string;
   message: string;
   onRetry: () => void;
   autoClose?: boolean;
@@ -47,6 +53,7 @@ interface ToastProps {
 }
 
 const Toast: React.FC<ToastProps> = ({
+  title,
   message,
   onRetry,
   autoClose = false,
@@ -113,7 +120,7 @@ const Toast: React.FC<ToastProps> = ({
         </div>
 
         {/* Title */}
-        <h3 className="text-xl font-semibold text-ink mb-2">Not a Legal Document</h3>
+        <h3 className="text-xl font-semibold text-ink mb-2">{title}</h3>
 
         {/* Message */}
         <p className="text-sm text-ink-subtle mb-6 leading-relaxed">{message}</p>

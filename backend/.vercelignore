@@ -1,0 +1,12 @@
+# Local virtualenvs. Both exist on disk here and are hundreds of MB; uploading
+# them wastes build time and threatens the unzipped function size limit.
+.venv/
+venv/
+
+# Test and tooling artifacts — nothing here is needed to serve a request.
+tests/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+__pycache__/
+.env

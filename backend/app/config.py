@@ -38,6 +38,20 @@ _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"})
 class Settings(BaseSettings):
     PORT: int = 8000
     MONGODB_URI: str = "mongodb://localhost:27017/unbindai"
+    # ── Mongo client tuning ──────────────────────────────────────────────────
+    # The driver defaults (100 connections per instance, 30s server selection)
+    # assume one long-lived process. Under serverless the instance count is
+    # elastic, so a small per-instance pool is what keeps the cluster's
+    # connection limit out of reach, and short timeouts are what make an outage
+    # surface as a 503 instead of a hang.
+    MONGO_MAX_POOL_SIZE: int = 10
+    MONGO_MAX_IDLE_TIME_MS: int = 30_000
+    MONGO_SERVER_SELECTION_TIMEOUT_MS: int = 5_000
+    MONGO_CONNECT_TIMEOUT_MS: int = 5_000
+    # Index creation is a deploy step (`python -m app.scripts.ensure_indexes`),
+    # not a per-request cost — see connect_db. Turn this on for local dev or a
+    # first boot against a brand-new cluster.
+    RUN_INDEX_CREATION_ON_BOOT: bool = False
     # Which deployment this is. Every security-relevant relaxation (insecure
     # defaults, non-Secure cookies) is gated on this single explicit switch
     # rather than inferred from FRONTEND_URL — a forgotten env var must fail
@@ -78,6 +92,24 @@ class Settings(BaseSettings):
     # model (llama-4-scout/maverick were deprecated in 2026). Verify against
     # Groq's model list before changing — vision model IDs churn over time.
     OCR_MODEL: str = "qwen/qwen3.6-27b"
+    # Chat / analysis models, by plan tier.
+    #
+    # Settings rather than constants for the same reason OCR_MODEL is one:
+    # Groq retires model IDs on its own schedule. `llama-3.3-70b-versatile`
+    # vanished from every key and took the entire analysis pipeline down with
+    # it — every clause extraction, summary, HyDE expansion, negotiation draft
+    # and chat answer returned 404. Keeping these in the environment means
+    # recovering from the next deprecation is a config change, not a deploy.
+    #
+    # Verify against Groq's live model list before changing:
+    #   curl -H "Authorization: Bearer $GROQ_API_KEY" \
+    #        https://api.groq.com/openai/v1/models
+    #
+    # Avoid the `groq/compound*` models here: they are agentic and can reach
+    # the open web, which would silently break the guarantee that answers come
+    # only from the user's document.
+    CHAT_MODEL_FREE: str = "openai/gpt-oss-120b"
+    CHAT_MODEL_PRO: str = "openai/gpt-oss-120b"
     HUGGINGFACEHUB_API_TOKEN: str = ""  # Free token from huggingface.co/settings/tokens
     LANGCHAIN_TRACING_V2: bool = Field(
         default=False,

@@ -1,0 +1,343 @@
+"use client";
+import React from "react";
+import Header from "@/components/Header";
+import Footer from "@/components/footer";
+import BackLink from "@/components/BackLink";
+import { useRouter } from "next/navigation";
+import { createPlanOrder, verifyPlanPayment } from "@/services/api";
+import { loadRazorpay } from "@/lib/razorpay";
+import { useAuth } from "@/context/AuthContext";
+import {
+  SparklesIcon,
+  FileSearchIcon,
+  ScaleIcon,
+  CheckIcon,
+  CheckCircleIcon,
+} from "@/components/Icons";
+
+const TerminalIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <polyline points="4 17 10 11 4 5" /><line x1="12" x2="20" y1="19" y2="19" />
+  </svg>
+);
+
+const PlanCheck = () => (
+  <CheckIcon className="h-4 w-4 text-success mt-0.5 shrink-0" />
+);
+export default function PricingView() {
+    const router = useRouter();
+  const { user, authReady } = useAuth();
+  const onBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/dashboard')
+    }
+    }
+  const [currentPlan, setCurrentPlan] = React.useState<string | null>(null);
+  const [activating, setActivating] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!authReady || !user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await import("@/services/api").then((m) => m.getUserPlan());
+        if (!cancelled) setCurrentPlan(data.plan);
+      } catch {
+        if (!cancelled) setCurrentPlan(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [authReady, user]);
+
+  const handleSelectPlan = async (selectedPlan: string) => {
+    if (selectedPlan === currentPlan || activating) return;
+
+    // Must be signed in to attach a plan to an account.
+    if (!user) {
+      router.push("/login?next=/pricing");
+      return;
+    }
+
+    setActivating(selectedPlan);
+    try {
+      // 1) Create the order server-side (server decides the price).
+      const order = await createPlanOrder(selectedPlan);
+      // 2) Load Razorpay Checkout.
+      const Razorpay = await loadRazorpay();
+
+      // 3) Open the payment sheet. Verification happens in the handler.
+      const rzp = new Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: "UnBind AI",
+        description: order.description,
+        order_id: order.orderId,
+        prefill: { email: user.email, name: user.username },
+        theme: { color: "#6366f1" },
+        handler: async (response) => {
+          try {
+            // 4) Verify signature server-side, which grants the plan.
+            const result = await verifyPlanPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            setCurrentPlan(result.plan);
+            router.push("/profile");
+          } catch {
+            setActivating(null);
+          }
+        },
+        modal: {
+          // User closed the sheet without paying — re-enable the buttons.
+          ondismiss: () => setActivating(null),
+        },
+      });
+      rzp.open();
+    } catch {
+      setActivating(null);
+    }
+  };
+
+  const isDisabled = (btnPlan: string) => btnPlan === currentPlan || activating !== null;
+  const btnClass = (btnPlan: string) =>
+    isDisabled(btnPlan)
+      ? "w-full bg-surface-2 text-ink-subtle font-semibold py-2.5 rounded-lg cursor-not-allowed opacity-60"
+      : "w-full cursor-pointer ln-btn-primary justify-center py-2.5 rounded-lg";
+  const btnLabel = (btnPlan: string, label: string) =>
+    btnPlan === currentPlan ? "Current Plan" : activating === btnPlan ? "Processing…" : label;
+  return (
+    <>
+          <Header />
+          
+      <div className="min-h-screen bg-canvas pt-20 sm:pt-24 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 fade-in font-sans">
+        <div className="max-w-7xl mx-auto">
+            <div className="w-full max-w-3xl mb-4 text-left">
+        <BackLink onClick={onBack} />
+      </div>
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+            {/* Left Section - Information */}
+            <div className="space-y-8">
+              <div>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-ink mb-4">
+                  Unlock Pro Features
+                </h1>
+                <p className="text-lg sm:text-xl text-ink-muted">
+                  Upgrade to UnBind Pro and supercharge your contract analysis
+                  experience.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <SparklesIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-ink mb-2">
+                      Advanced AI Analysis
+                    </h3>
+                    <p className="text-ink-muted">
+                      Access higher-end AI models for more accurate and nuanced
+                      contract analysis.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <FileSearchIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-ink mb-2">
+                      Deeper Insights
+                    </h3>
+                    <p className="text-ink-muted">
+                      Unlock more detailed risk analysis, negotiation
+                      suggestions, and key term extraction.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <ScaleIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-ink mb-2">
+                      Curated Lawyer Assistance
+                    </h3>
+                    <p className="text-ink-muted">
+                      Get access to a network of expert lawyers for further
+                      enquiry and personalized help.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ln-card p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <CheckCircleIcon className="h-5 w-5 text-success" />
+                  <p className="text-ink font-semibold">Cancel Anytime</p>
+                </div>
+                <p className="text-ink-muted text-sm">
+                  No risk, no long-term commitment. Cancel your subscription
+                  whenever you want.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Section - Pricing Cards */}
+            <div className="space-y-6">
+              <h2 className="text-2xl sm:text-3xl font-semibold text-ink text-center mb-8">
+                Choose Your Plan
+              </h2>
+
+              {/* Top Row - Pro 1 and Pro 2 side by side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Pro 1 Card */}
+                <div className="ln-card p-6 hover:bg-surface-2 transition-colors flex flex-col">
+                  <div className="flex flex-col mb-4">
+                    <h3 className="text-xl font-semibold text-ink mb-2">Brief</h3>
+                    <div>
+                      <div className="text-2xl font-semibold text-ink">
+                        ₹100
+                      </div>
+                      <div className="text-sm text-ink-subtle">1 Month</div>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 mb-6 flex-grow">
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span>Top-end AI models</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span>Faster analysis</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span>Valid for 1 month, no auto-renewal</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span>3 analyses per day</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span>40 AI questions per day</span>
+                    </li>
+                  </ul>
+                    <button className={btnClass("Brief")} onClick={() => handleSelectPlan("Brief")} disabled={isDisabled("Brief")}>
+                      {btnLabel("Brief", "Get Brief")}
+                    </button>
+                </div>
+
+                {/* Pro 2 Card - Popular */}
+                <div className="ln-card-raised rounded-2xl p-6 relative flex flex-col">
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-primary text-white px-3 py-0.5 rounded-full text-xs font-semibold">
+                      POPULAR
+                    </span>
+                  </div>
+                  <div className="flex flex-col mb-4">
+                    <h3 className="text-xl font-semibold text-ink mb-2">Motion</h3>
+                    <div>
+                      <div className="text-2xl font-semibold text-ink">
+                        ₹450
+                      </div>
+                      <div className="text-sm text-ink-subtle">1 Month</div>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 mb-6 flex-grow">
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span>Top-end AI models</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span>Faster analysis</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span className="font-semibold">Deeper analysis</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span>Valid for 1 month, no auto-renewal</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span className="font-semibold">5 analyses per day</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-ink-muted text-sm">
+                      <PlanCheck />
+                      <span className="font-semibold">100 AI questions per day</span>
+                    </li>
+                  </ul>
+                    <button className={btnClass("Motion")} onClick={() => handleSelectPlan("Motion")} disabled={isDisabled("Motion")}>
+                      {btnLabel("Motion", "Get Motion")}
+                    </button>
+                              </div>
+                              
+              </div>
+
+              {/* Bottom Row - Pro 3 full width */}
+              <div className="ln-card p-6 sm:p-8 hover:bg-surface-2 transition-colors">
+                <div className="flex justify-between items-start gap-3 mb-4">
+                  <h3 className="text-xl sm:text-2xl font-semibold text-ink min-w-0 break-words">Verdict</h3>
+                  <div className="text-right shrink-0">
+                    <div className="text-2xl sm:text-3xl font-semibold text-ink">
+                      ₹2500
+                    </div>
+                    <div className="text-sm text-ink-subtle">Lifetime</div>
+                  </div>
+                </div>
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <PlanCheck />
+                    <span>Top-end AI models</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <PlanCheck />
+                    <span>Faster analysis</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <PlanCheck />
+                    <span>Deeper analysis</span>
+                  </li>
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <PlanCheck />
+                    <span className="font-semibold">
+                      Curated lawyer assistance
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2 text-ink-muted">
+                    <PlanCheck />
+                    <span className="font-semibold">Lifetime access</span>
+                  </li>
+                   <li className="flex items-start gap-2 text-ink-muted">
+                    <PlanCheck />
+                    <span className="font-semibold">Unlimited Analysis</span>
+                  </li>
+                   <li className="flex items-start gap-2 text-sm">
+                  <TerminalIcon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <span className="text-primary font-semibold">CLI tool access (exclusive)</span>
+                </li>
+                </ul>
+                  <button className={btnClass("Verdict")} onClick={() => handleSelectPlan("Verdict")} disabled={isDisabled("Verdict")}>
+                    {btnLabel("Verdict", "Get Verdict")}
+                  </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </>
+  );
+}

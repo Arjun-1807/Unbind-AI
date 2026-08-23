@@ -2,7 +2,6 @@ import type {
   User,
   AnalysisSummary,
   StoredAnalysis,
-  AnalysisResponse,
   LawyerProfile,
   AnalysisProgressEvent,
   Citation,
@@ -93,6 +92,69 @@ function withoutAccessToken(raw: User & { accessToken?: string }): User {
   return safe;
 }
 
+/**
+ * How long any single non-streaming request may take before it is aborted.
+ *
+ * Without this a hung backend is indistinguishable from a slow one and the UI
+ * waits forever — a boot-time `/auth/me` that never settles leaves the app on
+ * its loader with no way out. A ceiling turns that into an error the caller
+ * can show and retry. Streaming uploads are exempt: they legitimately run for
+ * minutes and carry their own `AbortController`.
+ */
+const REQUEST_TIMEOUT_MS = 30_000;
+
+/**
+ * Subscribers notified when the backend rejects our session (HTTP 401).
+ *
+ * A 401 can surface from any call, not just `/auth/me` — the cookie is valid
+ * for days and typically expires mid-session, while the app still holds a
+ * `user` in React state. Without a central signal every screen keeps rendering
+ * as signed-in and each action fails with a raw backend string. AuthContext
+ * subscribes to this and clears the session once, from one place.
+ */
+type UnauthorizedListener = () => void;
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+/** Register a callback for session expiry. Returns an unsubscribe function. */
+export function onUnauthorized(listener: UnauthorizedListener): () => void {
+  unauthorizedListeners.add(listener);
+  return () => unauthorizedListeners.delete(listener);
+}
+
+/**
+ * Endpoints where a 401 is a normal answer rather than an expired session:
+ * these are the ones you call *without* being signed in, and a rejected
+ * password must surface on the login form rather than triggering a
+ * session-expiry redirect.
+ */
+const AUTH_CHALLENGE_PATHS = ["/auth/login", "/auth/signup", "/auth/google"];
+
+function notifyUnauthorized(): void {
+  for (const listener of unauthorizedListeners) {
+    try {
+      listener();
+    } catch {
+      // One bad subscriber must not stop the others from being told.
+    }
+  }
+}
+
+/**
+ * Read a successful response body, tolerating an empty one.
+ *
+ * Several endpoints answer 204 (or 200 with no body) — logout, the delete
+ * routes, the reminder PUT. Calling `res.json()` on those throws a parse error
+ * on a request that actually succeeded.
+ */
+async function parseBody<T>(res: Response): Promise<T> {
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method || "GET").toUpperCase();
   const shouldSetJsonHeader = method !== "GET" && !(init?.body instanceof FormData);
@@ -100,29 +162,54 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     ...(shouldSetJsonHeader ? { "Content-Type": "application/json" } : {}),
     ...(init?.headers || {}),
   };
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    // The httpOnly auth cookie is the *only* credential the browser holds, so
-    // this is mandatory on every path and must not be overridable by `init`.
-    credentials: "include",
-    headers,
-  });
-  if (!res.ok) {
-    throw await toApiError(res);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      // The httpOnly auth cookie is the *only* credential the browser holds, so
+      // this is mandatory on every path and must not be overridable by `init`.
+      credentials: "include",
+      headers,
+      signal: init?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    // fetch rejects for transport failures and for our own timeout. Both are
+    // "we never got an answer", which is a different thing from a 4xx/5xx and
+    // is worth saying plainly rather than surfacing the browser's
+    // "Failed to fetch".
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      throw new ApiError(0, "The server took too long to respond. Please try again.");
+    }
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw err; // A caller-initiated cancellation, not a failure.
+    }
+    throw new ApiError(0, "Could not reach the server. Check your connection and try again.");
   }
-  return res.json() as Promise<T>;
+
+  if (!res.ok) {
+    const error = await toApiError(res);
+    if (res.status === 401 && !AUTH_CHALLENGE_PATHS.some((p) => path.startsWith(p))) {
+      notifyUnauthorized();
+    }
+    throw error;
+  }
+  return parseBody<T>(res);
 }
 
 // ─── Auth ───
 
+/**
+ * Create an account. No display name is collected — the server derives one
+ * from the email address, matching how Google sign-in names accounts.
+ */
 export const signup = async (
-  username: string,
   email: string,
   password: string,
 ): Promise<User> => {
   const user = await apiFetch<User & { accessToken?: string }>("/auth/signup", {
     method: "POST",
-    body: JSON.stringify({ username, email, password }),
+    body: JSON.stringify({ email, password }),
   });
   return withoutAccessToken(user);
 };
@@ -142,16 +229,29 @@ export const logout = async (): Promise<void> => {
   purgeLegacyBrowserCredentials();
 };
 
+/**
+ * Resolve the current session.
+ *
+ * Returns `null` only when the backend actually says "you are not signed in"
+ * (401/403). Every other failure — a timeout, a network drop, a 5xx — is
+ * rethrown, because it is NOT evidence that the user is logged out.
+ *
+ * This used to swallow everything and return null, which made a backend blip
+ * indistinguishable from a signed-out visitor: one slow deploy and every
+ * signed-in user was bounced to the landing page mid-session. The caller
+ * (AuthContext) needs the difference so it can show a retry state instead of
+ * silently ending the session.
+ */
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
     const user = await apiFetch<User & { accessToken?: string }>("/auth/me");
     // /auth/me re-mints a fresh cookie server-side; nothing to persist here.
     return user ? withoutAccessToken(user) : null;
-  } catch {
-    // A 401 means no session; any other failure (network, 5xx) also leaves us
-    // without a user for this render. Either way there is nothing local to
-    // clear, because the credential is a cookie the browser manages.
-    return null;
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      return null;
+    }
+    throw err;
   }
 };
 
@@ -174,37 +274,6 @@ export const updatePassword = async (
 };
 
 // ─── Analysis ───
-
-export const analyzeText = async (
-  text: string,
-  role: string,
-  fileName: string,
-): Promise<StoredAnalysis> => {
-  return apiFetch<StoredAnalysis>("/analysis/analyze", {
-    method: "POST",
-    body: JSON.stringify({ text, role, fileName }),
-  });
-};
-
-export const uploadAndAnalyze = async (
-  file: File,
-  role: string,
-): Promise<StoredAnalysis> => {
-  const form = new FormData();
-  form.append("file", file);
-  form.append("role", role);
-  const res = await fetch(`${API_BASE}/analysis/upload`, {
-    method: "POST",
-    // Authenticated by the httpOnly auth cookie. Do not set Content-Type: the
-    // browser must generate the multipart boundary itself.
-    credentials: "include",
-    body: form,
-  });
-  if (!res.ok) {
-    throw await toApiError(res);
-  }
-  return res.json() as Promise<StoredAnalysis>;
-};
 
 /**
  * Parses a text/event-stream body into `{event, data}` frames as they arrive.
@@ -339,6 +408,13 @@ export const getDocumentChat = async (
   return data.map((m) => ({ ...m, citations: m.citations ?? [] }));
 };
 
+/** Rename the signed-in account. Returns the updated user. */
+export const updateName = async (username: string): Promise<User> =>
+  apiFetch<User>("/auth/update-name", {
+    method: "POST",
+    body: JSON.stringify({ username }),
+  });
+
 export const clearDocumentChat = async (analysisId: string): Promise<void> => {
   await apiFetch(`/analysis/${analysisId}/chat`, { method: "DELETE" });
 };
@@ -360,9 +436,31 @@ export const deleteAnalysis = async (id: string): Promise<void> => {
 
 // ─── User Plan ───
 
-export const getUserPlan = async (): Promise<{ plan: string | null; isPro: boolean; aiModel: string; dailyCount: number; dailyLimit: number | null; limitReached: boolean }> => {
+export interface UserPlanStatus {
+  plan: string | null;
+  isPro: boolean;
+  aiModel: string;
+  dailyCount: number;
+  dailyLimit: number | null;
+  limitReached: boolean;
+  /**
+   * When the current plan runs out, ISO-8601. Null for a lifetime plan or no
+   * plan at all. Brief and Motion are 30-day passes that do not auto-renew, so
+   * the UI warns ahead of this date rather than letting a user discover it by
+   * hitting a quota wall.
+   */
+  expiresAt: string | null;
+  /**
+   * The plan that just ended, when one has. Non-null only while `plan` is null
+   * because it lapsed — so a user can be told what happened instead of being
+   * silently dropped to free-tier limits.
+   */
+  lapsedPlan: string | null;
+}
+
+export const getUserPlan = async (): Promise<UserPlanStatus> => {
   try {
-    return await apiFetch<{ plan: string | null; isPro: boolean; aiModel: string; dailyCount: number; dailyLimit: number | null; limitReached: boolean }>("/user/plan/");
+    return await apiFetch<UserPlanStatus>("/user/plan/");
   } catch (error) {
     // Unauthenticated users get sensible free-tier defaults; any other
     // failure is a real error and must not be silently swallowed.
@@ -374,6 +472,8 @@ export const getUserPlan = async (): Promise<{ plan: string | null; isPro: boole
         dailyCount: 0,
         dailyLimit: 1,
         limitReached: false,
+        expiresAt: null,
+        lapsedPlan: null,
       };
     }
     throw error;
@@ -448,10 +548,6 @@ export const getLawyers = async (
     ? `?specialization=${encodeURIComponent(specialization)}`
     : "";
   return apiFetch<LawyerProfile[]>(`/lawyers/${qs}`);
-};
-
-export const getLawyerById = async (id: string): Promise<LawyerProfile> => {
-  return apiFetch<LawyerProfile>(`/lawyers/${id}`);
 };
 
 export const contactLawyer = async (

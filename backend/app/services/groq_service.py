@@ -12,7 +12,7 @@ from langsmith import traceable
 
 from app.config import get_settings
 from app.database import get_db
-from app.services.model_selector import FREE_MODEL, select_model
+from app.services.model_selector import free_model, select_model
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +236,7 @@ async def get_user_by_id(user_id: str) -> dict[str, Any] | None:
 
 async def resolve_model(user_id: str | None) -> str:
     if not user_id:
-        return FREE_MODEL
+        return free_model()
     user = await get_user_by_id(user_id)
     return select_model(user)
 
@@ -269,7 +269,7 @@ async def generate_hypothetical_document(
     main analysis/summary calls for the same quota.
     """
     api_key = _get_hyde_api_key()
-    llm = _get_llm(api_key, FREE_MODEL, temperature)
+    llm = _get_llm(api_key, free_model(), temperature)
     lc_messages = _to_lc_messages(
         [
             {"role": "system", "content": _HYDE_SYSTEM_PROMPT},
@@ -297,7 +297,7 @@ async def negotiation_complete(
     higher default temperature suits natural-sounding prose.
     """
     api_key = _get_negotiation_api_key()
-    llm = _get_llm(api_key, FREE_MODEL, temperature)
+    llm = _get_llm(api_key, free_model(), temperature)
     lc_messages = _to_lc_messages(messages)
     return await _invoke_with_retry(llm, lc_messages, _NEGOTIATION_SEMAPHORE)
 

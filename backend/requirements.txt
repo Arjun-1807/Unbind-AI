@@ -21,15 +21,18 @@ motor>=3.3.0
 httpx>=0.27.0
 
 # AI / LLM
-langchain>=0.2.0
+# Only the pieces actually imported. The `langchain` meta-package and
+# `langchain-community` were both listed but never imported — langchain-groq
+# depends on langchain-core, not on either — so they added a large install and
+# a wide transitive surface for nothing.
 langchain-core>=0.2.0
 langchain-groq>=0.1.0
-langchain-community>=0.2.0
 langchain-text-splitters>=0.2.0
 langsmith>=0.1.0
 
-# Embeddings via HuggingFace hosted Inference API — served over HTTP through
-# langchain-community (above) + huggingface_hub, so no local torch/transformers.
+# Embeddings via HuggingFace hosted Inference API, called directly through
+# huggingface_hub's InferenceClient — no local torch/transformers, which is what
+# keeps the deployment small and cold starts fast.
 huggingface_hub>=0.23.0
 
 # Vector search. No vector database: retrieval is always scoped to a single

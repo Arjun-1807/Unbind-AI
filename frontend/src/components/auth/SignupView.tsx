@@ -10,7 +10,6 @@ import BackLink from "../BackLink";
 import ResponsiveGoogleButton from "./ResponsiveGoogleButton";
 
 const SignupView: React.FC = () => {
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -23,10 +22,6 @@ const SignupView: React.FC = () => {
     e.preventDefault();
     setError("");
 
-    if (!username.trim()) {
-      setError("Username is required.");
-      return;
-    }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -45,7 +40,7 @@ const SignupView: React.FC = () => {
     }
 
     try {
-      await signup(username, email, password);
+      await signup(email, password);
       router.push("/dashboard");
     } catch (err) {
       setError(
@@ -78,7 +73,7 @@ const SignupView: React.FC = () => {
       <div className="w-full max-w-3xl mb-4 text-left">
         <BackLink href="/" />
       </div>
-      <div className="w-full max-w-md p-6 sm:p-8 space-y-6 ln-card">
+      <div className="fade-in w-full max-w-md p-6 sm:p-8 space-y-6 ln-card">
         <div className="flex flex-col items-center space-y-1.5">
           <LogoIcon className="h-10 w-10 text-primary" />
           <h2 className="text-2xl sm:text-3xl font-semibold text-center text-ink">
@@ -90,26 +85,6 @@ const SignupView: React.FC = () => {
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label
-              htmlFor="username-signup"
-              className="block text-sm font-medium text-ink-muted"
-            >
-              Username
-            </label>
-            <div className="mt-1">
-              <input
-                id="username-signup"
-                name="username"
-                type="text"
-                autoComplete="username"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="ln-input w-full p-3"
-              />
-            </div>
-          </div>
           <div>
             <label
               htmlFor="email-signup"

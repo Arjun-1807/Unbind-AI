@@ -70,9 +70,16 @@ const FeedbackBanner: React.FC<{ feedback: Feedback }> = ({ feedback }) => (
   </div>
 );
 
+const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+);
+
 const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, updateName } = useAuth();
 
   // ── Password form ──
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -211,6 +218,53 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
   const memberSince = user.createdAt ? formatDate(user.createdAt) : "";
   const initial = user.username.charAt(0).toUpperCase();
 
+  // ── Inline name editing ──
+  // Email signup derives a display name from the address, so for most
+  // accounts this is the only way to set a real one.
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(user.username);
+  const [savingName, setSavingName] = useState(false);
+  const [nameError, setNameError] = useState("");
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+
+  const beginEditName = () => {
+    setNameDraft(user.username);
+    setNameError("");
+    setEditingName(true);
+  };
+
+  const cancelEditName = () => {
+    setEditingName(false);
+    setNameError("");
+  };
+
+  const saveName = async () => {
+    const next = nameDraft.trim();
+    if (!next) {
+      setNameError("Name cannot be empty.");
+      return;
+    }
+    if (next === user.username) {
+      cancelEditName();
+      return;
+    }
+    setSavingName(true);
+    setNameError("");
+    try {
+      await updateName(next);
+      setEditingName(false);
+    } catch (err) {
+      setNameError(err instanceof Error ? err.message : "Could not save that name.");
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  // Focus the field as it opens, so the pencil is a one-click affordance.
+  useEffect(() => {
+    if (editingName) nameInputRef.current?.select();
+  }, [editingName]);
+
   // ── Statistics ──
   const totalAnalyses = analyses.length;
   const totalClauses = analyses.reduce(
@@ -338,9 +392,58 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             <div className="min-w-0">
               <div className="flex items-center justify-center gap-2 sm:justify-start">
                 <UserIcon className="h-5 w-5 text-primary shrink-0" />
-                <h3 className="truncate text-2xl font-semibold text-ink">
-                  {user.username}
-                </h3>
+                {editingName ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void saveName();
+                    }}
+                    className="flex min-w-0 items-center gap-2"
+                  >
+                    <input
+                      ref={nameInputRef}
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") cancelEditName();
+                      }}
+                      maxLength={100}
+                      disabled={savingName}
+                      aria-label="Your name"
+                      className="ln-input min-w-0 max-w-[14rem] px-2 py-1 text-2xl font-semibold"
+                    />
+                    <button
+                      type="submit"
+                      disabled={savingName}
+                      className="ln-btn-primary shrink-0 cursor-pointer px-3 py-1.5 text-xs disabled:opacity-50"
+                    >
+                      {savingName ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditName}
+                      disabled={savingName}
+                      className="ln-btn-secondary shrink-0 cursor-pointer px-3 py-1.5 text-xs disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                ) : (
+                  <>
+                    <h3 className="truncate text-2xl font-semibold text-ink">
+                      {user.username}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={beginEditName}
+                      aria-label="Edit your name"
+                      title="Edit your name"
+                      className="shrink-0 cursor-pointer rounded-md p-1.5 text-ink-subtle transition-colors hover:bg-surface-2 hover:text-ink"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                     isPro
@@ -352,6 +455,14 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                 </span>
               </div>
               <p className="mt-1 truncate text-sm text-ink-subtle">{user.email}</p>
+              {nameError && (
+                <p
+                  role="alert"
+                  className="mt-1.5 text-center text-xs text-danger sm:text-left"
+                >
+                  {nameError}
+                </p>
+              )}
               {memberSince && (
                 <p className="mt-1 flex items-center justify-center gap-1.5 text-xs text-ink-subtle sm:justify-start">
                   <CalendarIcon className="h-3.5 w-3.5" />
@@ -363,7 +474,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
 
           <button
             onClick={handleLogout}
-            className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-hairline px-4 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 sm:w-auto"
+            className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-danger/40 px-4 py-2 text-sm font-medium text-danger transition-colors hover:border-danger/60 hover:bg-danger/10 sm:w-auto"
           >
             <LogOutIcon className="mr-2 h-4 w-4" />
             Logout

@@ -3,12 +3,15 @@ import os
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.auth import clear_auth_cookie
 from app.config import get_settings
 from app.database import close_db, connect_db, ping_db
+from app.routes.admin_routes import router as admin_router
 from app.routes.analysis_routes import router as analysis_router
 from app.routes.auth_routes import router as auth_router
 from app.routes.lawyer_registration_routes import router as lawyer_registration_router
@@ -155,6 +158,37 @@ app.include_router(plan_router, prefix="/api")
 app.include_router(lawyer_router, prefix="/api")
 app.include_router(lawyer_registration_router, prefix="/api")
 app.include_router(reminder_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Default HTTP error response, plus one side effect: a rejected session
+    cookie is cleared.
+
+    ``GET /api/auth/me`` is the session probe — a 401 there means the browser
+    is holding a credential the server will not accept again. Leaving it on
+    disk is not harmless: the frontend's middleware routes on cookie
+    *presence* (it cannot verify a JWT at the edge), so a dead cookie kept
+    sending users to a signed-in route that immediately bounced them back.
+    Clearing it here ends that state at the source, on the one response that
+    proves the credential is dead.
+
+    Deliberately scoped to /auth/me: a 401 from ``/auth/login`` means a wrong
+    password, which says nothing about the validity of any session the browser
+    already holds.
+    """
+    response = JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    if (
+        exc.status_code == 401
+        and request.url.path.rstrip("/").endswith("/auth/me")
+        # Only when one was actually sent. Every signed-out page load calls
+        # this endpoint, and answering each with a Set-Cookie that deletes a
+        # cookie the browser never had is noise on the hot path.
+        and settings.COOKIE_NAME in request.cookies
+    ):
+        clear_auth_cookie(response, request)
+    return response
 
 
 @app.get("/api/health")

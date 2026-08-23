@@ -1,18 +1,64 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { APP_NAME } from "@/constants";
 import { LogoIcon, UserIcon, LogOutIcon, SunIcon, MoonIcon } from "./Icons";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useActiveSection } from "@/hooks/useActiveSection";
+import { LANDING_VIEW_EVENT, type LandingView } from "@/lib/landingView";
 import Link from "next/link";
+
+/* The landing page's own sections, in the order they're scrolled through.
+   Signed-out visitors arrive with no idea what the product does, so the
+   centre of the navbar — which for signed-in users points at the app — is
+   better spent telling them what's further down the page. Kept short on
+   purpose: the page has more sections than this, but a nav that lists every
+   one stops being a summary and starts being a table of contents.
+
+   Order must match document order — useActiveSection breaks ties by position
+   in this array, so a mismatch would highlight the wrong link where two
+   sections overlap the observer band. */
+const LANDING_SECTIONS = [
+  { id: "how-it-works", label: "How it works" },
+  { id: "features", label: "Features" },
+  { id: "pricing", label: "Pricing" },
+  { id: "cli", label: "CLI" },
+  { id: "faq", label: "FAQ" },
+] as const;
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = React.useState(false);
+
+  // The landing page swaps to a lawyer sign-up view in place, which unmounts
+  // every anchored section. Track it so the nav goes with them.
+  const [landingView, setLandingView] = React.useState<LandingView>("clients");
+  React.useEffect(() => {
+    const onView = (e: Event) =>
+      setLandingView((e as CustomEvent<LandingView>).detail);
+    window.addEventListener(LANDING_VIEW_EVENT, onView);
+    return () => window.removeEventListener(LANDING_VIEW_EVENT, onView);
+  }, []);
+
+  // The anchors only exist on the landing route, in its client view; linking
+  // to them from /pricing, /login or the lawyer view would scroll nowhere.
+  const showSections = !user && pathname === "/" && landingView === "clients";
+  const sectionIds = React.useMemo(
+    () => (showSections ? LANDING_SECTIONS.map((s) => s.id) : []),
+    [showSections],
+  );
+  const activeSection = useActiveSection(sectionIds);
+
+  // Close the mobile sheet on navigation — the hash routes don't unmount
+  // anything, so nothing else would.
+  React.useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   const handleReset = () => {
     setMenuOpen(false);
@@ -40,12 +86,42 @@ const Header: React.FC = () => {
           title="Go to Dashboard"
         >
           <LogoIcon className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 text-primary group-hover:text-primary-hover transition-colors" />
-          <h1 className="text-xl sm:text-2xl font-semibold text-ink tracking-tight truncate">
+          {/* Not an <h1>: this renders on every route, so making the wordmark a
+              top-level heading gave each page two competing h1s and pushed the
+              real page heading down the document outline. */}
+          <span className="truncate text-xl font-semibold tracking-tight text-ink sm:text-2xl">
             {APP_NAME}
-          </h1>
+          </span>
         </div>
 
-        {/* ── Zone 2: Center nav — only visible when logged in ── */}
+        {/* ── Zone 2: Center nav ──
+            Same slot, same pill vocabulary in both states: signed-in users get
+            the app link, signed-out visitors get the page's own sections. */}
+        {showSections && (
+          <nav
+            aria-label="Page sections"
+            className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1 rounded-full border border-hairline bg-surface-1 p-1"
+          >
+            {LANDING_SECTIONS.map((section) => {
+              const isActive = activeSection === section.id;
+              return (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  aria-current={isActive ? "true" : undefined}
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 ${
+                    isActive
+                      ? "bg-surface-3 text-ink"
+                      : "text-ink-muted hover:bg-surface-2 hover:text-ink"
+                  }`}
+                >
+                  {section.label}
+                </a>
+              );
+            })}
+          </nav>
+        )}
+
         {user && (
           <nav className="hidden sm:flex absolute left-1/2 -translate-x-1/2">
             <Link
@@ -160,10 +236,66 @@ const Header: React.FC = () => {
             >
               Get started
             </Link>
+            {/* Mobile menu toggle — the only route to the section links once
+                the centre nav drops out below md. */}
+            {showSections && (
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                className="md:hidden inline-flex items-center justify-center h-9 w-9 text-ink-muted bg-surface-1 border border-hairline rounded-md hover:bg-surface-2 transition-colors"
+                aria-label="Menu"
+                aria-expanded={menuOpen}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.8}
+                  stroke="currentColor"
+                  className="h-5 w-5"
+                >
+                  {menuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+                  )}
+                </svg>
+              </button>
+            )}
           </div>
         )}
 
       </div>
+
+      {/* ── Mobile dropdown menu (signed-out landing) ── */}
+      {showSections && menuOpen && (
+        <nav
+          aria-label="Page sections"
+          className="md:hidden mt-3 pt-3 border-t border-hairline flex flex-col gap-1 fade-in"
+        >
+          {LANDING_SECTIONS.map((section) => (
+            <a
+              key={section.id}
+              href={`#${section.id}`}
+              onClick={() => setMenuOpen(false)}
+              aria-current={activeSection === section.id ? "true" : undefined}
+              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                activeSection === section.id
+                  ? "bg-surface-2 text-ink"
+                  : "text-ink-muted hover:bg-surface-1 hover:text-ink"
+              }`}
+            >
+              {section.label}
+            </a>
+          ))}
+          <Link
+            href="/login"
+            onClick={() => setMenuOpen(false)}
+            className="mt-1 sm:hidden inline-flex items-center justify-center px-3 py-2 text-sm ln-btn-secondary"
+          >
+            Sign in
+          </Link>
+        </nav>
+      )}
 
       {/* ── Mobile dropdown menu (logged-in only) ── */}
       {user && menuOpen && (

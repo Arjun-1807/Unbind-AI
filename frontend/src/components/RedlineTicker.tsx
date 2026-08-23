@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 
 const REDLINES: { label: string; before: string; after: string }[] = [
   { label: "Late Payment Penalty", before: "$200/day, compounding, no cap", after: "$50 one-time fee, capped at 1 month's rent" },
@@ -25,7 +24,7 @@ function RedlineChip({ item }: { item: (typeof REDLINES)[number] }) {
       <svg className="h-3 w-3 shrink-0 text-ink-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
       </svg>
-      <span className="text-xs" style={{ color: "#4ade80" }}>
+      <span className="text-xs" style={{ color: "var(--ln-success-bright)" }}>
         {item.after}
       </span>
     </div>
@@ -34,7 +33,7 @@ function RedlineChip({ item }: { item: (typeof REDLINES)[number] }) {
 
 export default function RedlineTicker() {
   return (
-    <section className="py-10 border-t border-hairline">
+    <section className="py-10">
       <p className="mx-auto mb-6 max-w-7xl px-4 text-center text-xs font-medium uppercase tracking-wide text-ink-tertiary sm:px-6 lg:px-8">
         Real redlines, applied automatically
       </p>

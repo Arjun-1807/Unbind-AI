@@ -46,7 +46,7 @@ function MockFrame({
 const RISK = {
   High: { fg: "var(--ln-danger)", bg: "rgba(248,113,113,0.12)" },
   Medium: { fg: "var(--ln-warning)", bg: "rgba(251,191,36,0.12)" },
-  Low: { fg: "#4ade80", bg: "rgba(39,166,68,0.14)" },
+  Low: { fg: "var(--ln-success-bright)", bg: "rgba(39,166,68,0.14)" },
 };
 
 function RiskPill({ level }: { level: keyof typeof RISK }) {
@@ -92,9 +92,9 @@ export function UploadMockup() {
         <span className="text-[9px] text-ink-subtle">PDF, TXT, or MD</span>
         <div
           className="mt-1 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px]"
-          style={{ background: "rgba(39,166,68,0.14)", color: "#4ade80" }}
+          style={{ background: "rgba(39,166,68,0.14)", color: "var(--ln-success-bright)" }}
         >
-          <span className="h-1 w-1 rounded-full" style={{ background: "#4ade80" }} />
+          <span className="h-1 w-1 rounded-full" style={{ background: "var(--ln-success-bright)" }} />
           lease-agreement.pdf
         </div>
       </div>
@@ -168,7 +168,7 @@ export function NegotiationMockup() {
           className="rounded-md p-2"
           style={{ background: "rgba(39,166,68,0.1)", border: "1px solid rgba(39,166,68,0.28)" }}
         >
-          <span className="text-[8px] font-semibold uppercase tracking-wide" style={{ color: "#4ade80" }}>
+          <span className="text-[8px] font-semibold uppercase tracking-wide" style={{ color: "var(--ln-success-bright)" }}>
             AI suggested
           </span>
           <p className="mt-1 text-[9px] leading-relaxed text-ink-muted">

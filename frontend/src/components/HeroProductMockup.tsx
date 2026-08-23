@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 
 /**
  * An interactive mock of the real UnBind analysis UI — rendered from live
@@ -20,7 +20,7 @@ import React, { useState } from "react";
 const RISK_STYLES: Record<string, { label: string; bg: string; fg: string; ring: string }> = {
   High: { label: "High risk", bg: "rgba(239,68,68,0.12)", fg: "#f87171", ring: "rgba(239,68,68,0.35)" },
   Medium: { label: "Medium risk", bg: "rgba(245,158,11,0.12)", fg: "#fbbf24", ring: "rgba(245,158,11,0.35)" },
-  Low: { label: "Low risk", bg: "rgba(39,166,68,0.14)", fg: "#4ade80", ring: "rgba(39,166,68,0.35)" },
+  Low: { label: "Low risk", bg: "rgba(39,166,68,0.14)", fg: "var(--ln-success-bright)", ring: "rgba(39,166,68,0.35)" },
 };
 
 function RiskBadge({ level }: { level: keyof typeof RISK_STYLES }) {

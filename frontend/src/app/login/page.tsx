@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/footer";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import AppLoader from "@/components/AppLoader";
 export default function LoginPage() {
   const { user, authReady } = useAuth();
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function LoginPage() {
     }
   }, [authReady, user, router]);
 
-  if (!authReady || user) return null;
+  if (!authReady || user) return <AppLoader />;
 
   return (
     <div className="min-h-screen font-sans">
