@@ -2,7 +2,7 @@
  * One scroll driver for the whole page.
  *
  * Every scroll-linked effect on the landing page registers here instead of
- * attaching its own listener. That is not tidiness for its own sake — it is
+ * attaching its own listener. That is not tidiness for its own sake; it is
  * the difference between a smooth page and a stuttering one.
  *
  * A component that reads its own `getBoundingClientRect()` and then writes a
@@ -17,9 +17,9 @@
  *
  * Each subscriber receives its progress through two phases:
  *
- *   enter — 0 as the block's top crosses 90% of the viewport height,
+ *   enter:  0 as the block's top crosses 90% of the viewport height,
  *           reaching 1 once it has risen to 30%. This is the reading zone.
- *   exit  — 0 while the block is still comfortably on screen, reaching 1 as
+ *   exit:   0 while the block is still comfortably on screen, reaching 1 as
  *           it clears the top. Blocks animate out as well as in, which is
  *           what makes a long page read as one continuous move rather than a
  *           list of things that pop in once and then sit there.
@@ -57,13 +57,13 @@ function tick() {
   frame = 0;
   const viewportHeight = window.innerHeight;
 
-  // Read phase — every rectangle, before a single style is touched.
+  // Read phase: every rectangle, before a single style is touched.
   const readings: Array<[HTMLElement, Subscriber, SceneProgress]> = [];
   subscribers.forEach((apply, el) => {
     readings.push([el, apply, measure(el, viewportHeight)]);
   });
 
-  // Write phase — no reads from here on, so nothing forces a reflow.
+  // Write phase: no reads from here on, so nothing forces a reflow.
   for (const [el, apply, progress] of readings) apply(progress, el);
 }
 

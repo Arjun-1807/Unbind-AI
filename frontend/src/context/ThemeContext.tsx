@@ -27,8 +27,8 @@ function applyTheme(theme: Theme) {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
 
-  // On mount, read the persisted preference (default to "dark" — the
-  // existing look — rather than following OS preference, so existing
+  // On mount, read the persisted preference (default to "dark", the
+  // existing look, rather than following OS preference, so existing
   // users see no change unless they opt in).
   useEffect(() => {
     const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;

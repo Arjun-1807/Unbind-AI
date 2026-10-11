@@ -7,7 +7,7 @@ import CitedAnswer from "./CitedAnswer";
 import { SparklesIcon } from "./Icons";
 
 interface DocumentChatViewProps {
-  /** Stable analysis id — the conversation is stored against it server-side. */
+  /** Stable analysis id: the conversation is stored against it server-side. */
   analysisId: string;
   onError: (message: string) => void;
   /** Ask the parent to highlight + scroll to a cited passage in the document. */
@@ -16,7 +16,7 @@ interface DocumentChatViewProps {
 
 /**
  * Starter questions, so the empty state isn't a blank box. Deliberately mixes
- * plain questions with "what if" scenarios to show that both work here — the
+ * plain questions with "what if" scenarios to show that both work here: the
  * two used to be separate features and users shouldn't have to wonder.
  */
 const SUGGESTIONS = [
@@ -55,7 +55,7 @@ function SaulAvatar({ className = "h-9 w-9 text-sm" }: { className?: string }) {
   );
 }
 
-/** Shared renderer — the live thread and the history panel show the same shape. */
+/** Shared renderer: the live thread and the history panel show the same shape. */
 function MessageList({
   messages,
   onCitationJump,
@@ -115,7 +115,7 @@ const DocumentChatView: React.FC<DocumentChatViewProps> = ({
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const toggleHistory = useCallback(async () => {
-    // Already fetched — this is now a pure show/hide.
+    // Already fetched. This is now a pure show/hide.
     if (history !== null) {
       setHistoryOpen((open) => !open);
       return;
@@ -127,7 +127,7 @@ const DocumentChatView: React.FC<DocumentChatViewProps> = ({
     try {
       const stored = await api.getDocumentChat(analysisId);
       // The server holds the whole conversation, including anything asked in
-      // this session — those turns are already on screen in the card above, so
+      // this session; those turns are already on screen in the card above, so
       // trim them off the tail rather than showing them twice. Fetched once
       // and kept: "previous conversation" should stay the snapshot it was when
       // opened, not creep forward as the live thread grows.
@@ -244,7 +244,7 @@ const DocumentChatView: React.FC<DocumentChatViewProps> = ({
               <p className="text-sm text-ink-muted">
                 Ask what a clause means, or what would happen in a situation like
                 &quot;what if I move out early?&quot; Every answer cites the exact
-                clauses it came from — click a source to jump to that passage.
+                clauses it came from. Click a source to jump to that passage.
               </p>
               <h4 className="mb-3 mt-5 text-sm font-semibold text-ink">
                 Not sure where to start?
@@ -328,7 +328,7 @@ const DocumentChatView: React.FC<DocumentChatViewProps> = ({
             </div>
             <p className="text-xs text-ink-subtle">
               Answers come only from this document. Saul is a character, not a
-              lawyer — UnBind explains contracts, it isn&apos;t legal advice.
+              lawyer. UnBind explains contracts, it isn&apos;t legal advice.
             </p>
           </form>
         </div>

@@ -38,7 +38,7 @@ function buildMarkdown(analysis) {
     : new Date().toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' });
 
   // ── Title block ──────────────────────────────────────────────────────────
-  lines.push('# UnBind AI — Legal Analysis Report');
+  lines.push('# UnBind AI: Legal Analysis Report');
   lines.push('');
   lines.push(`**Document:** ${fileName ?? 'Unknown'}`);
   lines.push(`**Generated:** ${date}`);
@@ -160,7 +160,7 @@ function buildPlainText(analysis) {
   const subRule = '-'.repeat(60);
 
   lines.push(rule);
-  lines.push('  UNBIND AI — LEGAL ANALYSIS REPORT');
+  lines.push('  UNBIND AI: LEGAL ANALYSIS REPORT');
   lines.push(rule);
   lines.push('');
   lines.push(`  Document : ${fileName ?? 'Unknown'}`);
@@ -297,12 +297,12 @@ export function exportAnalysis(analysis, opts = {}) {
       const cwd = fs.realpathSync(process.cwd());
       // realParent is already symlink-resolved and the basename cannot contain
       // a separator, so this join is what *closes* the symlink escape rather
-      // than opening one — and `target` is only computed here, never used
+      // than opening one, and `target` is only computed here, never used
       // before the containment check below rejects anything outside cwd.
       const target = path.join(realParent, path.basename(resolved)); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       const rel = path.relative(cwd, target);
       // If the real path is outside cwd, reject it. Compare against '..' and
-      // '../' specifically — a plain startsWith('..') would also reject a
+      // '../' specifically; a plain startsWith('..') would also reject a
       // legitimate file named e.g. "..notes.md" inside cwd.
       if (rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) {
         throw new Error('Invalid output path: must be inside the current working directory');
@@ -320,7 +320,7 @@ export function exportAnalysis(analysis, opts = {}) {
     format === 'txt' ? buildPlainText(analysis) : buildMarkdown(analysis);
 
   try {
-    // 0600 — the report embeds the full contract text, so keep it as private
+    // 0600: the report embeds the full contract text, so keep it as private
     // as the session token in config.js rather than at the ambient umask.
     // O_NOFOLLOW (POSIX only) refuses to write through a symlinked report path.
     fs.writeFileSync(outputPath, content, {

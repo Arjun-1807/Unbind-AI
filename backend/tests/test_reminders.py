@@ -101,7 +101,7 @@ def test_due_lead_returns_none_when_everything_arrived_has_been_sent():
 
 
 def test_due_lead_tolerates_an_outage():
-    """If the scheduler was down through both marks, send once — not twice."""
+    """If the scheduler was down through both marks, send once, not twice."""
     assert due_lead(3, [14, 7, 1], []) == 14
 
 
@@ -293,7 +293,7 @@ async def test_sweep_after_an_outage_collapses_missed_leads_into_one_email(
     """Down through the 14- and 7-day marks: one catch-up email, not two.
 
     The 1-day lead hasn't arrived yet at this point, so it still fires normally
-    the following day — that's ordinary operation, not a backlog burst.
+    the following day; that's ordinary operation, not a backlog burst.
     """
     user = seed_user(email="user@example.com")
     uid = str(user["_id"])
@@ -485,7 +485,7 @@ async def test_cannot_set_a_due_date_on_someone_elses_reminder(reminders_db, see
 
 
 async def test_changing_the_date_resets_sent_history(reminders_db, seed_user, sent_mail):
-    """A new deadline is a new deadline — old sends shouldn't suppress it."""
+    """A new deadline is a new deadline; old sends shouldn't suppress it."""
     user = seed_user(email="user@example.com")
     uid = str(user["_id"])
     rid = _seed_reminder(reminders_db, uid, due=TODAY + timedelta(days=7), sent_leads=[14, 7, 1])
@@ -684,7 +684,7 @@ async def test_unsubscribe_with_a_bad_token_is_a_400_page(fake_db):
 
 
 async def test_unsubscribe_post_with_a_bad_token_is_a_400_page(fake_db, seed_user):
-    """The token is re-verified on the POST — the GET having seen a good one
+    """The token is re-verified on the POST; the GET having seen a good one
     proves nothing about this request."""
     user = seed_user(email="user@example.com")
     uid = str(user["_id"])

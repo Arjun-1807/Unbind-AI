@@ -25,7 +25,7 @@ def _require_sweep_secret(request: Request) -> None:
 
     This endpoint sends mail to every user with a due deadline, so it must not be
     callable by anyone who knows the URL. Compared in constant time, and refused
-    outright when unconfigured rather than defaulting to open — an unset secret is
+    outright when unconfigured rather than defaulting to open: an unset secret is
     a misconfiguration, not permission.
     """
     expected = get_settings().REMINDER_SWEEP_SECRET
@@ -37,7 +37,7 @@ def _require_sweep_secret(request: Request) -> None:
     provided = request.headers.get("x-reminder-secret", "")
     # Compared as bytes, not str: Starlette decodes headers as latin-1, so a
     # header carrying a non-ASCII byte yields a str that compare_digest refuses
-    # with TypeError — which would turn this clean 401 into a 500 for any
+    # with TypeError, which would turn this clean 401 into a 500 for any
     # unauthenticated caller who sends one.
     if not hmac.compare_digest(provided.encode("latin-1", "ignore"), expected.encode()):
         raise HTTPException(status_code=401, detail="Invalid sweep credentials")
@@ -136,7 +136,7 @@ async def set_reminder_due_date(reminder_id: str, body: ReminderDueDateRequest, 
 
 @router.get("/unsubscribe", response_class=HTMLResponse)
 async def unsubscribe(token: str = Query(...)):
-    """Confirmation page for the opt-out link in the email — no login required.
+    """Confirmation page for the opt-out link in the email, no login required.
 
     Deliberately changes NOTHING. A GET is followed by things that are not the
     recipient: link prefetchers, mail-client and antivirus URL scanners,
@@ -166,7 +166,7 @@ async def confirm_unsubscribe(token: str = Form(...)):
     """Actually opt the user out. Submitted by the button on the page above.
 
     The signed, purpose-scoped token is the whole authorization: there is no
-    session cookie in play, so the Origin check adds nothing here — anyone able
+    session cookie in play, so the Origin check adds nothing here: anyone able
     to forge this request already holds the token, and holding the token *is*
     the permission. It passes that check anyway, because the confirmation page
     is served from FRONTEND_URL (see ``reminder_service.build_unsubscribe_url``)
@@ -211,7 +211,7 @@ def _page(title: str, message: str, confirm_token: str | None = None) -> str:
     frontend = get_settings().FRONTEND_URL.rstrip("/")
     # An empty action posts back to this very URL, which is what keeps the page
     # working behind the frontend's /api proxy without having to know the
-    # deployed path. The token is escaped even though a JWT is base64url only —
+    # deployed path. The token is escaped even though a JWT is base64url only;
     # it arrived from the client, so it is never interpolated raw.
     action = ""
     if confirm_token is not None:

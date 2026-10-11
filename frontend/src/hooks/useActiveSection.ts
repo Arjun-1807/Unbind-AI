@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
  * The observer's `rootMargin` collapses the viewport down to a thin band just
  * below the sticky header. Watching the whole viewport instead would keep
  * three sections "visible" at once on a tall screen and make the highlight
- * jitter between them; a band answers the question the nav actually asks —
+ * jitter between them; a band answers the question the nav actually asks:
  * what is under the header right now.
  *
  * Ties are broken by position in `ids` rather than by intersection ratio: the

@@ -56,7 +56,7 @@ async def test_non_admin_cannot_list_registrations(override_settings, seed_user)
             _authed_request(override_settings, str(user["_id"]))
         )
 
-    # 404, not 403 — the surface doesn't confirm it exists to a stranger.
+    # 404, not 403: the surface doesn't confirm it exists to a stranger.
     assert exc.value.status_code == 404
 
 
@@ -86,7 +86,7 @@ async def test_admin_verifying_a_lawyer_makes_them_visible_to_a_verdict_user(
     admin = seed_user(isAdmin=True)
     lawyer = _seed_lawyer(db)
 
-    # A Verdict subscriber sees nothing while the registration is unverified —
+    # A Verdict subscriber sees nothing while the registration is unverified:
     # this is the bug the back-office exists to fix.
     subscriber = seed_user(plan="Verdict")
     subscriber_req = _authed_request(override_settings, str(subscriber["_id"]))

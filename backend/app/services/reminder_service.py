@@ -1,7 +1,7 @@
 """Deadline reminders: generate them from an analysis, then email when due.
 
 Turns UnbindAI from a one-shot tool into something that keeps working after the
-user closes the tab — the contract said "give 60 days notice" and six months
+user closes the tab: the contract said "give 60 days notice" and six months
 later nobody remembers.
 
 Three properties drive the design:
@@ -13,7 +13,7 @@ Three properties drive the design:
 2. **Never double-send.** The sweep runs from an external scheduler, so it can
    fire twice, or not at all for days. Each reminder records which lead times it
    has already emailed, and the sweep is driven by that record rather than by
-   "did today's job run" — so a retry sends nothing and a missed week still
+   "did today's job run", so a retry sends nothing and a missed week still
    sends once, late, instead of never.
 3. **Never send unwanted mail.** Every digest carries a working one-click
    unsubscribe, and an opted-out user is filtered before any mail is built.
@@ -134,7 +134,7 @@ async def generate_for_analysis(
         try:
             await db[COLLECTION].insert_one(doc)
         except DuplicateKeyError:
-            # Already generated for this analysis — the row exists, so it still
+            # Already generated for this analysis; the row exists, so it still
             # counts as scheduled: a re-run reports the same totals as the first.
             counts[bucket] += 1
             continue
@@ -246,7 +246,7 @@ async def _collect_due(today: date) -> dict[str, list[dict[str, Any]]]:
     # asked for 90 days notice must be loaded 90 days out, and the horizon is
     # computed before we know whose reminders these are. Reading the actual
     # per-user maxima would mean a scan of `users` on every sweep to shave a
-    # window that is already tiny — reminders are one row per contract deadline,
+    # window that is already tiny: reminders are one row per contract deadline,
     # bounded by MAX_REMINDERS_PER_ANALYSIS, and `due_lead` below still does the
     # real per-user filtering. The index on dueDate makes the wider range cost
     # the same lookup, just a few more rows.
@@ -378,7 +378,7 @@ UNSUBSCRIBE_TOKEN_TTL_DAYS = 90
 
 
 def _unsubscribe_signing_key() -> str:
-    """Signing key for unsubscribe tokens, derived from — but not equal to — JWT_SECRET.
+    """Signing key for unsubscribe tokens, derived from, but not equal to, JWT_SECRET.
 
     These tokens ride in an email URL query string, so they leak into proxy
     logs, mail archives and referrers. Using a distinct key makes it
@@ -424,8 +424,8 @@ def build_unsubscribe_token(user_id: str) -> str:
 def read_unsubscribe_token(token: str) -> str | None:
     """Return the user id from an unsubscribe token, or None if it isn't one.
 
-    None covers every rejection reason — wrong key, wrong purpose, expired,
-    malformed — because the caller renders the same "link isn't valid" page for
+    None covers every rejection reason (wrong key, wrong purpose, expired,
+    malformed) because the caller renders the same "link isn't valid" page for
     all of them and shouldn't leak which.
     """
     from jose import JWTError, jwt

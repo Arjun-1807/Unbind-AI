@@ -36,7 +36,7 @@ const DWELL_VH = 60;
  * * One rAF-coalesced scroll listener for the whole section.
  * * The continuous value (0→1 progress) is written straight to a CSS
  *   variable on the rail. React never re-renders on it.
- * * `setState` fires only when the *stage index* changes — three times over
+ * * `setState` fires only when the *stage index* changes: three times over
  *   the section, not sixty times a second.
  * * The rail beam and its travelling head are both pure `transform`s driven
  *   by that one variable, so scrolling costs a compositor transform and
@@ -45,7 +45,7 @@ const DWELL_VH = 60;
  *   find-in-page all behave exactly as they would on a static page.
  *
  * Below `md`, and whenever reduced motion is requested, the pin is dropped
- * entirely for a plain stacked list — the stages are taller than a phone
+ * entirely for a plain stacked list: the stages are taller than a phone
  * viewport, so pinning there would clip content rather than reveal it.
  */
 export default function HowItWorksPipeline({ stages }: { stages: PipelineStage[] }) {
@@ -84,8 +84,8 @@ export default function HowItWorksPipeline({ stages }: { stages: PipelineStage[]
   /**
    * `.reveal` is only safe in the stacked branch. The pinned branch mounts
    * *after* first paint (useMediaQuery reports false during SSR, then flips),
-   * and the page-level reveal observer has already finished its scan by then
-   * — so a `.reveal` node appearing here would never be observed and would
+   * and the page-level reveal observer has already finished its scan by then,
+   * so a `.reveal` node appearing here would never be observed and would
    * sit at opacity 0 forever. The pinned heading is on screen the moment the
    * section is reached anyway, so it needs no entrance of its own.
    */
@@ -193,7 +193,7 @@ export default function HowItWorksPipeline({ stages }: { stages: PipelineStage[]
             >
               {/* Sized against viewport height as well as width. The layers
                   are absolutely stacked so they cross-dissolve in place, which
-                  means they cannot grow the frame — the frame has to be at
+                  means they cannot grow the frame; the frame has to be at
                   least as tall as the tallest artwork or the panel's
                   overflow:hidden would crop it. Tying both dimensions to vh
                   keeps that relationship true on every screen instead of only

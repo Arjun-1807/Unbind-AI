@@ -11,7 +11,7 @@ interface BackLinkProps {
 }
 
 /**
- * Consistent "go back" affordance used across app pages — an icon chip with
+ * Consistent "go back" affordance used across app pages: an icon chip with
  * a chevron plus label, replacing the old plain-text "&larr; Back" links.
  * Pass either `href` (renders a Link) or `onClick` (renders a button).
  */

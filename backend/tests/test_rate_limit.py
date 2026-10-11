@@ -1,7 +1,7 @@
 """Tests for the two throttles: per-plan daily quotas and the HTTP rate limiter.
 
-The quota tests (app.services.quota_service) assert on observable state — the
-counter stored on the user document — rather than on the shape of the update
+The quota tests (app.services.quota_service) assert on observable state (the
+counter stored on the user document) rather than on the shape of the update
 calls, so the accounting can change implementation without the tests needing to.
 
 The rate-limiter tests (app.security_middleware) live here too because they
@@ -191,7 +191,7 @@ async def test_release_after_midnight_does_not_touch_tomorrows_counter(seed_user
 # Refunding is necessary (a user shouldn't lose their day to our outage) but on
 # its own it is a hole: every refund reopens the gate, so a caller that fails
 # after the LLM has been billed can loop forever. The attempt counter is the
-# backstop — it is never handed back, so the loop is bounded regardless.
+# backstop: it is never handed back, so the loop is bounded regardless.
 
 
 @pytest.mark.parametrize("plan,limit", [(None, 1), ("Brief", 3), ("Motion", 5)])
@@ -390,7 +390,7 @@ def test_client_ip_falls_back_to_the_socket_peer_without_the_header():
 
 
 def test_client_ip_falls_back_when_the_header_is_shorter_than_the_proxy_chain(monkeypatch):
-    """Too few entries means the request skipped a hop — trust the peer, not it."""
+    """Too few entries means the request skipped a hop; trust the peer, not it."""
     monkeypatch.setattr(security_middleware, "TRUSTED_PROXY_HOPS", 2)
     assert security_middleware.client_ip(_request({"X-Forwarded-For": "1.2.3.4"})) == "10.0.0.9"
 
@@ -430,7 +430,7 @@ def _limited_client(rules) -> TestClient:
 def test_rotating_x_forwarded_for_no_longer_buys_a_fresh_bucket():
     """The bug this encodes: one attacker, one bucket, however they spoof.
 
-    Before the fix client_ip() took parts[0] — fully attacker-chosen — so each
+    Before the fix client_ip() took parts[0], fully attacker-chosen, so each
     request below landed in its own bucket and the 3/hour limit never fired.
 
     The header is built the way the wire actually delivers it: the attacker's

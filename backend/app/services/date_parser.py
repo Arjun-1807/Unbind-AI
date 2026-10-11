@@ -11,13 +11,13 @@ contracts actually express deadlines. Only some of those are calendar dates:
     "01/02/2026"                      → ambiguous (1 Feb or 2 Jan?)
 
 **This module never guesses.** A wrong reminder date on a legal deadline is worse
-than no reminder — the user relies on it and misses the real one. So anything not
+than no reminder: the user relies on it and misses the real one. So anything not
 unambiguously resolvable is returned as unschedulable *with a reason*, which the
 UI shows as "needs a date from you" rather than silently dropping it.
 
 Deliberately deterministic: no LLM call. A second model pass per analysis would
-cost tokens, vary between runs, and be far harder to test than the regexes below
-— and it would still have to refuse the genuinely ambiguous cases.
+cost tokens, vary between runs, and be far harder to test than the regexes below,
+and it would still have to refuse the genuinely ambiguous cases.
 """
 
 import re
@@ -80,7 +80,7 @@ _CONDITIONAL_MARKERS = re.compile(
 # fixed date ("due 31 December 2026 if the work is accepted"). Treating those as
 # conditional dropped a schedulable deadline the user could never recover, since
 # CONDITIONAL isn't offered for correction. So these are checked only after
-# absolute extraction fails — a real date always wins over them.
+# absolute extraction fails; a real date always wins over them.
 _WEAK_CONDITIONAL_MARKERS = re.compile(r"\b(?:when|if)\s", re.I)
 
 # ── Absolute date patterns ───────────────────────────────────────────────────
@@ -108,7 +108,7 @@ class ResolvedDate:
         """True when a human could supply the missing piece.
 
         Distinguishes "we can't work this out, but you could tell us" from
-        "no date exists here at all" — the UI prompts for the former.
+        "no date exists here at all"; the UI prompts for the former.
         """
         return self.reason in (RELATIVE, RECURRING, AMBIGUOUS)
 
@@ -181,7 +181,7 @@ def resolve_key_date(raw: str, *, today: date | None = None) -> ResolvedDate:
         # Only now do bare "if"/"when" decide it: no date was found, so the
         # clause really is all there is. Reported as conditional rather than
         # unparseable so the UI says "no date exists here", not "we failed".
-        # An AMBIGUOUS reason keeps priority — there a date *is* present and the
+        # An AMBIGUOUS reason keeps priority: there a date *is* present and the
         # user can disambiguate it, which conditional would deny them.
         if reason != AMBIGUOUS and _WEAK_CONDITIONAL_MARKERS.search(text):
             return ResolvedDate(False, reason=CONDITIONAL)

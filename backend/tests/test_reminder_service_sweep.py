@@ -191,7 +191,7 @@ async def test_a_failed_reminder_is_never_swept(monkeypatch, reminders_db, seed_
 async def test_counts_survive_a_re_run(reminders_db):
     """Re-running an analysis reports the same totals, not zeros.
 
-    The duplicate-key path means "already stored", so it still counts —
+    The duplicate-key path means "already stored", so it still counts;
     otherwise a re-analysis would tell the user nothing was scheduled.
     """
     key_dates = [

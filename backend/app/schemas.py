@@ -28,7 +28,7 @@ MAX_PASSWORD_LENGTH = 72
 # ---------- Auth ----------
 class SignupRequest(BaseModel):
     # Optional. The web signup form no longer asks for a display name, so the
-    # route derives one from the email address — the same fallback the Google
+    # route derives one from the email address, the same fallback the Google
     # sign-in path already uses, so both routes name accounts identically. The
     # CLI still prompts for one, and anything supplied here wins.
     username: str | None = Field(default=None, max_length=100)

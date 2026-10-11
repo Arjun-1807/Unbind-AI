@@ -1,10 +1,10 @@
-"""Signup no longer collects a display name — the server must derive one.
+"""Signup no longer collects a display name; the server must derive one.
 
 The web form dropped its username field, so `SignupRequest.username` became
 optional. That makes two things worth pinning: an account created without one
 still gets a sensible, non-empty name (there is no endpoint to rename an
-account later, so whatever lands here is permanent), and the CLI — which still
-prompts for a name — keeps having its value respected.
+account later, so whatever lands here is permanent), and the CLI, which still
+prompts for a name, keeps having its value respected.
 
 Goes through the real ASGI stack for the same reason as the cookie suite, and
 likewise skips the lifespan so `connect_db()` never touches a real cluster.
@@ -60,6 +60,6 @@ def test_the_response_returns_the_derived_name_rather_than_null(override_setting
     res = _signup(email="stored@example.com")
     assert res.status_code == 200, res.text
     # The response used to echo body.username, which is now None when the
-    # form omits it — handing the client a user with no display name while the
+    # form omits it, handing the client a user with no display name while the
     # stored document was fine. That divergence is what this guards.
     assert res.json()["username"] == "stored"

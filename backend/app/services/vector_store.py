@@ -1,14 +1,14 @@
 """Persistent per-analysis embedding index with exact similarity search.
 
 **Why there is no vector database here.** Retrieval in this product is always
-scoped to a *single* contract — we never search across a corpus. One document is
+scoped to a *single* contract; we never search across a corpus. One document is
 tens to a few hundred chunks of 384-dim vectors, so an exact brute-force cosine
 scan in numpy costs microseconds: less than the network round-trip to an external
 index would, and *exact* rather than approximate. A dedicated vector service
 (Chroma Cloud, Atlas Vector Search) would add cost, an operational dependency,
 and approximation to solve a problem at a scale that doesn't have it.
 
-What matters for performance is not the search — it's the *embedding*. Building
+What matters for performance is not the search; it's the *embedding*. Building
 the index means one API call per chunk, which is why it is done once per analysis
 and reused. The previous implementation rebuilt an ephemeral index on every
 question, so asking five questions about one contract embedded it five times.
@@ -39,7 +39,7 @@ CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
 
 # Hard ceiling on chunks per document. At 1000 chars/chunk this covers ~800k
-# characters — beyond the 600k input cap — so it should never bind in practice.
+# characters (beyond the 600k input cap), so it should never bind in practice.
 # It exists so a pathological document can't drive unbounded embedding calls.
 MAX_CHUNKS = 800
 
@@ -119,8 +119,8 @@ async def get_or_build_index(
 ) -> dict[str, Any] | None:
     """Return the stored index, building it on first use.
 
-    Lazy rather than eager so analyses created before this feature existed — and
-    any whose indexing failed — work on their next question instead of needing a
+    Lazy rather than eager so analyses created before this feature existed (and
+    any whose indexing failed) work on their next question instead of needing a
     migration. A model change also invalidates: a record embedded with a
     different model is rebuilt rather than silently compared across vector
     spaces, which would return confident nonsense.
@@ -142,7 +142,7 @@ def search_index(index: dict[str, Any], query_vector: list[float], k: int) -> li
     """Return the ``k`` chunks most similar to ``query_vector``, best first.
 
     Exact cosine similarity. Stored vectors are pre-normalised, so this is a
-    single matrix-vector product plus a partial sort — microseconds for any
+    single matrix-vector product plus a partial sort: microseconds for any
     document this product accepts. Synchronous because at this size the work is
     genuinely negligible; there is nothing worth handing to a thread.
     """
@@ -205,7 +205,7 @@ async def delete_index(analysis_id: str, user_id: str) -> None:
     """Drop a document's vectors. Best-effort: called when an analysis is deleted.
 
     A failure here leaves orphaned vectors, which is wasted storage but not a
-    correctness problem — every read is scoped by analysisId, so orphans are
+    correctness problem: every read is scoped by analysisId, so orphans are
     unreachable. Not worth failing the user's delete over.
     """
     try:
@@ -224,7 +224,7 @@ async def keyword_fallback(document_text: str, query_text: str, k: int = 6) -> l
 
     Returns [] when no query word matches anything. It used to hand back "the
     first k chunks", which the answering prompt then presents as *the relevant
-    excerpts* — so a question the document is silent on came back confidently
+    excerpts*, so a question the document is silent on came back confidently
     cited to whatever happens to be on page one. No match is information; the
     caller turns it into "I couldn't find anything about this".
     """

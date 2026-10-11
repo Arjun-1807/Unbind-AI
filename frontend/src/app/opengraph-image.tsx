@@ -5,7 +5,7 @@ import { SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 // deploy rather than a static asset somebody has to remember to re-export when
 // the wording changes. Palette matches globals.css (canvas #010102, accent
 // #5e6ad2).
-export const alt = `${SITE_NAME} — ${SITE_TAGLINE}`;
+export const alt = `${SITE_NAME}: ${SITE_TAGLINE}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

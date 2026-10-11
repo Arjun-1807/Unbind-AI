@@ -5,7 +5,7 @@ Run as a deploy step, not on boot::
     python -m app.scripts.ensure_indexes
 
 Index creation moved out of ``connect_db`` because on serverless it ran on
-every cold start — ten round-trips to Atlas before the first request could be
+every cold start: ten round-trips to Atlas before the first request could be
 served, measured at ~11s against production. It belongs here: once per deploy,
 where a failure is a deploy failure rather than a user-facing timeout.
 

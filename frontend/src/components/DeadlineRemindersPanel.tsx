@@ -16,7 +16,7 @@ interface DeadlineRemindersPanelProps {
  * "this depends on your signing date" tells the user exactly what to supply.
  */
 const REASON_COPY: Record<ReminderReason, string> = {
-  relative: "Counted from another date — tell us when that was.",
+  relative: "Counted from another date. Tell us when that was.",
   recurring: "This repeats. Set the next date you want to be reminded about.",
   ambiguous: "This date could be read two ways, so we didn't guess.",
   conditional: "Depends on something happening, so there's no fixed date.",
@@ -106,8 +106,8 @@ const DeadlineRemindersPanel: React.FC<DeadlineRemindersPanelProps> = ({
         <ul className="space-y-1.5 text-sm">
           {scheduled.map((r) => (
             <li key={r.id} className="flex flex-wrap gap-x-2 text-ink-muted">
-              <span className="font-medium text-ink">{r.dueDate}</span>
-              <span className="break-words">— {r.description}</span>
+              <span className="font-medium text-ink">{r.dueDate}:</span>
+              <span className="break-words">{r.description}</span>
             </li>
           ))}
         </ul>
@@ -119,10 +119,10 @@ const DeadlineRemindersPanel: React.FC<DeadlineRemindersPanelProps> = ({
             <strong>
               {needsAttention.length}{" "}
               {needsAttention.length === 1 ? "date needs" : "dates need"} your
-              input
+              input.
             </strong>{" "}
             <span className="text-ink-muted">
-              — we don&apos;t guess deadlines, because a wrong reminder is worse
+              We don&apos;t guess deadlines, because a wrong reminder is worse
               than none.
             </span>
           </p>

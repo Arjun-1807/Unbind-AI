@@ -94,7 +94,7 @@ const STAGES: PipelineStage[] = [
   {
     label: "Ingest",
     title: "Upload or photograph the contract",
-    desc: "Drag in a PDF or DOCX — or snap a photo of a paper contract and vision AI reads the text straight off the image.",
+    desc: "Drag in a PDF or DOCX, or snap a photo of a paper contract and vision AI reads the text straight off the image.",
     meta: "PDF · DOCX · TXT · JPG · PNG",
     readout: "rental-agreement.pdf → text extracted",
     visual: <UploadMockup />,
@@ -141,7 +141,7 @@ const PILLARS = [
     body:
       "Knowing a clause is bad is only half of it. For every risky term UnBind drafts a fairer replacement, then turns the changes you pick into a polite message ready to paste into an email.",
     points: [
-      "A suggested rewrite for every risky clause — keep it, take the AI's, or write your own",
+      "A suggested rewrite for every risky clause: keep it, take the AI's, or write your own",
       "Choose your points, tone and format; get a ready-to-send message",
       "Ask “what if I leave early?” and get an answer cited to the contract",
     ],
@@ -151,7 +151,7 @@ const PILLARS = [
     eyebrow: "Finish",
     title: "Leave with something you can use",
     body:
-      "Export the full analysis as a formatted PDF, or export the contract itself with your negotiated changes applied — ready to send back. Deadlines go straight to your calendar.",
+      "Export the full analysis as a formatted PDF, or export the contract itself with your negotiated changes applied, ready to send back. Deadlines go straight to your calendar.",
     points: [
       "Full analysis as a formatted PDF report",
       "Modified contract export with your clause changes applied",
@@ -215,7 +215,7 @@ const FAQS: FaqItem[] = [
     a: (
       <>
         No. UnBind is not a law firm and is not a substitute for legal counsel. It is
-        built to make a contract legible — so you understand what you are agreeing to,
+        built to make a contract legible, so you understand what you are agreeing to,
         spot the terms worth arguing about, and walk into a conversation with a lawyer
         knowing which clause to point at. For anything high-stakes, get a lawyer.
         Verdict plan users can find one through the referral directory.
@@ -227,14 +227,14 @@ const FAQS: FaqItem[] = [
     a: (
       <>
         To produce the analysis, the text of your document is sent to Groq, a
-        third-party AI inference provider — there is currently no way to run the
+        third-party AI inference provider. There is currently no way to run the
         analysis without it. Photos and scans are additionally sent to a vision model
         for text recognition. Your documents and their analyses are stored so you can
         revisit them from your dashboard. The{" "}
         <Link href="/privacy#ai-processing" className="text-primary underline underline-offset-2 hover:text-primary-hover">
           Privacy Policy
         </Link>{" "}
-        spells out every one of these flows in detail — it is worth two minutes before
+        spells out every one of these flows in detail. It is worth two minutes before
         you upload anything sensitive.
       </>
     ),
@@ -244,7 +244,7 @@ const FAQS: FaqItem[] = [
     a: (
       <>
         PDF, DOCX, TXT and Markdown files, plus photographs and scans (JPG, PNG, WEBP,
-        TIFF, BMP) — a phone snap of a paper contract works, because vision AI reads
+        TIFF, BMP). A phone snap of a paper contract works, because vision AI reads
         the text off the image first.
       </>
     ),
@@ -264,7 +264,7 @@ const FAQS: FaqItem[] = [
     q: "Is the free tier really free?",
     a: (
       <>
-        Yes — one full analysis and ten follow-up questions every day, no card. Paid
+        Yes, one full analysis and ten follow-up questions every day, no card. Paid
         plans exist for people who need more throughput, deeper analysis, or the
         lawyer directory.
       </>
@@ -274,7 +274,7 @@ const FAQS: FaqItem[] = [
     q: "Do paid plans auto-renew?",
     a: (
       <>
-        No. Brief and Motion are fixed one-month terms that simply expire — nothing
+        No. Brief and Motion are fixed one-month terms that simply expire. Nothing
         recurring is charged. Verdict is a single one-time payment for lifetime access.
         Payments are handled by Razorpay.
       </>
@@ -355,7 +355,7 @@ const LandingPage: React.FC = () => {
   return (
     <>
       {/* Both are position: fixed, so they must sit OUTSIDE the .fade-in
-          wrapper — a transformed ancestor retargets fixed descendants to
+          wrapper: a transformed ancestor retargets fixed descendants to
           itself, which would make the backdrop scroll away with the page and
           strand the progress bar at the top of the document. */}
       <AmbientBackdrop />
@@ -393,7 +393,7 @@ const LandingPage: React.FC = () => {
             style={{ ["--i" as string]: 2 }}
           >
             Upload a contract and know exactly what you are signing. Every risky clause
-            found, scored, explained in plain English — and rewritten into words you
+            found, scored, explained in plain English, and rewritten into words you
             can send back.
           </p>
 
@@ -425,11 +425,11 @@ const LandingPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Product UI as protagonist — live components, not a screenshot, so a
+        {/* Product UI as protagonist: live components, not a screenshot, so a
             visitor can click through the clauses. The tilt is pointer-only and
             deliberately shallow; it should register as depth, not as a toy. */}
         {/* Full-bleed but inset a few pixels from the viewport edge, the way
-            the reference site frames its hero media — the artwork reads as a
+            the reference site frames its hero media; the artwork reads as a
             pane set into the page rather than another item in the text column. */}
         <div className="relative mt-14 px-3 sm:mt-16 sm:px-5">
           <div className="rise-in" style={{ ["--i" as string]: 5 }}>
@@ -466,7 +466,7 @@ const LandingPage: React.FC = () => {
             as="p"
             className="t-lead mt-8 max-w-xl text-ink-subtle"
             feather={10}
-            text="It was written to be agreed to. UnBind reads it instead — in about two minutes — and tells you which sentences are going to cost you."
+            text="It was written to be agreed to. UnBind reads it instead, in about two minutes, and tells you which sentences are going to cost you."
           />
         </div>
       </section>
@@ -663,7 +663,7 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── CLI — a Verdict perk, sized like one ─────────────────────── */}
+      {/* ── CLI: a Verdict perk, sized like one ──────────────────────── */}
       <section id="cli" className="ln-section scroll-mt-16">
         <div className="ln-shell">
           <ScrollScene className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
@@ -676,7 +676,7 @@ const LandingPage: React.FC = () => {
                 Analyse contracts from your terminal
               </h2>
               <p className="mt-4 text-base leading-relaxed text-ink-subtle">
-                No browser needed. Install the CLI and get a full interactive REPL —
+                No browser needed. Install the CLI and get a full interactive REPL,
                 the same analysis as the web app, piped into your workflow.
               </p>
               <div className="mt-6 space-y-3">
@@ -771,7 +771,7 @@ const LandingPage: React.FC = () => {
             Let justice be done though the heavens fall
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-base text-ink-subtle sm:text-lg">
-            Get started free — no credit card required. Analyse your first contract in
+            Get started free, no credit card required. Analyse your first contract in
             under two minutes.
           </p>
 

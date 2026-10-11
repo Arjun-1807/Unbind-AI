@@ -13,7 +13,7 @@ import ora from 'ora';
 const accent = chalk.hex('#5C6BC0');
 
 // ─── Banner ───────────────────────────────────────────────────────────────────
-// Scales of Justice — balanced beam with two hanging pans, a central pillar,
+// Scales of Justice: balanced beam with two hanging pans, a central pillar,
 // and a solid base. Coral on the beam & pans; dim on the pillar & base.
 // Wordmark sits flush to the right, vertically centred on rows 1–4.
 //
@@ -27,8 +27,8 @@ const accent = chalk.hex('#5C6BC0');
 //      ╚═════╝
 
 export function printBanner(version = '1.0.5') {
-  const c = accent;       // coral — beam, chains, pans
-  const d = chalk.dim;    // dim   — pillar, base
+  const c = accent;       // coral: beam, chains, pans
+  const d = chalk.dim;    // dim:   pillar, base
 
   //  col:  0         1         2
   //        0123456789012345678901
@@ -202,7 +202,7 @@ export function createSpinner(text) {
 }
 
 // ─── Risk helpers ─────────────────────────────────────────────────────────────
-// Text-colour only — no background badges. Risk is a coloured dot + label.
+// Text-colour only: no background badges. Risk is a coloured dot + label.
 
 const RISK_STYLES = {
   High:       { color: chalk.red,        symbol: '●' },
@@ -287,7 +287,7 @@ function sectionHeader(title) {
 // ─── View renderers ───────────────────────────────────────────────────────────
 
 /**
- * Summary — plain indented prose block.
+ * Summary: plain indented prose block.
  */
 export function printSummary(analysisResult) {
   sectionHeader('Summary');
@@ -324,7 +324,7 @@ export function printPlainEnglish(analysisResult) {
 }
 
 /**
- * Clauses — full detail view.
+ * Clauses: full detail view.
  * Compact block per clause; no box-drawing separators.
  */
 export function printClauses(analysisResult) {
@@ -347,26 +347,26 @@ export function printClauses(analysisResult) {
       `  ${chalk.dim('Clause ' + String(i + 1).padStart(2, '0'))}  ${badge}`
     );
 
-    // Original clause text — dim, truncated
+    // Original clause text: dim, truncated
     if (clause.clauseText) {
       console.log(
         colorWrap(truncate(clause.clauseText, 160), 76, '    ', chalk.dim)
       );
     }
 
-    // Plain-English explanation — risk colour
+    // Plain-English explanation: risk colour
     if (clause.simplifiedExplanation) {
       console.log(colorWrap(clause.simplifiedExplanation, 76, '    ', colorFn));
     }
 
-    // Risk reason — yellow
+    // Risk reason: yellow
     if (isRisky && clause.riskReason) {
       console.log(
         colorWrap('⚠  ' + clause.riskReason, 76, '    ', chalk.yellow)
       );
     }
 
-    // Negotiation suggestion — green
+    // Negotiation suggestion: green
     if (
       isRisky &&
       clause.negotiationSuggestion &&
@@ -413,17 +413,17 @@ export function printAIResponse(result) {
 // ─── Status helpers ───────────────────────────────────────────────────────────
 // All three mirror Claude Code's left-margin marker convention.
 
-/** "  ✔  message" — success */
+/** "  ✔  message": success */
 export function printSuccess(msg) {
   console.log(`  ${chalk.green('✔')}  ${chalk.white(msg)}`);
 }
 
-/** "  ✘  message" — error */
+/** "  ✘  message": error */
 export function printError(msg) {
   console.log(`  ${chalk.red('✘')}  ${chalk.white(msg)}`);
 }
 
-/** "  ›  message" — informational / prompt */
+/** "  ›  message": informational / prompt */
 export function printInfo(msg) {
   console.log(`  ${accent('›')}  ${chalk.white(msg)}`);
 }

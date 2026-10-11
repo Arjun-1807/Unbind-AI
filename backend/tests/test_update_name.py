@@ -1,7 +1,7 @@
 """Renaming an account.
 
-Email signup no longer collects a display name — the server derives one from
-the address — so this endpoint is the only way to change it. Without it the
+Email signup no longer collects a display name (the server derives one from
+the address), so this endpoint is the only way to change it. Without it the
 derived name is permanent, which is why it exists at all.
 
 Goes through the real ASGI stack, skipping the lifespan so `connect_db()`

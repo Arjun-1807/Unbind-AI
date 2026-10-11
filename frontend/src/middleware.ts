@@ -12,7 +12,7 @@ const SESSION_COOKIE = "unbind_token";
  *
  * The client-side guard in `app/page.tsx` cannot do this job on its own. It has
  * to wait for `/auth/me` before it knows who the visitor is, so the first paint
- * for *everyone* — including Googlebot and every social-link scraper — is a
+ * for *everyone*, including Googlebot and every social-link scraper, is a
  * loader, not the marketing page. That is the worst possible thing to serve on
  * the one route whose entire purpose is being found and read.
  *
@@ -20,7 +20,7 @@ const SESSION_COOKIE = "unbind_token";
  * with no session gets the real landing HTML immediately, and a request with
  * one is redirected without ever painting.
  *
- * Cookie *presence* is not proof of validity — an expired or forged token still
+ * Cookie *presence* is not proof of validity: an expired or forged token still
  * looks like a cookie from here, and this middleware deliberately does not
  * verify it (that would need the JWT secret in the edge runtime). It is a
  * routing hint only. `/dashboard` still runs the real check and bounces back if

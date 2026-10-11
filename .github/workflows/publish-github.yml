@@ -26,8 +26,8 @@ jobs:
 
       # `npm ci` installs exactly the tree in cli/package-lock.json. `npm install`
       # re-resolves ranges at build time, so the artifact published to the registry
-      # could contain dependency versions nobody reviewed — including a freshly
-      # released malicious patch — and would not be reproducible from the commit.
+      # could contain dependency versions nobody reviewed, including a freshly
+      # released malicious patch, and would not be reproducible from the commit.
       - name: Install dependencies
         working-directory: cli
         run: npm ci

@@ -10,7 +10,7 @@ export interface FaqItem {
 
 /**
  * Objection-handling FAQ, built as a set of independent disclosures rather
- * than an accordion that closes its siblings — someone comparing two answers
+ * than an accordion that closes its siblings: someone comparing two answers
  * should not have to keep re-opening the first one.
  *
  * Each row is a real <button> wired to its panel with aria-controls /

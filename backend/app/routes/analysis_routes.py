@@ -95,7 +95,7 @@ def _should_refund(exc: BaseException) -> bool:
     Refundable: an infrastructure failure (upstream 5xx, timeout, dropped
     connection, database outage), an upload rejected before any model call
     (:class:`PreflightRejection`), and an image that never reached the vision
-    model (:class:`OcrError` — HEIC, undecodable bytes, a decompression bomb;
+    model (:class:`OcrError`: HEIC, undecodable bytes, a decompression bomb;
     every one of those is raised before ``ocr_complete``).
 
     Not refundable, and this is the whole point: ``OCR_INSUFFICIENT_TEXT`` (the
@@ -103,7 +103,7 @@ def _should_refund(exc: BaseException) -> bool:
     ``NOT_A_LEGAL_DOCUMENT`` (a classifier completion reached that verdict) and
     :class:`ClauseExtractionError` (up to a few hundred chunk completions, all
     billed). Refunding those is what made a failure loop free and let one free
-    account drive unbounded spend — the counter went back where it started, so
+    account drive unbounded spend: the counter went back where it started, so
     the gate never closed.
 
     Anything unrecognised (a bare ``RuntimeError``, say) falls on the
@@ -125,7 +125,7 @@ async def _schedule_reminders(analysis_id: str, user_id: str, file_name: str, re
     """Derive deadline reminders from a finished analysis.
 
     Wrapped so a reminder failure can never fail the analysis the user waited
-    for — reminders are a bonus on top of the result, not part of it.
+    for; reminders are a bonus on top of the result, not part of it.
     """
     await reminder_service.generate_safely(
         analysis_id, user_id, file_name, result.get("keyDates", []) or []
@@ -154,8 +154,8 @@ def _size_limit(is_image: bool) -> tuple[int, str]:
 async def _read_upload_within_limit(request: Request, file: UploadFile, is_image: bool) -> bytes:
     """Read an upload into memory, aborting the moment it exceeds its cap.
 
-    The cap used to be applied to ``await file.read()`` — i.e. to the length of
-    bytes that were already, in their entirety, in RAM — which enforced nothing
+    The cap used to be applied to ``await file.read()`` (i.e. to the length of
+    bytes that were already, in their entirety, in RAM), which enforced nothing
     at all. Reading in blocks and checking a running total means the process
     never holds more than the limit plus one block, so the 413 is real.
 
@@ -211,13 +211,13 @@ async def _stream_analysis(
     client through a queue drained by a concurrently running consumer task.
 
     When ``ocr_source`` (raw image bytes, content-type, filename) is given, the
-    image is OCR'd here first — emitting a progress event so the client sees
-    feedback during the vision call — and the transcription becomes ``text``.
+    image is OCR'd here first (emitting a progress event so the client sees
+    feedback during the vision call), and the transcription becomes ``text``.
 
     ``reserved`` says whether the caller consumed a unit of the daily quota. It
     is handed back only for a failure that cost us no LLM tokens (see
     :func:`_should_refund`). Every outcome that a completion was already billed
-    for keeps the unit — refunding those is what made "upload a photo of a blank
+    for keeps the unit; refunding those is what made "upload a photo of a blank
     wall in a loop" a free way to spend someone else's Groq budget.
     """
     if ocr_source is not None:
@@ -225,7 +225,7 @@ async def _stream_analysis(
         try:
             text = await image_to_text(*ocr_source)
         except OcrError as e:
-            # The user's own image: HEIC, undecodable, or a decompression bomb —
+            # The user's own image: HEIC, undecodable, or a decompression bomb,
             # all raised before the vision call, so the unit is refundable.
             # OcrError messages are written for humans, so passing them through
             # leaks nothing.
@@ -418,7 +418,7 @@ async def upload_and_analyze(
                 text = await image_to_text(content, file.content_type, file_name)
             except OcrError as e:
                 # Every OcrError is raised before the vision call, so this is
-                # refundable — matching the streaming endpoint's behaviour.
+                # refundable, matching the streaming endpoint's behaviour.
                 raise PreflightRejection(status_code=422, detail=e.code) from e
             if not text or len(text.strip()) < 50:
                 # The vision completion ran and was billed, so unlike the
@@ -633,8 +633,8 @@ async def delete_analysis(analysis_id: str, request: Request):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    # Deleting a document must delete what we derived from it — its embeddings
-    # and its Q&A history — or the user's "delete" leaves their contract text
+    # Deleting a document must delete what we derived from it (its embeddings
+    # and its Q&A history), or the user's "delete" leaves their contract text
     # behind in chunk form.
     await vector_store.delete_index(analysis_id, user_id)
     await reminder_service.delete_for_analysis(analysis_id, user_id)
@@ -730,7 +730,7 @@ async def simulate(body: SimulateRequest, request: Request):
     # An analysisId keys a persisted vector index (up to ~800 chunk records), so
     # an unchecked one lets a caller mint permanent index rows under ids they
     # have nothing to do with. Every vector-store read is already scoped by
-    # userId, so this is not a cross-user read — but the write side needs the
+    # userId, so this is not a cross-user read, but the write side needs the
     # same ownership rule the /{analysis_id}/chat path already applies.
     if body.analysisId:
         await _load_owned_analysis(body.analysisId, user_id)
@@ -797,8 +797,8 @@ async def _extract_text_from_upload(
 ) -> str:
     """Dispatch to the right extractor based on content-type/filename, or decode as plain text.
 
-    pdfplumber and python-docx are synchronous and CPU-bound — a large PDF parsed
-    inline would stall the event loop for every other request on the worker — so
+    pdfplumber and python-docx are synchronous and CPU-bound (a large PDF parsed
+    inline would stall the event loop for every other request on the worker), so
     they run in a thread, matching ocr_service's handling of Pillow.
     """
     if content_type == "application/pdf" or file_name.lower().endswith(".pdf"):
@@ -832,7 +832,7 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
             return "\n\n".join(pages)
         except Exception as e:
             # The exception text is a parser's opinion of attacker-controlled
-            # bytes — library internals, sometimes file paths. Log it, tell the
+            # bytes: library internals, sometimes file paths. Log it, tell the
             # client something it can act on.
             logger.exception("PDF text extraction failed")
             raise PreflightRejection(status_code=422, detail=_PDF_ERROR_DETAIL) from e

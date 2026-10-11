@@ -92,7 +92,7 @@ export default function PricingView() {
           }
         },
         modal: {
-          // User closed the sheet without paying — re-enable the buttons.
+          // User closed the sheet without paying; re-enable the buttons.
           ondismiss: () => setActivating(null),
         },
       });

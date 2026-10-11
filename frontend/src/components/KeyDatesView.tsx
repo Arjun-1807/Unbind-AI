@@ -41,7 +41,7 @@ const generateIcsFile = (dateStr: string, description: string) => {
   };
 
   // `description` and `dateStr` are model output derived from the uploaded
-  // contract, so they must be escaped before they touch a property line — see
+  // contract, so they must be escaped before they touch a property line; see
   // the note in @/lib/ics.
   const summary = escapeIcsText(description);
   const details = escapeIcsText(
@@ -131,7 +131,7 @@ const KeyDatesView: React.FC<KeyDatesViewProps> = ({
         </h3>
         <p className="text-ink-muted mt-2 max-w-3xl">
           The AI has identified the following important dates and deadlines. We
-          email you before the ones we can pin to a calendar date — and you can
+          email you before the ones we can pin to a calendar date, and you can
           add any of them to your own calendar.
         </p>
       </div>

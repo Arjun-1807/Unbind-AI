@@ -4,7 +4,7 @@ Scope is deliberately one job: promoting a registered lawyer to ``verified``.
 
 That gap was load-bearing. ``POST /api/lawyer-register/`` writes every
 submission with ``verified: False``, and every read in ``lawyer_routes``
-filters on ``verified: True`` — but nothing anywhere set it true, so the
+filters on ``verified: True``, but nothing anywhere set it true, so the
 directory was permanently empty. It is the headline feature of the ₹2,500
 Verdict plan, which made it a feature that was sold and could not be
 delivered.
@@ -15,7 +15,7 @@ structure without payoff. Promote an account by hand, once::
 
     db.users.updateOne({email: "you@example.com"}, {$set: {isAdmin: true}})
 
-The flag is never settable through the API — there is no endpoint that writes
+The flag is never settable through the API: there is no endpoint that writes
 ``isAdmin``, so a compromised session cannot escalate to one.
 """
 
@@ -69,7 +69,7 @@ async def list_lawyers_for_review(
 ):
     """List lawyer registrations, newest first.
 
-    Unlike the public directory this does NOT filter to verified only — the
+    Unlike the public directory this does NOT filter to verified only; the
     whole point is seeing the pending queue.
     """
     await _require_admin(request)

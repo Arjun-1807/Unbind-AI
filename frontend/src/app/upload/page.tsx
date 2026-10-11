@@ -26,12 +26,12 @@ export default function UploadPage() {
 
   useEffect(() => {
     // authError means we could not reach the backend, so "no user" is not
-    // evidence of being signed out — redirecting on it would end a valid
+    // evidence of being signed out; redirecting on it would end a valid
     // session over a transient blip.
     if (authReady && !authError && !user) {
       // To /login, NOT to "/". middleware.ts redirects "/" to /dashboard
       // whenever a session cookie is present, and an *expired* cookie still
-      // looks present to it — bouncing there would loop
+      // looks present to it; bouncing there would loop
       // /dashboard -> / -> /dashboard forever for exactly the users whose
       // session just ran out. /login is outside the matcher and is also the
       // more useful destination for someone who needs to sign in.
@@ -102,7 +102,7 @@ export default function UploadPage() {
           setToastError({
             title: "Couldn't Read That Image",
             message:
-              "We couldn't read enough text from that image. Try a clearer, well-lit photo with the page filling the frame — or upload the file as a PDF/DOCX.",
+              "We couldn't read enough text from that image. Try a clearer, well-lit photo with the page filling the frame, or upload the file as a PDF/DOCX.",
           });
         } else if (errorMessage === "IMAGE_TOO_LARGE") {
           setToastError({

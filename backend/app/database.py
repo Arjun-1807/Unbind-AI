@@ -15,7 +15,7 @@ class _IndexSpec(NamedTuple):
     """One index to build.
 
     ``critical`` marks an index that application code *relies on for
-    correctness* rather than for speed — see :func:`_ensure_indexes`.
+    correctness* rather than for speed; see :func:`_ensure_indexes`.
     """
 
     collection: str
@@ -29,7 +29,7 @@ async def _ensure_indexes(db: AsyncIOMotorDatabase) -> None:
 
     Failure handling is deliberately split by what the index is *for*:
 
-    * Performance-only indexes are best-effort — a failure (e.g. a pre-existing
+    * Performance-only indexes are best-effort: a failure (e.g. a pre-existing
       conflicting index) is logged and the app still starts, because the worst
       case is a slow query.
     * ``critical=True`` indexes ARE the correctness guarantee, and code
@@ -99,7 +99,7 @@ async def _ensure_indexes(db: AsyncIOMotorDatabase) -> None:
             await db[spec.collection].create_index(*spec.args, **spec.kwargs)
         except Exception:
             logger.exception(
-                "Failed to create index %s on %s — the guarantee it provides is NOT in effect",
+                "Failed to create index %s on %s; the guarantee it provides is NOT in effect",
                 spec.args[0],
                 spec.collection,
             )
@@ -109,7 +109,7 @@ async def _ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     if failed_critical:
         # Refuse to serve. A missing unique index doesn't degrade a feature, it
         # removes the only thing preventing double-granted plans and duplicate
-        # accounts — failing the boot is how that stays visible.
+        # accounts; failing the boot is how that stays visible.
         raise RuntimeError(
             "Could not create correctness-critical unique index(es): "
             + ", ".join(failed_critical)
@@ -129,7 +129,7 @@ async def connect_db() -> None:
     trips. Indexes are a deploy-time concern, so they moved to
     ``app.scripts.ensure_indexes`` (see :func:`ensure_indexes_once`).
 
-    Set ``RUN_INDEX_CREATION_ON_BOOT=true`` to restore the old behaviour —
+    Set ``RUN_INDEX_CREATION_ON_BOOT=true`` to restore the old behaviour,
     useful for local development and for a first boot against a brand-new
     cluster, where nobody has run the deploy step yet.
     """
@@ -160,7 +160,7 @@ async def ensure_indexes_once(db: AsyncIOMotorDatabase | None = None) -> None:
     """Build every index the app relies on. Entry point for the deploy step.
 
     Idempotent, so it is safe to run on every deploy. Raises if a
-    correctness-critical index cannot be built — see :func:`_ensure_indexes`.
+    correctness-critical index cannot be built; see :func:`_ensure_indexes`.
     """
     await _ensure_indexes(db if db is not None else get_db())
 

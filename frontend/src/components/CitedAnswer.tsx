@@ -18,14 +18,14 @@ interface CitedAnswerProps {
  * inline `[S#]` markers become clickable chips that jump to the exact cited
  * passage in the document.
  *
- * The two are parsed together rather than in sequence — citations routinely
+ * The two are parsed together rather than in sequence: citations routinely
  * land inside emphasis (`**capped at 2% [S3]**`), so a Markdown pass followed
  * by a citation pass would lose one or the other. See lib/answerMarkdown.
  *
  * Model output is untrusted, so it is parsed into a data structure and
  * rendered as React elements. Nothing is ever handed to dangerouslySetInnerHTML.
  *
- * Shared by the impact simulator and document Q&A — both produce answers under
+ * Shared by the impact simulator and document Q&A: both produce answers under
  * the same citation contract, and the marker-parsing plus the not-locatable
  * handling should behave identically in each.
  */
@@ -86,7 +86,7 @@ const CitedAnswer: React.FC<CitedAnswerProps> = ({
           return <br key={key} />;
         case "cite": {
           const cite = byId.get(node.id);
-          // Marker with no matching source — plain text, never a dead link.
+          // Marker with no matching source: plain text, never a dead link.
           return cite ? (
             chip(cite, String(node.id), key)
           ) : (

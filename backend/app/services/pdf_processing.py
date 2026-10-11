@@ -61,7 +61,7 @@ def chunk_text_with_offsets(text: str, chunk_size: int = 4000, overlap: int = 30
 
     Returns dicts with ``text``, ``start`` and ``end`` (character offsets into
     ``text``). The offsets let callers map a retrieved chunk back to the exact
-    place in the source document — used for impact-simulator citations that jump
+    place in the source document, used for impact-simulator citations that jump
     to the cited passage. ``start``/``end`` are -1 for the rare chunk that can't
     be located verbatim (e.g. whitespace the splitter normalised away); callers
     should treat those as non-locatable rather than mis-highlight.

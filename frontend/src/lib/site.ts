@@ -1,8 +1,8 @@
 /**
  * Canonical site identity, in one place.
  *
- * Every absolute URL the app emits — canonicals, OG tags, the sitemap, robots
- * — derives from `SITE_URL`, so pointing a custom domain at this deployment is
+ * Every absolute URL the app emits (canonicals, OG tags, the sitemap, robots)
+ * derives from `SITE_URL`, so pointing a custom domain at this deployment is
  * a single environment variable rather than a search-and-replace across the
  * metadata surface.
  */
@@ -15,7 +15,7 @@ export const SITE_NAME = "UnBind AI";
 export const SITE_TAGLINE = "AI Legal Contract Analyzer";
 
 export const SITE_DESCRIPTION =
-  "Upload a contract and get a plain-English, clause-by-clause risk breakdown in minutes. UnBind AI flags risky terms, explains the jargon, suggests fairer wording, and tracks your deadlines — built for people without legal training.";
+  "Upload a contract and get a plain-English, clause-by-clause risk breakdown in minutes. UnBind AI flags risky terms, explains the jargon, suggests fairer wording, and tracks your deadlines. Built for people without legal training.";
 
 /**
  * Public contact addresses for the legal pages.
@@ -39,7 +39,7 @@ export const LEGAL_CONTACT_EMAIL =
  * Governing law and exclusive jurisdiction for the Terms.
  *
  * Rendered verbatim into /terms §15. This was shipping as a literal
- * "[Governing Law Jurisdiction — to be finalized by Legal]" bracket, which
+ * "[Governing Law Jurisdiction: to be finalized by Legal]" bracket, which
  * leaves the clause unenforceable.
  */
 export const GOVERNING_LAW_JURISDICTION = "India";

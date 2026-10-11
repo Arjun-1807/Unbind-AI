@@ -32,7 +32,7 @@ type Capability = { icon: React.ReactNode; title: string; desc: string };
  *
  * Deliberately uniform: same tile, same weight, one line of copy each. The
  * page has already made its argument by this point, so this grid's job is
- * completeness for the reader who is scanning for one specific thing —
+ * completeness for the reader who is scanning for one specific thing;
  * giving these equal billing with the pillars (as the previous eleven-card
  * bento did) flattened the hierarchy and left nothing memorable.
  */
@@ -40,7 +40,7 @@ const CAPABILITIES: Capability[] = [
   {
     icon: <CameraIcon className="h-5 w-5" />,
     title: "Photograph a paper contract",
-    desc: "Snap or scan it and vision AI reads the text — no retyping.",
+    desc: "Snap or scan it and vision AI reads the text. No retyping.",
   },
   {
     icon: <BookOpenIcon className="h-5 w-5" />,
@@ -50,7 +50,7 @@ const CAPABILITIES: Capability[] = [
   {
     icon: <SparklesIcon className="h-5 w-5" />,
     title: "Ask anything",
-    desc: "“What if I leave early?” — answered from your contract, in a thread that remembers.",
+    desc: "“What if I leave early?” Answered from your contract, in a thread that remembers.",
   },
   {
     icon: <FileSearchIcon className="h-5 w-5" />,

@@ -3,7 +3,7 @@
 .venv/
 venv/
 
-# Test and tooling artifacts — nothing here is needed to serve a request.
+# Test and tooling artifacts: nothing here is needed to serve a request.
 tests/
 .pytest_cache/
 .ruff_cache/

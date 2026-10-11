@@ -20,7 +20,7 @@ const IS_DEV = process.env.NODE_ENV !== "production";
  *  - `script-src 'unsafe-inline'`: Next.js App Router streams hydration data as
  *    inline `<script>self.__next_f.push(...)</script>` tags with no nonce.
  *    Nonces require a `middleware.ts` that stamps a fresh value per response,
- *    which also opts every route out of static rendering — so this stays until
+ *    which also opts every route out of static rendering, so this stays until
  *    that trade is made deliberately. Browsers ignore 'unsafe-inline' whenever
  *    a nonce or hash is present, so adding one later is a drop-in change.
  *  - `'unsafe-eval'` in development only: the webpack dev server evaluates
@@ -96,7 +96,7 @@ const securityHeaders = [
   // allowed: src/components/FileUpload.tsx offers a photo-capture affordance on
   // small screens via <input type="file" capture="environment">. That path goes
   // through the OS picker rather than getUserMedia, so it is not strictly
-  // gated by this header today — but keeping self-permission avoids breaking it
+  // gated by this header today, but keeping self-permission avoids breaking it
   // if that ever moves to an in-page capture.
   {
     key: "Permissions-Policy",

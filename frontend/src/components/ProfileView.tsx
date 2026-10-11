@@ -195,7 +195,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
         const data = await getPaymentHistory();
         if (!cancelled) setPayments(Array.isArray(data) ? data : []);
       } catch {
-        // On any failure just fall back to an empty history — never crash.
+        // On any failure just fall back to an empty history; never crash.
         if (!cancelled) setPayments([]);
       } finally {
         if (!cancelled) setPaymentsLoading(false);
@@ -347,7 +347,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
       <ConfirmModal
         open={showCancelConfirm}
         title="Cancel your plan?"
-        message="You'll lose your paid features and return to the Free plan. This can't be undone from here — you'd need to subscribe again."
+        message="You'll lose your paid features and return to the Free plan. This can't be undone from here. You'd need to subscribe again."
         confirmLabel="Cancel plan"
         cancelLabel="Keep plan"
         loadingLabel="Cancelling…"
@@ -374,7 +374,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
       <div className="ln-card p-5 sm:p-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
-            {/* Avatar — real picture for OAuth users, initials otherwise */}
+            {/* Avatar: real picture for OAuth users, initials otherwise */}
             {user.picture ? (
               // OAuth avatars come from arbitrary remote hosts; next/image would
               // need every provider domain whitelisted. A plain <img> is safe here.
@@ -785,7 +785,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between gap-4">
                 <span className="text-ink-subtle">Member since</span>
-                <span className="text-ink-muted">{memberSince || "—"}</span>
+                <span className="text-ink-muted">{memberSince || "N/A"}</span>
               </div>
               <div className="flex justify-between gap-4">
                 <span className="text-ink-subtle">Account type</span>
@@ -846,7 +846,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, analyses }) => {
                       {formatDate(p.createdAt)}
                     </td>
                     <td className="py-3 text-xs text-ink-muted break-all">
-                      {p.razorpayPaymentId ?? "—"}
+                      {p.razorpayPaymentId ?? "N/A"}
                     </td>
                   </tr>
                 ))}

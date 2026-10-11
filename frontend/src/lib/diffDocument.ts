@@ -10,7 +10,7 @@ const normalizeText = (text: string) =>
     .trim();
 
 // The backend prompts the model to literally write phrases like "No changes
-// needed" into suggestedRewrite for No-Risk clauses — that's a sentinel
+// needed" into suggestedRewrite for No-Risk clauses; that's a sentinel
 // meaning "don't rewrite this", not real replacement text. Recognize it so
 // it's never spliced into the document.
 const NO_OP_REWRITE_PATTERN =
@@ -23,8 +23,8 @@ const isNoOpRewrite = (rewrite: string) =>
  * The same normalization as `normalizeText`, but performed character by
  * character so every character of the result can be mapped back to the index
  * it came from in the original text. Re-normalizing one character at a time
- * cannot do this: `normalizeText(" ")` trims to `""`, so whitespace — which
- * the normalized haystack *does* contain — would not be counted, shifting
+ * cannot do this: `normalizeText(" ")` trims to `""`, so whitespace, which
+ * the normalized haystack *does* contain, would not be counted, shifting
  * every mapped offset right by the number of preceding spaces.
  */
 export const normalizeWithOffsets = (
@@ -48,13 +48,13 @@ export const normalizeWithOffsets = (
     prevWasSpace = false;
     // Characters outside the allowed class are dropped. Note this happens
     // *after* whitespace collapsing, so a dropped character between two
-    // spaces leaves both of them — matching normalizeText exactly.
+    // spaces leaves both of them, matching normalizeText exactly.
     if (!/[\w.,;:!?()-]/.test(char)) continue;
     chars.push(char.toLowerCase());
     offsets.push(i);
   }
 
-  // `.trim()` — drop the leading/trailing collapsed spaces and their offsets.
+  // `.trim()`: drop the leading/trailing collapsed spaces and their offsets.
   let from = 0;
   let to = chars.length;
   while (from < to && chars[from] === " ") from++;
@@ -123,7 +123,7 @@ export interface ContextSegment {
   text: string;
 }
 
-/** A clause with a located, non-trivial AI rewrite — eligible for accept/reject. */
+/** A clause with a located, non-trivial AI rewrite, eligible for accept/reject. */
 export interface ClauseSegment {
   type: "clause";
   originalIndex: number;
@@ -162,12 +162,12 @@ export function buildDocumentSegments(
     if (!clause.suggestedRewrite || !clause.suggestedRewrite.trim()) return;
     if (!clause.clauseText || !clause.clauseText.trim()) return;
     // A rewrite that's word-for-word identical to the original isn't a real
-    // change — don't surface it as one, and don't spend a match slot on it.
+    // change; don't surface it as one, and don't spend a match slot on it.
     if (normalizeText(clause.suggestedRewrite) === normalizeText(clause.clauseText)) {
       return;
     }
     // Sentinel "no change" phrasing (see NO_OP_REWRITE_PATTERN) isn't
-    // replacement text either — skip so the original text is kept as-is.
+    // replacement text either; skip so the original text is kept as-is.
     if (isNoOpRewrite(clause.suggestedRewrite)) {
       return;
     }
@@ -252,13 +252,13 @@ const pushToken = (tokens: DiffToken[], op: DiffOp, text: string) => {
 /**
  * Cap on LCS table cells (~16 MB of Uint32). The table is O(n×m), so without
  * a cap a 20k-word contract (~40k tokens per side) would ask for ~6.4 GB and
- * 1.6 billion iterations — enough to kill the tab.
+ * 1.6 billion iterations, enough to kill the tab.
  */
 const MAX_LCS_CELLS = 4_000_000;
 
 /**
  * LCS diff over two token arrays. Identical leading/trailing tokens are
- * matched off first — that alone reduces most document-sized comparisons to
+ * matched off first; that alone reduces most document-sized comparisons to
  * the handful of tokens that actually changed. Returns null (rather than
  * allocating) when what remains is still too large for the table.
  */
@@ -315,7 +315,7 @@ const diffTokenArrays = (a: string[], b: string[]): DiffToken[] | null => {
 
 /**
  * Computes a word-level diff between two texts using LCS, returning tokens
- * tagged as equal / delete (old-only) / insert (new-only) — the same shape
+ * tagged as equal / delete (old-only) / insert (new-only), the same shape
  * GitHub's split diff view highlights.
  *
  * Degrades gracefully on inputs too big for an exact word-level table: first
@@ -338,7 +338,7 @@ export function diffWords(oldText: string, newText: string): DiffToken[] {
 /**
  * Diffs a segmented document without ever comparing it to itself end to end:
  * context runs are equal by construction, and only clauses whose rewrite is
- * being applied are diffed — each against its own rewrite. Output matches
+ * being applied are diffed, each against its own rewrite. Output matches
  * `diffWords(documentText, applyDecisions(...))` for normal documents while
  * costing O(clause size) instead of O(document²).
  */

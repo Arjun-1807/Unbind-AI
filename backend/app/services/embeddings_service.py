@@ -18,12 +18,12 @@ logger = logging.getLogger(__name__)
 
 # Small, fast & free embedding model served via HuggingFace's hosted Inference
 # API. 384-dim with a ~256-token input limit, which is why retrieval chunks are
-# kept small — anything longer would be silently truncated.
+# kept small: anything longer would be silently truncated.
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIM = 384
 
 # How many embedding requests may be in flight at once. The API is per-request,
-# so a document's chunks would otherwise be embedded one round-trip at a time —
+# so a document's chunks would otherwise be embedded one round-trip at a time:
 # for a 40-chunk contract that is 40 sequential HTTP calls. Bounded rather than
 # unlimited so a long document doesn't open hundreds of sockets or trip the
 # provider's rate limit.
@@ -36,8 +36,8 @@ _EMBED_TIMEOUT_SECONDS = 30.0
 
 
 # Embeddings get their own executor instead of the default one behind
-# asyncio.to_thread. That default pool is shared process-wide — outbound SMTP in
-# email_service runs on it too — and it holds only ~min(32, cpu+4) threads. With
+# asyncio.to_thread. That default pool is shared process-wide (outbound SMTP in
+# email_service runs on it too), and it holds only ~min(32, cpu+4) threads. With
 # up to _EMBED_CONCURRENCY blocking calls in flight per document, a slow HF
 # provider would otherwise soak up the shared threads and stall unrelated work.
 # Sized to the concurrency gate: more threads than that can never be busy.

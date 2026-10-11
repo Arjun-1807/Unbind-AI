@@ -44,7 +44,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 
   const handleCitationJump = (citation: Citation) => {
     if (citation.startIndex < 0 || citation.endIndex <= citation.startIndex) {
-      return; // Excerpt couldn't be located in the document — nothing to jump to.
+      return; // Excerpt couldn't be located in the document; nothing to jump to.
     }
     setActiveCitation({
       start: citation.startIndex,
@@ -103,7 +103,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         </div>
       </div>
 
-      {/* Mounted only while open — the modal segments and diffs the whole
+      {/* Mounted only while open: the modal segments and diffs the whole
           document, which is wasted work for anyone who never opens it. */}
       {compareOpen && (
         <CompareDocumentsModal

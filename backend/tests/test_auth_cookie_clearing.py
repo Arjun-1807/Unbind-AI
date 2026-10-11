@@ -1,7 +1,7 @@
 """A rejected session cookie must be cleared, not left on disk.
 
-The frontend's middleware routes on cookie *presence* — it cannot verify a JWT
-at the edge — so a dead-but-present cookie kept sending users to a signed-in
+The frontend's middleware routes on cookie *presence* (it cannot verify a JWT
+at the edge), so a dead-but-present cookie kept sending users to a signed-in
 route that immediately bounced them back out.
 
 These go through the real ASGI stack (rather than calling handlers directly
@@ -9,7 +9,7 @@ like the other suites) because the thing under test is an exception handler
 registered on the app: calling the route function would never reach it.
 
 The TestClient is deliberately NOT used as a context manager. That would run
-the app's lifespan, and `connect_db()` opens a real MongoDB connection — which
+the app's lifespan, and `connect_db()` opens a real MongoDB connection, which
 against a populated `.env` means the developer's production cluster. Skipping
 the lifespan leaves `database._db` unset, so the `fake_db` fixture supplies it
 instead.

@@ -19,7 +19,7 @@ async def register_lawyer(payload: LawyerRegistrationRequest):
     break the sole legitimate caller.
 
     What makes that safe is that the row is written with ``verified: False`` and
-    every read path in ``lawyer_routes`` filters on ``verified: True`` — an
+    every read path in ``lawyer_routes`` filters on ``verified: True``; an
     un-vetted submission is invisible in the paid directory and cannot be
     contacted until an admin promotes it. Abuse of the endpoint itself is bounded
     by rate limiting and the field-length caps on ``LawyerRegistrationRequest``.

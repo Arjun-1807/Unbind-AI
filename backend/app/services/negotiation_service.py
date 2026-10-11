@@ -49,11 +49,11 @@ _FORMAT_GUIDANCE = {
 _SYSTEM_PROMPT = (
     "You are a negotiation-writing assistant for everyday people with no legal "
     "background. You draft a clear, respectful message asking the other party to "
-    "change specific contract clauses. Use simple, everyday language — no "
+    "change specific contract clauses. Use simple, everyday language, no "
     "legalese. Be concrete about each requested change and give a brief, "
     "reasonable justification. Do NOT invent facts, legal citations, threats, or "
     "deadlines the user did not provide, and do not promise or guarantee any "
-    "outcome — keep it a good-faith request to discuss.\n\n"
+    "outcome; keep it a good-faith request to discuss.\n\n"
     "Format your reply as plain text (never JSON, never code fences): the FIRST "
     "line must be exactly `Subject: <a short subject line>` for an email, or "
     "`Subject:` with nothing after the colon for a message or letter. Then one "
@@ -142,7 +142,7 @@ async def draft_negotiation_message(req: NegotiationDraftRequest) -> dict:
             block.append(f"   Preferred wording: {point.desiredRewrite.strip()}")
         ask = "\n".join(block)
         if used + len(ask) > _MAX_PROMPT_CHARS:
-            # Drop whole points rather than cutting one mid-sentence — a
+            # Drop whole points rather than cutting one mid-sentence: a
             # half-quoted clause would make the model draft nonsense.
             logger.warning(
                 "Negotiation prompt hit the %d char cap; dropping %d of %d points",

@@ -7,7 +7,7 @@ import {
   writeStorage,
 } from "@/lib/storage";
 
-// Minimal localStorage stand-in — the vitest env is "node", so there is no
+// Minimal localStorage stand-in: the vitest env is "node", so there is no
 // real window/localStorage; we inject one to exercise the read/write paths.
 function makeFakeStorage() {
   const map = new Map<string, string>();

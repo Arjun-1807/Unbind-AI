@@ -2,7 +2,7 @@
 
 Turns an uploaded image (phone photo, scan) into text using a Groq vision model,
 so it can flow into the normal ``analyze_contract`` pipeline. The image is
-downscaled and re-encoded with Pillow first — phone photos are multi-megabyte,
+downscaled and re-encoded with Pillow first: phone photos are multi-megabyte,
 and a smaller JPEG keeps the base64 payload under Groq's per-image limit and
 makes OCR faster. This is a plain HTTPS call to Groq (no native binary), so it
 deploys on the existing serverless setup unchanged.
@@ -36,7 +36,7 @@ IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp")
 HEIC_CONTENT_TYPES = {"image/heic", "image/heif"}
 HEIC_EXTENSIONS = (".heic", ".heif")
 
-_MAX_DIM = 2000  # px — longest side after downscaling
+_MAX_DIM = 2000  # px, longest side after downscaling
 _JPEG_QUALITY = 85
 
 # Decompression-bomb ceiling, in pixels. Byte size says nothing about how much
@@ -49,7 +49,7 @@ _MAX_IMAGE_PIXELS = 40_000_000
 
 _OCR_PROMPT = (
     "Transcribe all the text in this image of a document exactly as written, "
-    "preserving line breaks and reading order. Output only the raw text — no "
+    "preserving line breaks and reading order. Output only the raw text, no "
     "summary, no explanation, no commentary, no markdown."
 )
 
@@ -97,7 +97,7 @@ def _unreadable() -> OcrError:
 def _preprocess_to_data_url(content: bytes) -> str:
     """Downscale + re-encode the image as JPEG and return a base64 data URL.
 
-    Synchronous/CPU-bound — call via ``asyncio.to_thread``.
+    Synchronous/CPU-bound; call via ``asyncio.to_thread``.
 
     Rejects decompression bombs before any pixel data is allocated. ``open()``
     reads only the header, so ``img.size`` is known while the image still costs

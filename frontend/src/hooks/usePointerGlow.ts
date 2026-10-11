@@ -7,7 +7,7 @@ import { useEffect } from "react";
  * `--my` custom properties, plus a `data-glow` flag while the pointer is
  * inside. Pair with the `.spotlight` class in globals.css.
  *
- * Coordinates are written directly to the node — never through state — so
+ * Coordinates are written directly to the node, never through state, so
  * moving the mouse repaints one composited overlay instead of re-rendering
  * a React subtree. Updates are coalesced to one per animation frame.
  *

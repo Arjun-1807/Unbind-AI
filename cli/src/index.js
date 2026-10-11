@@ -31,18 +31,18 @@ function printHelp() {
       chalk.bold.cyan('  UnBindAI CLI') + chalk.dim(`  v${VERSION}`),
       '',
       '  ' + chalk.bold('Usage:'),
-      '    unbind ' + chalk.cyan('<document.pdf>') + '         — analyse a contract',
-      '    unbind ' + chalk.cyan('<document.txt>') + '         — analyse a text file',
-      '    unbind ' + chalk.cyan('list') + '                   — browse & open a past analysis',
-      '    unbind ' + chalk.cyan('export <file>') + '          — analyse & export a report (no REPL)',
-      '    unbind ' + chalk.cyan('config set-server <url>') + ' — persist a custom backend URL',
-      '    unbind ' + chalk.cyan('config get-server') + '      — show the backend URL in use',
-      '    unbind ' + chalk.cyan('config reset-server') + '    — revert to the default backend',
+      '    unbind ' + chalk.cyan('<document.pdf>') + '           analyse a contract',
+      '    unbind ' + chalk.cyan('<document.txt>') + '           analyse a text file',
+      '    unbind ' + chalk.cyan('list') + '                     browse & open a past analysis',
+      '    unbind ' + chalk.cyan('export <file>') + '            analyse & export a report (no REPL)',
+      '    unbind ' + chalk.cyan('config set-server <url>') + '   persist a custom backend URL',
+      '    unbind ' + chalk.cyan('config get-server') + '        show the backend URL in use',
+      '    unbind ' + chalk.cyan('config reset-server') + '      revert to the default backend',
       '',
       '  ' + chalk.bold('Options:'),
       '    ' +
         chalk.yellow('--server <url>') +
-        '    Backend URL for THIS run only — not saved',
+        '    Backend URL for THIS run only, not saved',
       '                      ' +
         chalk.dim('(default: https://unbind-backend.vercel.app; https required'),
       '                       ' + chalk.dim('except for localhost / 127.0.0.1)'),
@@ -71,7 +71,7 @@ function safeResolveInput(p) {
     throw new Error('Invalid path argument');
   }
   // p is the document path the local operator typed on their own command
-  // line (e.g. `unbind ~/contracts/employment.pdf`) — there is no privilege
+  // line (e.g. `unbind ~/contracts/employment.pdf`); there is no privilege
   // boundary here for a path to traverse across, unlike a server resolving a
   // path on a remote client's behalf.
   return path.resolve(p); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
@@ -84,7 +84,7 @@ export async function main(rawArgs) {
 
   // ── --server flag ──────────────────────────────────────────────────────────
   // Per-invocation only. Persisting it would let a single copy-pasted command
-  // silently redirect every later run (and its credentials) at another host —
+  // silently redirect every later run (and its credentials) at another host;
   // `unbind config set-server` is the explicit, opt-in way to make it stick.
   const serverIdx = args.indexOf('--server');
   if (serverIdx !== -1) {
@@ -113,7 +113,7 @@ export async function main(rawArgs) {
   // ── --logout ───────────────────────────────────────────────────────────────
   if (command === '--logout') {
     clearToken();
-    console.log(chalk.green('\n  ✓ Logged out — credentials cleared.\n'));
+    console.log(chalk.green('\n  ✓ Logged out. Credentials cleared.\n'));
     process.exit(0);
   }
 
@@ -194,7 +194,7 @@ export async function main(rawArgs) {
 /**
  * unbind config set-server <url> | get-server | reset-server
  *
- * The only way to change the backend URL permanently — deliberately separate
+ * The only way to change the backend URL permanently, deliberately separate
  * from the `--server` flag so persistence is always an explicit act.
  */
 function configCommand(args) {

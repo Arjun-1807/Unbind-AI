@@ -3,7 +3,7 @@
 Cover the two things that are easy to regress and expensive in production: the
 ChatGroq client cache (every construction opens two unclosed httpx connection
 pools, so rebuilding per call leaks sockets) and the retry loop's backoff
-behaviour. No network is touched — ChatGroq is replaced with a recording stub.
+behaviour. No network is touched: ChatGroq is replaced with a recording stub.
 """
 
 import asyncio

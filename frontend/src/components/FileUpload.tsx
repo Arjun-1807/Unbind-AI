@@ -23,7 +23,7 @@ const isImage = (f: File) =>
   f.type.startsWith("image/") || /\.(jpe?g|png|webp|tiff?|bmp)$/i.test(f.name);
 
 // Formats the backend can actually extract text from. The `accept` attribute
-// only filters the file picker — drag-and-drop bypasses it entirely — so the
+// only filters the file picker (drag-and-drop bypasses it entirely), so the
 // same list is enforced in `processFile`.
 const ACCEPTED_EXTENSIONS = /\.(pdf|docx|txt|md|markdown)$/i;
 const ACCEPTED_DOCUMENT_TYPES = [
@@ -62,7 +62,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
   const processFile = (selectedFile: File) => {
     setError(null);
     // HEIC (default iPhone format) can't be decoded server-side without extra
-    // libs — guide the user to a supported format up front.
+    // libs; guide the user to a supported format up front.
     if (isHeic(selectedFile)) {
       setError(
         "iPhone HEIC photos aren't supported directly. Set your camera to " +
@@ -164,7 +164,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onStartAnalysis, onBack }) => {
                 or drag and drop
               </p>
               <p className="text-xs text-ink-subtle">
-                PDF, DOCX, TXT, MD — or a photo/scan of a contract (JPG, PNG)
+                PDF, DOCX, TXT, MD, or a photo/scan of a contract (JPG, PNG)
               </p>
               {file && (
                 <div className="mt-4 flex max-w-full min-w-0 items-center space-x-2 text-sm text-success bg-success/10 px-3 py-1.5 rounded-full ring-1 ring-inset ring-success/20">

@@ -11,7 +11,7 @@ import { observeScene, writeSceneVars, type SceneProgress } from "@/lib/scrollSc
  * re-renders while scrolling.
  *
  * Detaches entirely under reduced motion, leaving the CSS defaults
- * (`--enter: 1`, `--exit: 0`) in place — which is the fully-arrived state.
+ * (`--enter: 1`, `--exit: 0`) in place, which is the fully-arrived state.
  */
 export function useScrollScene<T extends HTMLElement>(
   apply?: (progress: SceneProgress, el: HTMLElement) => void,

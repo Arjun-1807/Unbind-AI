@@ -84,11 +84,11 @@ export default function PrivacyPage() {
               <p>
                 When you create an account directly, we collect the username,
                 email address, and password you provide. Your password is
-                never stored in plain text — it is hashed (via bcrypt) before
+                never stored in plain text; it is hashed (via bcrypt) before
                 being saved, and we cannot recover or view your original
                 password. If you sign in with Google, we instead receive
-                basic profile information from Google — your name, email
-                address, and profile picture — and do not receive or store
+                basic profile information from Google (your name, email
+                address, and profile picture) and do not receive or store
                 your Google password.
               </p>
               <p className="font-semibold text-ink">b. User Content</p>
@@ -100,8 +100,8 @@ export default function PrivacyPage() {
                 <span className="font-semibold text-ink">
                   User Content may contain sensitive, confidential, or
                   personal information
-                </span>{" "}
-                — for example, names, addresses, financial terms, or
+                </span>:
+                for example, names, addresses, financial terms, or
                 information about third parties named in your documents. You
                 should only upload documents you have the right to share, and
                 you should consider redacting information you do not want
@@ -112,7 +112,7 @@ export default function PrivacyPage() {
                 Paid plans are processed through Razorpay, our third-party
                 payment processor. UnBind does not receive, process, or store
                 your full card number, CVV, UPI credentials, or other raw
-                payment credentials — Razorpay collects and handles that
+                payment credentials; Razorpay collects and handles that
                 information directly. We store limited, non-sensitive billing
                 records on our side, such as the plan purchased, amount and
                 currency charged, Razorpay&rsquo;s order and payment
@@ -194,7 +194,7 @@ export default function PrivacyPage() {
               </p>
               <p>
                 This transmission to Groq is necessary for the core analysis
-                features of the Service to function — there is currently no
+                features of the Service to function; there is currently no
                 way to run the analysis without sending the relevant document
                 text (and, for image uploads, the image itself) to Groq for
                 inference. We do not control Groq&rsquo;s infrastructure and
@@ -224,31 +224,31 @@ export default function PrivacyPage() {
               </p>
               <ul className="list-disc pl-5 space-y-2">
                 <li>
-                  <span className="font-semibold text-ink">Groq</span> —
+                  <span className="font-semibold text-ink">Groq</span>:
                   AI inference for document analysis, clause risk detection,
                   negotiation drafting, and vision-based OCR (see Section 4).
                 </li>
                 <li>
-                  <span className="font-semibold text-ink">Hugging Face</span>{" "}
-                  — hosted inference API used to generate text embeddings for
+                  <span className="font-semibold text-ink">Hugging Face</span>:
+                  hosted inference API used to generate text embeddings for
                   the impact-simulator&rsquo;s retrieval feature.
                 </li>
                 <li>
-                  <span className="font-semibold text-ink">LangSmith</span> —
+                  <span className="font-semibold text-ink">LangSmith</span>:
                   optional tracing and observability of our AI pipeline calls,
                   used for debugging and quality monitoring.
                 </li>
                 <li>
-                  <span className="font-semibold text-ink">Razorpay</span> —
+                  <span className="font-semibold text-ink">Razorpay</span>:
                   payment processing for paid plans (see Section 2c).
                 </li>
                 <li>
-                  <span className="font-semibold text-ink">Google</span> —
+                  <span className="font-semibold text-ink">Google</span>:
                   optional Google OAuth sign-in, used only to authenticate you
                   and retrieve basic profile information you choose to share.
                 </li>
                 <li>
-                  <span className="font-semibold text-ink">Vercel</span> —
+                  <span className="font-semibold text-ink">Vercel</span>:
                   hosting of the Service, plus Vercel Analytics and Speed
                   Insights (see Section 2d).
                 </li>

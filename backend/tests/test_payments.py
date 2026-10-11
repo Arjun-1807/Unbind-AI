@@ -366,7 +366,7 @@ async def test_webhook_non_ascii_signature_is_400_not_500(override_settings):
 def test_verify_signature_false_for_non_ascii(override_settings):
     """Same TypeError trap on the /verify path, where the signature is a body field."""
     assert plan_routes._verify_signature("order_1", "pay_1", "d\xe9adbeef") is False
-    # Beyond latin-1 too — a JSON body can carry any code point.
+    # Beyond latin-1 too: a JSON body can carry any code point.
     assert plan_routes._verify_signature("order_1", "pay_1", "deadbeef€") is False
 
 

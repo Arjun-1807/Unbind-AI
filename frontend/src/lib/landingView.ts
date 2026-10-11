@@ -4,7 +4,7 @@
  *
  * The header renders a section nav (How it works / Features / Pricing / FAQ)
  * whose anchors only exist in the client view. It is a sibling of the landing
- * page rather than a child, so it cannot read that state directly — and
+ * page rather than a child, so it cannot read that state directly, and
  * without it the nav keeps four links that silently scroll nowhere once the
  * reader switches to the lawyer view.
  *

@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const [planStatus, setPlanStatus] = useState<api.UserPlanStatus | null>(null);
 
   // Plans do not auto-renew, so the dashboard is where a user finds out their
-  // pass is running out — before a quota refusal tells them the hard way.
+  // pass is running out, before a quota refusal tells them the hard way.
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -38,12 +38,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // authError means we could not reach the backend, so "no user" is not
-    // evidence of being signed out — redirecting on it would end a valid
+    // evidence of being signed out; redirecting on it would end a valid
     // session over a transient blip.
     if (authReady && !authError && !user) {
       // To /login, NOT to "/". middleware.ts redirects "/" to /dashboard
       // whenever a session cookie is present, and an *expired* cookie still
-      // looks present to it — bouncing there would loop
+      // looks present to it; bouncing there would loop
       // /dashboard -> / -> /dashboard forever for exactly the users whose
       // session just ran out. /login is outside the matcher and is also the
       // more useful destination for someone who needs to sign in.

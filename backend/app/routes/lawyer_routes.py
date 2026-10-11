@@ -25,7 +25,7 @@ async def _require_verdict_plan(user_id: str) -> None:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     # effective_plan treats an expired paid plan as the free tier, matching the
-    # analysis rate limiter — reading user["plan"] raw would let a lapsed plan
+    # analysis rate limiter; reading user["plan"] raw would let a lapsed plan
     # keep directory access.
     plan: str | None = effective_plan(user)
     limit = plan_limit(plan)
@@ -61,7 +61,7 @@ async def list_lawyers(
     # (it backs the "register as a lawyer" form on the unauthenticated landing
     # page), so anyone on the internet can insert a lawyers document with an
     # attacker-controlled email. Those rows land with verified=False and stay
-    # invisible until an admin vets them — without this filter a fake profile
+    # invisible until an admin vets them; without this filter a fake profile
     # would show up in the paid directory immediately, and contacting it would
     # email the attacker the customer's address and contract details.
     query = {"verified": True}
@@ -163,7 +163,7 @@ async def contact_lawyer(lawyer_id: str, request: ContactLawyerRequest, http_req
     # Await email sending directly so Vercel Serverless doesn't terminate/freeze
     # the function before it finishes. The contact request is already persisted
     # at this point, so an SMTP failure must not 500 the request and tell the
-    # user nothing happened — report the delivery outcome instead.
+    # user nothing happened; report the delivery outcome instead.
     try:
         await send_lawyer_contact_email(
             lawyer_email=lawyer_doc["email"],

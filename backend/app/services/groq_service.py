@@ -23,24 +23,24 @@ logger = logging.getLogger(__name__)
 _CHAT_SEMAPHORE = asyncio.Semaphore(2)
 
 # HyDE generation runs on a separate Groq key (HYDE_API_KEY), so it gets its
-# own concurrency gate independent of the main analysis calls — the two keys
+# own concurrency gate independent of the main analysis calls: the two keys
 # have independent per-key rate limits and shouldn't throttle each other.
 _HYDE_SEMAPHORE = asyncio.Semaphore(2)
 
 # The negotiation copilot runs on its own Groq key (NEGOTIATION_API_KEY) with a
-# dedicated concurrency gate, for the same reason as HyDE — independent per-key
+# dedicated concurrency gate, for the same reason as HyDE: independent per-key
 # rate limits so drafting never throttles (or is throttled by) analysis calls.
 _NEGOTIATION_SEMAPHORE = asyncio.Semaphore(2)
 
 # Vision OCR (reading photographed/scanned contracts) runs on its own Groq key
-# (GROQ_VISION_API_KEY) with a dedicated concurrency gate — same rationale.
+# (GROQ_VISION_API_KEY) with a dedicated concurrency gate. Same rationale.
 _OCR_SEMAPHORE = asyncio.Semaphore(2)
 
 _MAX_RETRIES = 5
 
 # Transient failures worth another attempt. A dropped connection, a read
 # timeout or a Groq-side 5xx says nothing about the request itself, and a long
-# analysis is dozens of sequential calls — failing the whole job on one blip
+# analysis is dozens of sequential calls; failing the whole job on one blip
 # wastes every call already paid for. 4xx errors other than 429 stay fatal:
 # retrying a malformed request just burns time.
 _RETRYABLE_ERRORS = (
@@ -52,7 +52,7 @@ _RETRYABLE_ERRORS = (
 
 # Ceiling on a server-supplied Retry-After. Groq occasionally advertises waits
 # measured in minutes or hours (e.g. a daily quota); honouring those verbatim
-# would hang the request — and the caller's HTTP request — for that long. Past
+# would hang the request (and the caller's HTTP request) for that long. Past
 # a minute it's better to exhaust the retries and surface the failure.
 _MAX_RETRY_AFTER_SECONDS = 60.0
 
@@ -63,8 +63,8 @@ _MAX_RETRY_AFTER_SECONDS = 60.0
 # often.
 _HYDE_SYSTEM_PROMPT = (
     "You generate a hypothetical document for retrieval (HyDE). Given a user's "
-    "question about a legal contract, write a short, plausible passage — as if "
-    "excerpted from such a contract — that would directly answer the question. "
+    "question about a legal contract, write a short, plausible passage (as if "
+    "excerpted from such a contract) that would directly answer the question. "
     "Use the formal clause-style language and terminology a real contract would "
     "use. Do not answer the user or add commentary; output only the hypothetical "
     "passage. Keep it under 120 words."
@@ -114,7 +114,7 @@ def _get_llm(api_key: str, model: str, temperature: float) -> ChatGroq:
 
 
 def _reset_llm_cache() -> None:
-    """Drop every cached client. For tests — a client built against a patched
+    """Drop every cached client. For tests: a client built against a patched
     ChatGroq or patched settings must not leak into the next test."""
     _get_llm.cache_clear()
 
@@ -170,7 +170,7 @@ def _to_lc_messages(messages: list[dict]) -> list:
     """Convert dict messages to LangChain message objects.
 
     ``assistant`` is mapped as well as ``system``/``user``, so multi-turn
-    conversations can replay prior turns — dropping them (as this used to) makes
+    conversations can replay prior turns; dropping them (as this used to) makes
     the model treat every follow-up as the first question and lose the thread.
     An unrecognised role raises rather than being silently discarded.
     """
@@ -203,7 +203,7 @@ async def _invoke_with_retry(
             # The gate is held for the request only, never across the backoff
             # sleep. With just a couple of permits process-wide, sleeping while
             # holding one would park a large slice of the global concurrency
-            # doing nothing — one rate-limited call would stall unrelated ones
+            # doing nothing: one rate-limited call would stall unrelated ones
             # that could have proceeded.
             async with semaphore:
                 response = await llm.ainvoke(lc_messages)

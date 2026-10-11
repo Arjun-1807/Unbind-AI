@@ -5,8 +5,8 @@
  * date labels and descriptions, which ultimately echo attacker-controlled
  * contract text) straight into `SUMMARY:` / `DESCRIPTION:` lines. iCalendar is
  * a CRLF line-oriented format, so a raw newline inside one of those values ends
- * the property and everything after it is parsed as a new property — or a whole
- * second VEVENT — in the user's calendar app. Commas, semicolons and
+ * the property and everything after it is parsed as a new property (or a whole
+ * second VEVENT) in the user's calendar app. Commas, semicolons and
  * backslashes are value/parameter separators and need escaping too.
  *
  * Per RFC 5545 §3.3.11, escaped-char is: "\\" / "\;" / "\," / "\N" / "\n".
