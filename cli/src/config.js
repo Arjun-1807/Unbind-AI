@@ -9,7 +9,7 @@ import Conf from 'conf';
  * NOT a keychain: `conf` writes a plain, unencrypted JSON file, so the JWT is
  * readable by anything that can read the file. The only protection is the file
  * mode. `configFileMode: 0o600` makes `conf` create both its temp file and the
- * final file owner-only, so the token is never on disk world-readable — not even
+ * final file owner-only, so the token is never on disk world-readable, not even
  * for the instant between write and chmod. Treat the token as plaintext on disk
  * and `unbind --logout` when done on a machine you do not control.
  *
@@ -51,7 +51,7 @@ const restrictStorePermissions = () => {
   try {
     fs.chmodSync(store.path, 0o600);
   } catch {
-    // Nothing actionable — the value is still stored, just possibly readable
+    // Nothing actionable; the value is still stored, just possibly readable
     // by other local users.
   }
 };
@@ -91,7 +91,7 @@ export const validateApiUrl = (url) => {
   try {
     parsed = new URL(String(url));
   } catch {
-    throw new Error(`Invalid server URL: "${url}" — expected something like https://api.example.com`);
+    throw new Error(`Invalid server URL: "${url}". Expected something like https://api.example.com`);
   }
 
   if (parsed.protocol === 'http:' && !LOOPBACK_HOSTS.has(parsed.hostname)) {
@@ -104,7 +104,7 @@ export const validateApiUrl = (url) => {
 
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
     throw new Error(
-      `Unsupported server URL scheme "${parsed.protocol}" in "${url}" — use https.`
+      `Unsupported server URL scheme "${parsed.protocol}" in "${url}". Use https.`
     );
   }
 

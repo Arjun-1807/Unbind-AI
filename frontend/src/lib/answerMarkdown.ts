@@ -1,7 +1,7 @@
 /**
  * A deliberately small Markdown subset parser for model answers.
  *
- * The models emit light Markdown whether or not you ask them to — `**bold**`
+ * The models emit light Markdown whether or not you ask them to: `**bold**`
  * for the phrase that matters, `-` bullets for a list of conditions. Rendering
  * that as preformatted text put the raw asterisks on screen, which reads as a
  * bug in a product whose whole job is making dense documents legible.
@@ -10,7 +10,7 @@
  *
  * * It has to interleave with citations. `[S3]` markers become interactive
  *   chips, and they appear *inside* emphasis (`**capped at 2% [S3]**`), so the
- *   citation pass cannot simply run before or after a Markdown pass — the two
+ *   citation pass cannot simply run before or after a Markdown pass; the two
  *   have to share one tokenizer.
  * * The output is untrusted. A parser that produces a data structure, rendered
  *   into React elements, has no HTML-injection surface at all; a library that
@@ -18,7 +18,7 @@
  *   easy to get subtly wrong.
  * * The supported subset is tiny and fixed by the system prompt.
  *
- * Anything unrecognised — a stray asterisk, an unclosed backtick, a table —
+ * Anything unrecognised (a stray asterisk, an unclosed backtick, a table)
  * falls through as literal text rather than being swallowed.
  */
 

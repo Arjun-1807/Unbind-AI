@@ -113,7 +113,7 @@ export default function LawyerRegistration({ onBack }: { onBack: () => void }) {
             className="rise-in mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-subtle"
             style={{ ["--i" as string]: 3 }}
           >
-            Get matched with clients who have already had their contract analysed — so
+            Get matched with clients who have already had their contract analysed, so
             they arrive knowing which clause they need help with, and why.
           </p>
         </div>

@@ -22,10 +22,10 @@ export default function AnalysisPage() {
     // would both bounce a signed-in user home and skip the stored analysis.
     if (!authReady) return;
     // authError means the session check never reached the backend, so "no
-    // user" is not evidence of being signed out — hold rather than bounce.
+    // user" is not evidence of being signed out; hold rather than bounce.
     if (authError) return;
     if (!user) {
-      // /login rather than "/": see the note in dashboard/page.tsx — an expired
+      // /login rather than "/": see the note in dashboard/page.tsx. An expired
       // cookie still satisfies middleware.ts, so "/" would loop.
       router.replace("/login");
       return;

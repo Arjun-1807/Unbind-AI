@@ -484,7 +484,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               </h3>
               <p className="mt-1 text-sm text-ink-subtle">
                 Connect with vetted legal professionals who specialise in the
-                same contract types our AI analyses — employment, SaaS, real
+                same contract types our AI analyses: employment, SaaS, real
                 estate, NDAs, and more.
               </p>
             </div>

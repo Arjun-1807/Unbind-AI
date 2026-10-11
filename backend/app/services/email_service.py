@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 def _esc(value: object) -> str:
     """Escape a value for interpolation into an HTML email body.
 
-    Anything user-supplied that reaches these templates — a contact message, the
-    sender's address — would otherwise be able to inject markup and links into
+    Anything user-supplied that reaches these templates (a contact message, the
+    sender's address) would otherwise be able to inject markup and links into
     mail that arrives looking like it came from UnBind AI.
     """
     return html.escape(str(value), quote=True)
@@ -27,13 +27,12 @@ def _send_smtp(
     html_body: str,
     reply_to: str | None = None,
 ) -> None:
-    """Blocking SMTP send — called inside a thread via asyncio.to_thread."""
+    """Blocking SMTP send, called inside a thread via asyncio.to_thread."""
     settings = get_settings()
 
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning(
-            "SMTP credentials not configured (SMTP_USER or SMTP_PASSWORD is empty) "
-            "— email not sent."
+            "SMTP credentials not configured (SMTP_USER or SMTP_PASSWORD is empty). Email not sent."
         )
         raise ValueError("SMTP credentials not configured on the server")
 
@@ -64,7 +63,7 @@ async def send_email(
     """Non-blocking email send. Errors are logged **and re-raised**.
 
     Every caller wraps this in its own try/except because each one wants a
-    different outcome from a delivery failure — the lawyer-contact route reports
+    different outcome from a delivery failure: the lawyer-contact route reports
     ``emailed: false`` and marks the request ``email_failed``, the receipt is
     best-effort and swallowed, the reminder digest leaves ``sentLeads`` untouched
     so the next run retries. Swallowing the error here would take that choice
@@ -90,7 +89,7 @@ async def send_lawyer_contact_email(
     Send a contact request email TO the lawyer FROM the platform,
     with the user's email as Reply-To so the lawyer can reply directly.
     """
-    subject = f"New Client Enquiry via UnBind AI — {user_email}"
+    subject = f"New Client Enquiry via UnBind AI: {user_email}"
     lawyer_name = _esc(lawyer_name)
     user_email = _esc(user_email)
     message = _esc(message)
@@ -175,9 +174,9 @@ async def send_payment_receipt_email(
     symbol = "₹" if currency.upper() == "INR" else ""
     major = (Decimal(amount) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     amount_display = f"{symbol}{major:,.2f} {currency.upper()}".strip()
-    validity = f"Valid until {expires_at[:10]}" if expires_at else "Lifetime access — never expires"
+    validity = f"Valid until {expires_at[:10]}" if expires_at else "Lifetime access, never expires"
 
-    subject = f"Your UnBind AI receipt — {plan_label}"
+    subject = f"Your UnBind AI receipt: {plan_label}"
     html_body = f"""
     <!DOCTYPE html>
     <html>
@@ -235,7 +234,7 @@ async def send_deadline_reminder_email(
 ) -> None:
     """Digest of upcoming contract deadlines.
 
-    One email covering every due deadline rather than one per deadline — three
+    One email covering every due deadline rather than one per deadline: three
     obligations landing the same week should not be three emails.
 
     The unsubscribe link is not optional decoration: this is scheduled mail the
@@ -312,8 +311,8 @@ async def send_deadline_reminder_email(
           <a href="{_esc(get_settings().FRONTEND_URL.rstrip("/"))}/dashboard" class="cta" style="color:#ffffff !important; text-decoration:none;">Open my documents</a>
 
           <p style="margin-top:28px; font-size:13px; color:#6b7280; line-height:1.6;">
-            Dates are taken from the contract text as written. UnBind explains contracts —
-            it isn't legal advice, so check anything consequential with a lawyer.
+            Dates are taken from the contract text as written. UnBind explains contracts.
+            It isn't legal advice, so check anything consequential with a lawyer.
           </p>
         </div>
         <div class="footer">

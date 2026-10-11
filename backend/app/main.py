@@ -32,8 +32,8 @@ logging.basicConfig(
 #
 # The frontend already sets these in next.config.mjs, but that only covers
 # traffic proxied through the Next rewrite. Several responses reach the browser
-# from the backend origin directly — the HTML unsubscribe page in
-# reminder_routes, the SSE analysis stream, the upload endpoints — and those
+# from the backend origin directly (the HTML unsubscribe page in
+# reminder_routes, the SSE analysis stream, the upload endpoints), and those
 # were going out bare.
 #
 # Deliberately no Content-Security-Policy: the unsubscribe page is
@@ -43,7 +43,7 @@ logging.basicConfig(
 # content-independent, so they are safe to apply blanket.
 SECURITY_HEADERS = {
     # Stop the browser MIME-sniffing a JSON/text response into something
-    # executable — the path by which a user-supplied filename or contract text
+    # executable: the path by which a user-supplied filename or contract text
     # echoed back could be treated as HTML or script.
     "X-Content-Type-Options": "nosniff",
     # Never leak the API URL (which carries analysis ids) to third-party sites.
@@ -61,7 +61,7 @@ class SecurityHeadersMiddleware:
     """Attach :data:`SECURITY_HEADERS` to every response.
 
     Raw ASGI rather than ``BaseHTTPMiddleware`` so it only rewrites the
-    ``http.response.start`` message and never touches the body stream — the SSE
+    ``http.response.start`` message and never touches the body stream: the SSE
     analysis endpoint must keep flushing chunk by chunk.
 
     Existing headers are left alone, so a route that deliberately sets its own
@@ -100,8 +100,8 @@ async def lifespan(app: FastAPI):
 settings = get_settings()
 IS_PRODUCTION = settings.ENVIRONMENT == "production"
 
-# The interactive docs publish the full API surface — every route, parameter and
-# schema — which is a free reconnaissance map for an attacker. Useful locally,
+# The interactive docs publish the full API surface (every route, parameter and
+# schema), which is a free reconnaissance map for an attacker. Useful locally,
 # so they stay on in development and are switched off entirely in production.
 docs_kwargs: dict = (
     {"docs_url": None, "redoc_url": None, "openapi_url": None} if IS_PRODUCTION else {}
@@ -117,7 +117,7 @@ app = FastAPI(
 
 # Only this project's known origins are allowed: the configured production
 # frontend, plus localhost in development ONLY. Allowing localhost:3000 in
-# production is a real hole given the auth cookie is SameSite=None — anything a
+# production is a real hole given the auth cookie is SameSite=None: anything a
 # victim happens to be running on port 3000 could make credentialed calls
 # against the production API. The broad "*.vercel.app" match stays opt-in via
 # VERCEL_PREVIEW_REGEX so anonymous Vercel apps can't hit the API.
@@ -135,7 +135,7 @@ cors_kwargs = {
 if settings.VERCEL_PREVIEW_REGEX:
     cors_kwargs["allow_origin_regex"] = settings.VERCEL_PREVIEW_REGEX
 
-# Order matters, and add_middleware inserts at the front of the stack — so the
+# Order matters, and add_middleware inserts at the front of the stack, so the
 # last registration is the outermost layer. Registering the security middleware
 # first and CORS second gives: CORS -> rate limit -> Origin/CSRF check -> routes.
 # CORS on the outside keeps OPTIONS preflights working and keeps CORS headers on
@@ -148,7 +148,7 @@ add_security_middleware(
 )
 app.add_middleware(CORSMiddleware, **cors_kwargs)
 # Registered last and therefore outermost, so the headers land on *every*
-# response — including the 403/429/413 the security middleware generates itself
+# response, including the 403/429/413 the security middleware generates itself
 # and the preflight replies CORSMiddleware short-circuits.
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -166,7 +166,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     """Default HTTP error response, plus one side effect: a rejected session
     cookie is cleared.
 
-    ``GET /api/auth/me`` is the session probe — a 401 there means the browser
+    ``GET /api/auth/me`` is the session probe: a 401 there means the browser
     is holding a credential the server will not accept again. Leaving it on
     disk is not harmless: the frontend's middleware routes on cookie
     *presence* (it cannot verify a JWT at the edge), so a dead cookie kept

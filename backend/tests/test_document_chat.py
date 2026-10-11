@@ -1,7 +1,7 @@
 """Tests for full-document Q&A: the service, persistence, and the routes.
 
 Retrieval and the LLM are both stubbed. What's under test is the conversation
-plumbing, the citation contract, and the tenancy boundary — not answer quality.
+plumbing, the citation contract, and the tenancy boundary, not answer quality.
 """
 
 import pytest
@@ -373,7 +373,7 @@ async def test_chat_route_refunds_the_quota_when_the_upstream_is_down(
             _authed(override_settings, uid),
         )
     assert seed_user.db.users._docs[uid]["dailyQueryCount"] == 0
-    # The attempt, however, is never handed back — that is what bounds a loop.
+    # The attempt, however, is never handed back; that is what bounds a loop.
     assert seed_user.db.users._docs[uid]["dailyQueryAttemptCount"] == 1
 
 

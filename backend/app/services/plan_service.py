@@ -18,7 +18,7 @@ PLAN_LIMITS: dict[str | None, int | None] = {
 
 # Daily limits for the cheap follow-up LLM calls (impact simulator, negotiation
 # message drafting). These cost a fraction of a full analysis, so they get their
-# own, more generous counter rather than eating into the analysis quota — but
+# own, more generous counter rather than eating into the analysis quota, but
 # they are metered, because an unbounded LLM endpoint is an unbounded bill.
 QUERY_LIMITS: dict[str | None, int | None] = {
     None: 10,  # free tier: 10 follow-up questions per day

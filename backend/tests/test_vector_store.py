@@ -2,7 +2,7 @@
 
 Embeddings are stubbed with deterministic vectors so retrieval behaviour is
 asserted exactly, with no network and no model. What's under test is the storage
-round-trip and the ranking — not the embedding model's quality.
+round-trip and the ranking, not the embedding model's quality.
 """
 
 import numpy as np
@@ -48,7 +48,7 @@ def test_pack_normalises_rows():
 
 
 def test_pack_tolerates_a_zero_vector():
-    """A zero row must not become NaN — that would poison every comparison."""
+    """A zero row must not become NaN; that would poison every comparison."""
     blob, count, dim = vector_store._pack([[0.0, 0.0], [1.0, 0.0]])
     restored = vector_store._unpack(blob, count, dim)
     assert not np.isnan(restored).any()
@@ -122,7 +122,7 @@ def test_search_rejects_a_dimension_mismatch():
 
 @pytest.fixture
 def stub_embeddings(monkeypatch):
-    """Embed deterministically from text length — no network, no model."""
+    """Embed deterministically from text length: no network, no model."""
     calls = {"count": 0}
 
     async def fake_embed_texts(texts):

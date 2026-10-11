@@ -9,7 +9,7 @@ import type { UserPlanStatus } from "@/services/api";
  *
  * Brief and Motion are 30-day passes that do not auto-renew, so lapsing is the
  * normal end state rather than an edge case. Without a warning the first sign a
- * user gets is a quota refusal on a contract they were in the middle of — which
+ * user gets is a quota refusal on a contract they were in the middle of, which
  * reads as the product breaking, not as a plan ending.
  */
 const WARN_WITHIN_DAYS = 5;
@@ -40,7 +40,7 @@ const PlanStatusBanner: React.FC<PlanStatusBannerProps> = ({ status }) => {
             Your {status.lapsedPlan} plan has ended.
           </span>{" "}
           You&rsquo;re back on the free plan&rsquo;s daily limits. Plans
-          don&rsquo;t renew automatically — buy again to pick up where you left
+          don&rsquo;t renew automatically. Buy again to pick up where you left
           off.
         </p>
         <Link
@@ -73,7 +73,7 @@ const PlanStatusBanner: React.FC<PlanStatusBannerProps> = ({ status }) => {
                   : `in ${remaining} days`}
               .
             </span>{" "}
-            It won&rsquo;t renew on its own — renew now to keep your higher
+            It won&rsquo;t renew on its own. Renew now to keep your higher
             daily limits.
           </p>
           <Link

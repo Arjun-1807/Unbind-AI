@@ -4,7 +4,7 @@ import React from "react";
 import { useScrollScene } from "@/hooks/useScrollScene";
 
 /**
- * A block whose entrance — and optionally its exit — is tied to scroll
+ * A block whose entrance (and optionally its exit) is tied to scroll
  * position rather than fired once by an IntersectionObserver.
  *
  * The difference is legible: a one-shot reveal plays its own timeline
@@ -15,10 +15,10 @@ import { useScrollScene } from "@/hooks/useScrollScene";
  * decorated.
  *
  * `mode`:
- *   "lift"  — rises in, then lifts and fades as it clears the top. For solo
+ *   "lift":   rises in, then lifts and fades as it clears the top. For solo
  *             moments that own the viewport.
- *   "hold"  — rises in and stays. For anything a reader may scroll back to.
- *   "unfold"— artwork tipped back and slightly small, righting itself as it
+ *   "hold":   rises in and stays. For anything a reader may scroll back to.
+ *   "unfold": artwork tipped back and slightly small, righting itself as it
  *             arrives.
  */
 export default function ScrollScene({

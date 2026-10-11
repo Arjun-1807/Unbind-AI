@@ -1,6 +1,6 @@
 """Shared test fixtures.
 
-Everything here runs against in-memory fakes — no real MongoDB, no network,
+Everything here runs against in-memory fakes: no real MongoDB, no network,
 and no dependency on a populated ``.env``. Settings are overridden to known
 test values and the async Mongo ``get_db()`` is backed by a tiny fake.
 """
@@ -25,14 +25,14 @@ TEST_SETTINGS_OVERRIDES = {
     "GROQ_API_KEY": "gsk_test_key",
     "FRONTEND_URL": "http://localhost:3000",
     "COOKIE_NAME": "unbind_token",
-    # Razorpay (payments) — deterministic test values so signatures/webhooks are
+    # Razorpay (payments): deterministic test values so signatures/webhooks are
     # reproducible and never depend on a populated .env.
     "RAZORPAY_KEY_ID": "rzp_test_key",
     "RAZORPAY_KEY_SECRET": "test_secret",
     "RAZORPAY_WEBHOOK_SECRET": "test_webhook_secret",
     # Unreachable by construction. Nothing in the suite should ever open a real
-    # connection — the Mongo fake stands in for the database and email sends are
-    # mocked — but leaving these unset let them fall through to the developer's
+    # connection (the Mongo fake stands in for the database and email sends are
+    # mocked), but leaving these unset let them fall through to the developer's
     # `.env`, which points at the production cluster and a live mail account. A
     # single test that forgets to patch would then hit real infrastructure.
     "MONGODB_URI": "mongodb://mongo.invalid:27017/unbindai_test",
@@ -43,7 +43,7 @@ TEST_SETTINGS_OVERRIDES = {
 
 # The `override_settings` fixture below patches `get_settings`, which covers
 # every module that calls it at *request* time. It cannot help a module that
-# builds its settings at *import* time — `app.main` does exactly that, so
+# builds its settings at *import* time: `app.main` does exactly that, so
 # importing it (as the TestClient-based suites must) would construct a real
 # `Settings` and fail on the missing JWT_SECRET.
 #
@@ -82,13 +82,13 @@ def override_settings(monkeypatch):
     monkeypatch.setattr(auth, "get_settings", _get_settings)
     # Modules that do ``from app.config import get_settings`` hold their own
     # bound reference, so patching ``config.get_settings`` alone doesn't reach
-    # them — they'd read the real lru_cached .env settings. Patch each one.
+    # them; they'd read the real lru_cached .env settings. Patch each one.
     from app.routes import plan_routes, reminder_routes
 
     monkeypatch.setattr(plan_routes, "get_settings", _get_settings)
     monkeypatch.setattr(reminder_routes, "get_settings", _get_settings)
     yield test_settings
-    # NB: don't touch config.get_settings here — monkeypatch reverts it after
+    # NB: don't touch config.get_settings here: monkeypatch reverts it after
     # this finalizer, and the patched stand-in has no cache_clear().
 
 
@@ -243,7 +243,7 @@ class FakeCollection:
 
     async def find_one_and_update(self, query, update):
         """Atomic in Mongo; here it just returns the pre-update doc, or None if
-        the filter didn't match — which is the signal callers gate on."""
+        the filter didn't match, which is the signal callers gate on."""
         self.update_calls.append((query, update))
         doc = self._first_match(query)
         if doc is None:
@@ -260,7 +260,7 @@ class FakeCollection:
                     raise DuplicateKeyError(f"duplicate key on {fields}")
 
         # Real Mongo mints an ObjectId, and code under test round-trips these
-        # ids through ObjectId() — a plain counter string would raise InvalidId.
+        # ids through ObjectId(); a plain counter string would raise InvalidId.
         _id = doc.get("_id") or ObjectId()
         stored = copy.deepcopy(doc)
         stored["_id"] = _id
@@ -323,7 +323,7 @@ def _pagination_arg(n, fallback):
 
     Tests call route handlers directly rather than through the app, so FastAPI
     never resolves the ``Query(...)`` defaults and the raw FieldInfo arrives
-    here — use the default it declares.
+    here. Use the default it declares.
     """
     if isinstance(n, int):
         return n

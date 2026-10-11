@@ -12,12 +12,12 @@ import Link from "next/link";
 
 /* The landing page's own sections, in the order they're scrolled through.
    Signed-out visitors arrive with no idea what the product does, so the
-   centre of the navbar — which for signed-in users points at the app — is
+   centre of the navbar (which for signed-in users points at the app) is
    better spent telling them what's further down the page. Kept short on
    purpose: the page has more sections than this, but a nav that lists every
    one stops being a summary and starts being a table of contents.
 
-   Order must match document order — useActiveSection breaks ties by position
+   Order must match document order: useActiveSection breaks ties by position
    in this array, so a mismatch would highlight the wrong link where two
    sections overlap the observer band. */
 const LANDING_SECTIONS = [
@@ -54,7 +54,7 @@ const Header: React.FC = () => {
   );
   const activeSection = useActiveSection(sectionIds);
 
-  // Close the mobile sheet on navigation — the hash routes don't unmount
+  // Close the mobile sheet on navigation: the hash routes don't unmount
   // anything, so nothing else would.
   React.useEffect(() => {
     setMenuOpen(false);
@@ -187,7 +187,7 @@ const Header: React.FC = () => {
             >
               <LogOutIcon className="h-4 w-4" />
             </button>
-            {/* Mobile menu toggle — surfaces the nav links hidden on small screens */}
+            {/* Mobile menu toggle: surfaces the nav links hidden on small screens */}
             <button
               onClick={() => setMenuOpen((v) => !v)}
               className="sm:hidden inline-flex items-center justify-center h-9 w-9 text-ink-muted bg-surface-1 border border-hairline rounded-md hover:bg-surface-2 transition-colors"
@@ -236,7 +236,7 @@ const Header: React.FC = () => {
             >
               Get started
             </Link>
-            {/* Mobile menu toggle — the only route to the section links once
+            {/* Mobile menu toggle: the only route to the section links once
                 the centre nav drops out below md. */}
             {showSections && (
               <button

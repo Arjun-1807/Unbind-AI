@@ -22,7 +22,7 @@ const LoginView: React.FC = () => {
    *
    * /pricing sends users here as `/login?next=/pricing` when they try to buy
    * while signed out; ignoring it dropped them on the dashboard and quietly
-   * ended the purchase. Only same-origin paths are honoured — an absolute URL
+   * ended the purchase. Only same-origin paths are honoured: an absolute URL
    * in `next` would make this an open redirect.
    */
   const nextPath = (() => {

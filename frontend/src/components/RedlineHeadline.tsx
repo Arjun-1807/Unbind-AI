@@ -10,7 +10,7 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 
 /**
  * The hero tagline performs the product's own trick on mount: a risky-sounding
- * fragment gets struck through in red, then swapped for the real copy — the
+ * fragment gets struck through in red, then swapped for the real copy: the
  * same red-strike/green-replace language used for clause rewrites elsewhere
  * in the product. Final DOM state matches today's static copy exactly, so
  * SSR, no-JS, and reduced-motion all render "Risks revealed." with no

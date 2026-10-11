@@ -8,8 +8,8 @@ import { observeScene } from "@/lib/scrollScene";
  * away again as it leaves.
  *
  * Each word is its own inline-block carrying an index. The component writes
- * two numbers per frame onto the wrapper — `--reveal` (how far the reading
- * head has travelled) and `--exit` (how far the block has left) — and every
+ * two numbers per frame onto the wrapper, `--reveal` (how far the reading
+ * head has travelled) and `--exit` (how far the block has left), and every
  * word derives its own opacity and offset from those in CSS. A thirty-word
  * sentence therefore costs two property writes per frame, not sixty style
  * mutations, and React never re-renders while scrolling.

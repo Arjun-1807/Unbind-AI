@@ -9,7 +9,7 @@ const PRO_PLAN = 'Verdict';
  * Checks that the authenticated user is subscribed to the Verdict Pro plan.
  * Exits the process with a friendly message if they are not.
  *
- * UX only — NOT a security control. The plan string comes from the server and
+ * UX only, NOT a security control. The plan string comes from the server and
  * is compared here purely so a free user gets a clear upgrade prompt instead of
  * a 403 halfway through. Entitlement is enforced server-side on every billable
  * endpoint; anyone can patch out this check locally and it buys them nothing.
@@ -69,7 +69,7 @@ export async function ensureAuth() {
 
   console.log(
     chalk.yellow('\n  🔐 Authentication required') +
-      chalk.dim(' — your credentials are stored locally for future sessions.\n')
+      chalk.dim('. Your credentials are stored locally for future sessions.\n')
   );
 
   const { action } = await inquirer.prompt([
@@ -78,8 +78,8 @@ export async function ensureAuth() {
       name: 'action',
       message: 'Do you have an UnBindAI account?',
       choices: [
-        { name: 'Yes — log in', value: 'login' },
-        { name: 'No  — create a new account', value: 'signup' },
+        { name: 'Yes, log in', value: 'login' },
+        { name: 'No, create a new account', value: 'signup' },
       ],
     },
   ]);
@@ -144,7 +144,7 @@ async function promptSignup() {
 
   try {
     await signup(answers.username, answers.email, answers.password);
-    console.log(chalk.green('\n  ✓ Account created — welcome to UnBindAI!\n'));
+    console.log(chalk.green('\n  ✓ Account created. Welcome to UnBindAI!\n'));
   } catch (err) {
     console.error(chalk.red(`\n  ✗ Sign-up failed: ${err.message}\n`));
     process.exit(1);

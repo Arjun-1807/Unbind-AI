@@ -73,7 +73,7 @@ def test_numeric_date_is_accepted_when_both_readings_agree():
 
 
 def test_ambiguous_numeric_date_is_refused_not_guessed():
-    """01/02/2026 is 1 Feb or 2 Jan depending on locale — picking is a bug."""
+    """01/02/2026 is 1 Feb or 2 Jan depending on locale; picking is a bug."""
     result = _resolve("01/02/2026")
     assert result.schedulable is False
     assert result.reason == AMBIGUOUS
@@ -176,7 +176,7 @@ def test_bare_if_still_wins_when_no_date_is_present():
 
 
 def test_strong_conditional_marker_still_beats_an_absolute_date():
-    """ "upon" and friends are unchanged — they override a date as before."""
+    """ "upon" and friends are unchanged: they override a date as before."""
     result = _resolve("upon termination of the agreement signed 31 December 2026")
     assert result.schedulable is False
     assert result.reason == CONDITIONAL
@@ -216,7 +216,7 @@ def test_past_date_is_not_schedulable_but_is_reported_as_past():
     assert result.reason == PAST
     # The date is still returned so the UI can say when it passed.
     assert result.due == date(2026, 1, 15)
-    # Nothing the user can supply — it simply already happened.
+    # Nothing the user can supply; it simply already happened.
     assert result.needs_user_input is False
 
 

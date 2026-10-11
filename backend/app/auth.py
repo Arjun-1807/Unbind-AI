@@ -13,8 +13,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ``sst`` (session start time) is stamped when a session first begins and is
 # carried forward *unchanged* through every re-issue, which puts a hard ceiling
 # on how far the sliding expiry can move. Lives here rather than in Settings so
-# it can't be weakened by an env var. This is not revocation — a stolen token is
-# still valid until it lapses — it only bounds the damage in time.
+# it can't be weakened by an env var. This is not revocation (a stolen token is
+# still valid until it lapses); it only bounds the damage in time.
 JWT_ABSOLUTE_EXPIRE_DAYS = 30
 
 
@@ -89,7 +89,7 @@ def _cookie_security() -> tuple[bool, str]:
     ``FRONTEND_URL`` or ``X-Forwarded-Proto``: a misconfigured/absent
     ``FRONTEND_URL`` used to silently downgrade a production deploy to a
     non-Secure cookie. Production is cross-site (frontend and API on different
-    origins), so it needs ``SameSite=None`` — which browsers only honour with
+    origins), so it needs ``SameSite=None``, which browsers only honour with
     ``Secure``. Local dev is same-site over plain HTTP, so ``lax``/non-Secure.
     """
     if get_settings().ENVIRONMENT == "production":
@@ -150,7 +150,7 @@ async def get_current_session(request: Request) -> dict:
     # (e.g. unsubscribe links, which travel in email URLs and get logged by
     # every proxy in between) must never be usable as a Bearer credential.
     # Tokens issued before this claim existed have no ``purpose`` and are
-    # rejected here — that logs everyone out once, by design.
+    # rejected here; that logs everyone out once, by design.
     if payload.get("purpose") != "session":
         raise HTTPException(status_code=401, detail="Not authenticated")
     user_id = payload.get("userId")

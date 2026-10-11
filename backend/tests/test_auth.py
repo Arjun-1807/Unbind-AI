@@ -1,4 +1,4 @@
-"""Tests for app.auth — token round-trips, tampering, hashing, cookie flags, purpose."""
+"""Tests for app.auth: token round-trips, tampering, hashing, cookie flags, purpose."""
 
 from datetime import datetime, timedelta, timezone
 
@@ -264,7 +264,7 @@ def test_session_start_garbage_claim_is_treated_as_now():
 
 
 class _FakeResponse:
-    """Stand-in for fastapi.Response — set_auth_cookie only needs set_cookie."""
+    """Stand-in for fastapi.Response; set_auth_cookie only needs set_cookie."""
 
     def __init__(self):
         self.cookies = {}
@@ -346,7 +346,7 @@ async def test_me_reissued_token_keeps_the_original_session_start(seed_user, ove
     )
     reissued = auth.decode_access_token(out.accessToken)
     assert reissued["sst"] == int(started.timestamp())
-    # 28 days in, only 2 remain — polling /auth/me cannot buy a fresh 7 days
+    # 28 days in, only 2 remain: polling /auth/me cannot buy a fresh 7 days
     # beyond the ceiling.
     assert reissued["exp"] == pytest.approx(
         (started + timedelta(days=auth.JWT_ABSOLUTE_EXPIRE_DAYS)).timestamp(), abs=5

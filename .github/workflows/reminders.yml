@@ -1,14 +1,14 @@
 name: Deadline reminders
 
 # Emails users about contract deadlines coming up. The backend is serverless and
-# only runs during a request, so something external has to wake it — that's this.
+# only runs during a request, so something external has to wake it: that's this.
 #
 # Required repository secrets:
 #   BACKEND_URL           e.g. https://unbind-backend.vercel.app
 #   REMINDER_SWEEP_SECRET must match the backend's REMINDER_SWEEP_SECRET env var
 on:
   schedule:
-    # 03:30 UTC ≈ 09:00 IST — morning for the India-first audience, and off the
+    # 03:30 UTC ≈ 09:00 IST, morning for the India-first audience, and off the
     # hour because GitHub delays jobs scheduled at :00 under load.
     - cron: "30 3 * * *"
   workflow_dispatch:
@@ -18,7 +18,7 @@ on:
         type: boolean
         default: true
 
-# Least privilege: this workflow doesn't even check the code out — it just POSTs
+# Least privilege: this workflow doesn't even check the code out; it just POSTs
 # to the backend. Without an explicit block it would inherit the repository
 # default token scope (possibly read/write-all) for no reason at all.
 permissions:
@@ -45,20 +45,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          # "Not configured yet" is a legitimate state — reminders are opt-in
+          # "Not configured yet" is a legitimate state: reminders are opt-in
           # infrastructure, and the rest of the app works without them. Skip
           # green with a warning rather than failing, so an unconfigured repo
           # doesn't email its owner a failure notice every single day.
           if [ -z "${BACKEND_URL:-}" ] || [ -z "${SWEEP_SECRET:-}" ]; then
-            echo "::warning::Deadline reminders are not configured — skipping. Set the BACKEND_URL and REMINDER_SWEEP_SECRET repository secrets to enable them."
+            echo "::warning::Deadline reminders are not configured, skipping. Set the BACKEND_URL and REMINDER_SWEEP_SECRET repository secrets to enable them."
             {
               echo "### Reminder sweep skipped"
               echo ""
               echo "Deadline reminders are not configured yet. To enable them, set both"
               echo "repository secrets:"
               echo ""
-              echo '- `BACKEND_URL` — e.g. `https://unbind-backend.vercel.app`'
-              echo '- `REMINDER_SWEEP_SECRET` — must match the backend env var of the same name'
+              echo '- `BACKEND_URL`: e.g. `https://unbind-backend.vercel.app`'
+              echo '- `REMINDER_SWEEP_SECRET`: must match the backend env var of the same name'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -88,7 +88,7 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
           # The sweep reports per-user send failures in its body rather than
-          # failing the request, so surface them as a warning — the run is still
+          # failing the request, so surface them as a warning; the run is still
           # a success (the next sweep retries those users).
           if grep -q '"failures": *[1-9]' /tmp/sweep-body.json; then
             echo "::warning::Some reminder emails failed to send; the next sweep will retry them."

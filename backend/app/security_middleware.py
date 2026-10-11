@@ -1,8 +1,8 @@
 """Cross-cutting HTTP security middleware: Origin/CSRF validation and rate limiting.
 
 Both concerns are implemented as ASGI middleware rather than per-route
-dependencies or decorators so that they cover every route — including routes
-added later — without each route module having to opt in.
+dependencies or decorators so that they cover every route (including routes
+added later) without each route module having to opt in.
 
 Registration order is handled by :func:`add_security_middleware`; see its
 docstring for the resulting request pipeline.
@@ -136,22 +136,22 @@ class RateLimitRule(NamedTuple):
 # credential guessing on login, bulk free-account creation (each account carries
 # an LLM quota, so signup spam drains the Groq budget), and bulk analysis.
 RATE_LIMITS: tuple[RateLimitRule, ...] = (
-    # 10 / minute — password guessing.
+    # 10 / minute: password guessing.
     RateLimitRule("/api/auth/login", 10, 60),
-    # 5 / hour — free-account farming, which drains the owner's Groq budget.
+    # 5 / hour: free-account farming, which drains the owner's Groq budget.
     RateLimitRule("/api/auth/signup", 5, 3600),
-    # 5 / hour — the SAME free-account farming as /signup. POST /api/auth/google
+    # 5 / hour: the SAME free-account farming as /signup. POST /api/auth/google
     # inserts a brand-new user document on first sign-in (auth_routes.py), so it
     # is a second, equally cheap account factory; leaving it unlisted made the
     # signup rule above trivially bypassable by taking the Google path instead.
     RateLimitRule("/api/auth/google", 5, 3600),
-    # 10 / hour — current-password guessing against a hijacked session.
+    # 10 / hour: current-password guessing against a hijacked session.
     RateLimitRule("/api/auth/update-password", 10, 3600),
-    # 3 / hour — unauthenticated write.
+    # 3 / hour: unauthenticated write.
     RateLimitRule("/api/lawyer-register", 3, 3600),
-    # 10 / hour — Razorpay order spam.
+    # 10 / hour: Razorpay order spam.
     RateLimitRule("/api/user/plan/create-order", 10, 3600),
-    # 30 / hour — LLM spend. Scoped to POST on purpose: every endpoint under
+    # 30 / hour: LLM spend. Scoped to POST on purpose: every endpoint under
     # this prefix that costs a Groq call (analyze, upload, chat, simulate,
     # negotiation-message) is a POST, whereas GET /analysis/history and
     # GET /analysis/{id}/chat are ordinary page reads. Throttling those at
@@ -183,7 +183,7 @@ def _read_trusted_proxy_hops() -> int:
     throttled request, so it must not depend on the settings object being
     importable/constructed (config.py raises on a missing JWT_SECRET).
 
-    ``0`` means "no proxy" — trust only the socket peer and ignore the header
+    ``0`` means "no proxy": trust only the socket peer and ignore the header
     entirely, which is the correct setting for a directly exposed deployment.
     """
     raw = os.getenv("TRUSTED_PROXY_HOPS", "1")
@@ -218,10 +218,10 @@ def client_ip(request: Request) -> str:
     which the client cannot influence. Deployments with N chained proxies must
     set the env var to N or they will key on the last proxy's own address.
 
-    Anything the header cannot answer — absent, all-empty, or fewer entries
-    than there are trusted hops (a request that never traversed the full proxy
-    chain) — falls back to the socket peer rather than to an attacker-supplied
-    value.
+    Anything the header cannot answer (absent, all-empty, or fewer entries
+    than there are trusted hops, meaning the request never traversed the full
+    proxy chain) falls back to the socket peer rather than to an
+    attacker-supplied value.
     """
     peer = request.client.host if request.client else "unknown"
 
@@ -241,7 +241,7 @@ def client_ip(request: Request) -> str:
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Fixed-set-of-prefixes sliding-window rate limiter keyed on client IP.
 
-    LIMITATION — this store lives in process memory. That means limits are
+    LIMITATION: this store lives in process memory. That means limits are
     enforced *per instance*: with N serverless instances or workers the
     effective ceiling is N x the configured limit, and every cold start resets
     all counters. It still raises the cost of the attacks above by orders of
@@ -403,7 +403,7 @@ class OriginValidationMiddleware(BaseHTTPMiddleware):
                     origin = f"{parts.scheme}://{parts.netloc}"
                     source = "Referer"
 
-        # Rule 4: no browser context to verify — non-browser client.
+        # Rule 4: no browser context to verify (non-browser client).
         if not origin:
             return await call_next(request)
 
@@ -451,6 +451,6 @@ def add_security_middleware(
     )
     app.add_middleware(RateLimitMiddleware)
     # Registered last, so it is the outermost of the three and refuses an
-    # oversized body before the limiter or the CSRF check does any work — and,
+    # oversized body before the limiter or the CSRF check does any work, and,
     # critically, before FastAPI's form parsing spools it to disk.
     app.add_middleware(BodySizeLimitMiddleware)

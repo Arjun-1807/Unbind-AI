@@ -92,7 +92,7 @@ const CompareDocumentsModal: React.FC<CompareDocumentsModalProps> = ({
   }, [open]);
 
   // All of the work below runs on every render, including the ones before the
-  // `!open` bail-out at the bottom — so it stays gated on `open`. Otherwise
+  // `!open` bail-out at the bottom, so it stays gated on `open`. Otherwise
   // merely rendering an analysis would pay for segmenting and diffing the
   // whole document.
   const { segments, unmatchedCount } = useMemo(
@@ -167,7 +167,7 @@ const CompareDocumentsModal: React.FC<CompareDocumentsModalProps> = ({
       aria-modal="true"
       className="fixed inset-0 z-50 flex flex-col bg-canvas fade-in"
     >
-      {/* Header — mimics a GitHub PR "Files changed" merge bar */}
+      {/* Header: mimics a GitHub PR "Files changed" merge bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 border-b border-hairline bg-surface-1 shrink-0">
         <div className="flex items-center gap-3 min-w-0 flex-wrap">
           <h2 className="text-base sm:text-lg font-semibold text-ink truncate">

@@ -1,6 +1,6 @@
-## UnbindAI — AI-Powered Legal Contract Analyzer
+## UnbindAI: AI-Powered Legal Contract Analyzer
 
-UnbindAI uses AI to break down legal contracts into plain English. Upload a PDF — or snap a photo of a paper contract — and get instant clause-by-clause risk analysis, negotiation suggestions (including a ready-to-send negotiation message), a key terms glossary, deadline tracking, and cited what-if impact simulations.
+UnbindAI uses AI to break down legal contracts into plain English. Upload a PDF, or snap a photo of a paper contract, and get instant clause-by-clause risk analysis, negotiation suggestions (including a ready-to-send negotiation message), a key terms glossary, deadline tracking, and cited what-if impact simulations.
 
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)
@@ -17,17 +17,17 @@ UnbindAI uses AI to break down legal contracts into plain English. Upload a PDF 
 | Feature                   | Description                                                 |
 | ------------------------- | ----------------------------------------------------------- |
 | **📄 PDF / DOCX Upload**  | Drag-and-drop or click to upload any legal contract         |
-| **📸 Photo / Scan OCR**   | Photograph or upload an image of a paper contract — a Groq vision model reads the text |
+| **📸 Photo / Scan OCR**   | Photograph or upload an image of a paper contract; a Groq vision model reads the text |
 | **⚠️ Risk Analysis**      | Clause-by-clause risk scoring with a visual risk meter      |
 | **🤝 Negotiation Helper** | AI-generated clause rewrites (keep/AI/custom) **plus a ready-to-send negotiation message** you can copy and send |
 | **📖 Key Terms Glossary** | Legal jargon explained in plain English                     |
 | **📅 Key Dates**          | Automatic deadline extraction with ICS calendar export      |
-| **🎯 Impact Simulator**   | "What if I…?" scenario testing — answers cite the exact clauses and jump to them in the document |
+| **🎯 Impact Simulator**   | "What if I…?" scenario testing; answers cite the exact clauses and jump to them in the document |
 | **📄 Document View**      | Side-by-side view with interactive clause highlighting      |
 | **📥 PDF Export**         | Download full analysis reports and modified contracts       |
 | **🔐 Auth**               | Secure JWT-based signup/login                               |
 | **📁 Dashboard**          | View and manage all past analyses                           |
-| **💻 CLI REPL**           | `npm install -g unbindai` — analyse contracts from terminal |
+| **💻 CLI REPL**           | `npm install -g unbindai`: analyse contracts from terminal  |
 
 ---
 
@@ -65,7 +65,7 @@ UnbindAI/
 │   ├── package.json
 │   └── next.config.mjs
 │
-└── cli/                        # npm package — unbindai
+└── cli/                        # npm package: unbindai
     ├── bin/unbind.js            # Shebang entry point
     ├── src/
     │   ├── index.js             # main(), arg parsing
@@ -81,9 +81,9 @@ UnbindAI/
 ## How It Works
 
 ```
-User uploads a PDF/DOCX — or photographs a paper contract
+User uploads a PDF/DOCX, or photographs a paper contract
        ↓
-Text extracted (pdfplumber / PyPDF2) — OR images read by a Groq vision model (OCR)
+Text extracted (pdfplumber / PyPDF2), OR images read by a Groq vision model (OCR)
        ↓
 Text is semantically chunked (heading-aware splitting)
        ↓
@@ -159,7 +159,7 @@ npm install -g .
 unbind contract.pdf
 ```
 
-→ Interactive terminal REPL — no browser needed
+→ Interactive terminal REPL, no browser needed
 
 ---
 
@@ -172,16 +172,16 @@ unbind contract.pdf
 | `JWT_SECRET`   | `python -c "import secrets; print(secrets.token_hex(32))"`                            | Self-generated |
 | `GOOGLE_CLIENT_ID` | [Google Cloud Console](https://console.cloud.google.com/) → Create → OAuth 2.0 Client ID | Free           |
 | `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/) → Create → OAuth 2.0 Client ID | Free           |
-| `HUGGINGFACEHUB_API_TOKEN` | [HuggingFace](https://huggingface.co/settings/tokens) → New token (read scope) — used for embeddings | Free |
-| `SMTP_USER` / `SMTP_PASSWORD` | Gmail address + [App Password](https://support.google.com/accounts/answer/185833) — required for lawyer-contact emails | Free |
+| `HUGGINGFACEHUB_API_TOKEN` | [HuggingFace](https://huggingface.co/settings/tokens) → New token (read scope), used for embeddings | Free |
+| `SMTP_USER` / `SMTP_PASSWORD` | Gmail address + [App Password](https://support.google.com/accounts/answer/185833), required for lawyer-contact emails | Free |
 
-> **Feature-specific Groq keys** (all optional — each falls back to `GROQ_API_KEY`, so a single key still works): `HYDE_KEY` (impact-simulator retrieval), `NEGOTIATION_KEY` (negotiation-message drafting), and `GROQ_VISION` (photo/scan OCR). Giving each feature its own key means they draw on independent per-key rate limits. OCR also needs `OCR_MODEL` set to a **vision-capable** Groq model (default `qwen/qwen3.6-27b` — verify against Groq's current model list, as vision IDs change).
+> **Feature-specific Groq keys** (all optional; each falls back to `GROQ_API_KEY`, so a single key still works): `HYDE_KEY` (impact-simulator retrieval), `NEGOTIATION_KEY` (negotiation-message drafting), and `GROQ_VISION` (photo/scan OCR). Giving each feature its own key means they draw on independent per-key rate limits. OCR also needs `OCR_MODEL` set to a **vision-capable** Groq model (default `qwen/qwen3.6-27b`; verify against Groq's current model list, as vision IDs change).
 >
 > **Other optional settings** (sane defaults, override only if needed): `PORT`, `FRONTEND_URL`, `LANGSMITH_*` (tracing), `SMTP_HOST` / `SMTP_PORT` / `EMAIL_FROM_NAME`, `JWT_ALGORITHM` / `JWT_EXPIRE_DAYS` / `COOKIE_NAME`, and `VERCEL_PREVIEW_REGEX` (opt-in CORS for Vercel preview URLs). See [`backend/.env.example`](backend/.env.example) for the full list.
 
 ---
 
-## CLI — `unbind`
+## CLI: `unbind`
 
 A standalone terminal REPL that talks to the same backend. Useful for quick analysis without opening a browser.
 
@@ -234,7 +234,7 @@ unbind --logout
 | 2 | **Translate to plain English** | `clauses[].simplifiedExplanation` |
 | 3 | **Ask a question** | `POST /api/analysis/simulate` |
 | 4 | **Extract clauses** | Full clause list with risk + negotiation tips |
-| 5 | **Exit** | — |
+| 5 | **Exit** | None |
 
 ### CLI Flags
 
@@ -249,11 +249,11 @@ unbind --logout
 
 | Badge | Meaning |
 |-------|---------|
-| 🔴 **High** | Significant risk — likely needs legal review |
-| 🟡 **Medium** | Moderate concern — consider negotiating |
-| 🟢 **Low** | Minor risk — worth noting |
+| 🔴 **High** | Significant risk: likely needs legal review |
+| 🟡 **Medium** | Moderate concern: consider negotiating |
+| 🟢 **Low** | Minor risk: worth noting |
 | ⚪ **Negligible** | Standard clause with minimal risk |
-| 🔵 **No Risk** | Neutral / boilerplate — no action needed |
+| 🔵 **No Risk** | Neutral / boilerplate: no action needed |
 
 Credentials are stored in `~/.config/unbindai/config.json` (Linux) and reused across sessions.
 
@@ -292,7 +292,7 @@ Credentials are stored in `~/.config/unbindai/config.json` (Linux) and reused ac
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS v4               |
 | Backend  | FastAPI, Python 3.12, Pydantic                                  |
 | Database | MongoDB Atlas (Motor async driver)                              |
-| AI       | Groq API — Llama 3.3 70B (analysis/HyDE/negotiation) · Qwen3 vision (OCR) |
+| AI       | Groq API: Llama 3.3 70B (analysis/HyDE/negotiation) · Qwen3 vision (OCR) |
 | Retrieval| Chroma vector store · HuggingFace embeddings · HyDE query expansion |
 | Auth     | JWT (python-jose), bcrypt (passlib)                             |
 | PDF/Image| pdfplumber, PyPDF2, Pillow (backend) · jsPDF, pdf-lib (frontend export) |

@@ -25,10 +25,10 @@ dependencies = [
     "huggingface_hub>=0.23.0",
     "pdfplumber>=0.10.0",
     # pypdf, not the archived/EOL PyPDF2 (unfixed infinite-loop DoS on malformed
-    # input, CVE-2023-36464 class) — this parses attacker-controlled bytes.
+    # input, CVE-2023-36464 class): this parses attacker-controlled bytes.
     "pypdf>=5.0.0",
     # Imported at runtime by analysis_routes (DOCX extraction) and ocr_service
-    # (image preprocessing) — an install from this file alone used to crash on
+    # (image preprocessing); an install from this file alone used to crash on
     # the first .docx or photo upload.
     "python-docx>=1.1.0",
     # >=11.0.0: multiple decoder CVEs across the 10.x line, and this decodes
@@ -66,4 +66,4 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["B018"]  # "useless expression" — intentional in assertions
+"tests/*" = ["B018"]  # "useless expression": intentional in assertions

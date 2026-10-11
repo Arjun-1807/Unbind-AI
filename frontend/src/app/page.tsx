@@ -16,7 +16,7 @@ export default function HomePage() {
   //
   // `middleware.ts` already redirects anyone carrying a session cookie before
   // this page renders at all, so this is the fallback for the cases it can't
-  // see — chiefly a client-side navigation to `/`, which never touches the
+  // see: chiefly a client-side navigation to `/`, which never touches the
   // middleware.
   useEffect(() => {
     if (authReady && user) {
@@ -27,7 +27,7 @@ export default function HomePage() {
   // Deliberately NOT gated on `authReady`.
   //
   // Waiting for `/auth/me` before painting meant the server-rendered HTML for
-  // this route was a loader — so every crawler and every link-preview scraper
+  // this route was a loader, so every crawler and every link-preview scraper
   // saw a spinner instead of the marketing page, on the one route whose whole
   // job is being found. Signed-out visitors are the overwhelming majority here
   // and their content needs no session, so render it immediately and let the

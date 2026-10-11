@@ -7,7 +7,7 @@ on:
 
 # Least privilege: this workflow only ever reads the code. Without an explicit
 # block the run inherits the repository default, which may still be the legacy
-# read/write-all token — that would let any step (or a compromised dependency
+# read/write-all token; that would let any step (or a compromised dependency
 # executed by one) push commits, publish packages or edit issues.
 permissions:
   contents: read

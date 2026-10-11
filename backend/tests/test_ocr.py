@@ -74,8 +74,8 @@ class TestPreprocess:
     def test_decompression_bomb_is_rejected_before_it_is_decoded(self):
         """A tiny file can declare an enormous canvas.
 
-        A 13000x13000 PNG of flat colour compresses to ~200 KB — well under the
-        route's 15 MB byte cap — and expands to ~500 MB the moment it is decoded.
+        A 13000x13000 PNG of flat colour compresses to ~200 KB (well under the
+        route's 15 MB byte cap) and expands to ~500 MB the moment it is decoded.
         The header is inspected first so that decode never happens.
         """
         bomb = _make_png(13000, 13000)

@@ -4,5 +4,5 @@ out/
 .env*.local
 .vercel
 
-# TypeScript incremental build cache — build output, not source.
+# TypeScript incremental build cache: build output, not source.
 *.tsbuildinfo

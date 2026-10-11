@@ -98,10 +98,10 @@ export default function TermsPage() {
                   does not provide legal advice.
                 </p>
                 <p>
-                  All outputs of the Service — including risk assessments,
+                  All outputs of the Service (including risk assessments,
                   negotiation suggestions, glossary explanations, key-date
-                  extractions, impact-simulation results, and clause rewrites
-                  — are generated for informational purposes only and are{" "}
+                  extractions, impact-simulation results, and clause rewrites)
+                  are generated for informational purposes only and are{" "}
                   <span className="font-semibold text-ink">
                     not a substitute for advice from a licensed attorney
                   </span>

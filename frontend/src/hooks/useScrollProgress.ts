@@ -11,7 +11,7 @@ import { useEffect, useRef } from "react";
  * that through `useState` re-renders the subtree sixty times a second for
  * what is almost always a single CSS custom property. Callers write the
  * number straight onto a DOM node instead, and call `setState` only on the
- * rare frames where something discrete actually changes — which stage is
+ * rare frames where something discrete actually changes: which stage is
  * active, say.
  *
  * Measurements are coalesced into one `requestAnimationFrame` per frame, so a
@@ -44,7 +44,7 @@ export function useScrollProgress(
         const el = targetRef.current;
         if (!el) return;
         const rect = el.getBoundingClientRect();
-        // Travel is the element's overflow beyond one viewport — the
+        // Travel is the element's overflow beyond one viewport: the
         // distance its top edge moves while it stays pinned.
         const travel = rect.height - window.innerHeight;
         progress = travel <= 0 ? 1 : -rect.top / travel;

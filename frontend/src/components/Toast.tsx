@@ -63,7 +63,7 @@ const Toast: React.FC<ToastProps> = ({
 
   // Callers pass `onRetry` as an inline arrow, so its identity changes on every
   // render. Keeping it in a ref lets the effects below depend only on real
-  // inputs — otherwise the auto-close timer would be torn down and restarted on
+  // inputs; otherwise the auto-close timer would be torn down and restarted on
   // each render and might never fire.
   const onRetryRef = useRef(onRetry);
   useEffect(() => {
@@ -96,14 +96,14 @@ const Toast: React.FC<ToastProps> = ({
   const handleClose = close;
 
   return (
-    // Backdrop — identical to ContactModal
+    // Backdrop: identical to ContactModal
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      {/* Card — identical ln-card + rounded-2xl sizing from ContactModal */}
+      {/* Card: identical ln-card + rounded-2xl sizing from ContactModal */}
       <div className="w-full max-w-sm ln-card rounded-2xl p-8 text-center relative fade-in">
-        {/* Close button — top-right, same as ContactModal */}
+        {/* Close button: top-right, same as ContactModal */}
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 text-ink-subtle hover:text-ink transition-colors cursor-pointer"
@@ -125,7 +125,7 @@ const Toast: React.FC<ToastProps> = ({
         {/* Message */}
         <p className="text-sm text-ink-subtle mb-6 leading-relaxed">{message}</p>
 
-        {/* Retry button — same style as ContactModal's primary action */}
+        {/* Retry button: same style as ContactModal's primary action */}
         <button
           onClick={handleClose}
           className="w-full inline-flex justify-center items-center px-4 py-2 text-sm cursor-pointer ln-btn-primary"

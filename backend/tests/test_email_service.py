@@ -1,7 +1,7 @@
 """Tests for the outbound email templates and the embedding client's isolation.
 
 The templates build HTML by f-string interpolation, so every value that reaches
-one has to be escaped — a receipt is mail our users trust, and an unescaped
+one has to be escaped: a receipt is mail our users trust, and an unescaped
 field is an injection hole one refactor away from being reachable.
 """
 

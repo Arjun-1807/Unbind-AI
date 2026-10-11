@@ -15,7 +15,7 @@ import type {
 
 const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL ?? ""}/api`;
 // Streaming (SSE) requests must bypass the Next.js rewrite proxy used by
-// API_BASE — rewrites buffer the whole response before forwarding it, which
+// API_BASE: rewrites buffer the whole response before forwarding it, which
 // defeats incremental progress events. Hit the backend origin directly.
 // NEXT_PUBLIC_BACKEND_ORIGIN is injected by next.config.mjs from the same
 // BACKEND_API_URL the rewrite uses, so both paths always agree.
@@ -96,7 +96,7 @@ function withoutAccessToken(raw: User & { accessToken?: string }): User {
  * How long any single non-streaming request may take before it is aborted.
  *
  * Without this a hung backend is indistinguishable from a slow one and the UI
- * waits forever — a boot-time `/auth/me` that never settles leaves the app on
+ * waits forever: a boot-time `/auth/me` that never settles leaves the app on
  * its loader with no way out. A ceiling turns that into an error the caller
  * can show and retry. Streaming uploads are exempt: they legitimately run for
  * minutes and carry their own `AbortController`.
@@ -106,7 +106,7 @@ const REQUEST_TIMEOUT_MS = 30_000;
 /**
  * Subscribers notified when the backend rejects our session (HTTP 401).
  *
- * A 401 can surface from any call, not just `/auth/me` — the cookie is valid
+ * A 401 can surface from any call, not just `/auth/me`: the cookie is valid
  * for days and typically expires mid-session, while the app still holds a
  * `user` in React state. Without a central signal every screen keeps rendering
  * as signed-in and each action fails with a raw backend string. AuthContext
@@ -142,7 +142,7 @@ function notifyUnauthorized(): void {
 /**
  * Read a successful response body, tolerating an empty one.
  *
- * Several endpoints answer 204 (or 200 with no body) — logout, the delete
+ * Several endpoints answer 204 (or 200 with no body): logout, the delete
  * routes, the reminder PUT. Calling `res.json()` on those throws a parse error
  * on a request that actually succeeded.
  */
@@ -200,7 +200,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 // ─── Auth ───
 
 /**
- * Create an account. No display name is collected — the server derives one
+ * Create an account. No display name is collected; the server derives one
  * from the email address, matching how Google sign-in names accounts.
  */
 export const signup = async (
@@ -233,7 +233,7 @@ export const logout = async (): Promise<void> => {
  * Resolve the current session.
  *
  * Returns `null` only when the backend actually says "you are not signed in"
- * (401/403). Every other failure — a timeout, a network drop, a 5xx — is
+ * (401/403). Every other failure (a timeout, a network drop, a 5xx) is
  * rethrown, because it is NOT evidence that the user is logged out.
  *
  * This used to swallow everything and return null, which made a backend blip
@@ -323,7 +323,7 @@ async function* parseSseStream(
  * Calls `onProgress` for each intermediate event and resolves with the final
  * stored analysis once the `result` event arrives.
  *
- * Pass `signal` to cancel the upload and tear the stream down — without it the
+ * Pass `signal` to cancel the upload and tear the stream down; without it the
  * reader keeps pulling frames (and calling `onProgress`) long after the caller
  * has unmounted, because the loop only ends when the server closes the body.
  * Aborting rejects this promise with the usual `AbortError`.
@@ -452,7 +452,7 @@ export interface UserPlanStatus {
   expiresAt: string | null;
   /**
    * The plan that just ended, when one has. Non-null only while `plan` is null
-   * because it lapsed — so a user can be told what happened instead of being
+   * because it lapsed, so a user can be told what happened instead of being
    * silently dropped to free-tier limits.
    */
   lapsedPlan: string | null;
@@ -490,7 +490,7 @@ export interface PlanOrder {
 }
 
 /** Ask the backend to create a Razorpay order for the chosen plan. The price
- * is decided server-side from the plan name — the client never sends an amount. */
+ * is decided server-side from the plan name; the client never sends an amount. */
 export const createPlanOrder = async (plan: string): Promise<PlanOrder> => {
   return apiFetch<PlanOrder>("/user/plan/create-order", {
     method: "POST",
@@ -523,7 +523,7 @@ export const cancelUserPlan = async (): Promise<{ success: boolean }> => {
 export interface PaymentRecord {
   id: string;
   plan: string;
-  /** Amount in the smallest currency unit (e.g. paise for INR — 45000 = ₹450.00). */
+  /** Amount in the smallest currency unit (e.g. paise for INR: 45000 = ₹450.00). */
   amount: number;
   currency: string;
   razorpayPaymentId: string | null;

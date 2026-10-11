@@ -7,7 +7,7 @@ import React, { useEffect, useRef } from "react";
  *
  * Rotation is published as `--rx` / `--ry` custom properties and consumed by
  * the `.tilt` class, so a pointer move updates two variables and the
- * compositor re-transforms one already-rasterised layer — no React render, no
+ * compositor re-transforms one already-rasterised layer: no React render, no
  * layout, no paint. Updates are coalesced to one per frame.
  *
  * Skipped entirely without a fine hover-capable pointer (a tilt nobody can

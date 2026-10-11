@@ -95,7 +95,7 @@ describe("normalizeWithOffsets", () => {
       "  Leading and   trailing   ",
       "Mixed\nWhitespace\tRuns",
       "Strip * these ** symbols # out",
-      "SECTION 1.2 — (a) Payment; terms: net-30!",
+      "SECTION 1.2 \u2014 (a) Payment; terms: net-30!",
       "",
     ];
     samples.forEach((sample) => {
@@ -117,7 +117,7 @@ describe("normalizeWithOffsets", () => {
 describe("findClauseInText", () => {
   it("returns the true offset of a clause preceded by spaces", () => {
     // Regression: findActualPosition used to skip whitespace when counting
-    // normalized characters, so this clause — which really starts at 42 —
+    // normalized characters, so this clause, which really starts at 42,
     // was reported at 51 and the slice began mid-word ("LAUSE says...").
     const prefix = "This is a preamble with some plain words. ";
     const clauseText = "THE BAD CLAUSE says you owe everything.";

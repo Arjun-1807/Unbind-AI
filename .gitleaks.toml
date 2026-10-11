@@ -5,13 +5,13 @@
 # CI ran `gitleaks detect` across full history (fetch-depth: 0) and passed green,
 # yet a live MongoDB Atlas connection string with embedded credentials had been
 # committed in a8cfcd7 (server/src/index.ts). Gitleaks' default ruleset targets
-# *provider-shaped* tokens — AKIA..., ghp_..., sk_live_..., etc. — which are
+# *provider-shaped* tokens (AKIA..., ghp_..., sk_live_..., etc.), which are
 # recognisable on their own. A database URI's password has no shape at all: it is
 # just an arbitrary string between ':' and '@'. Nothing in the default rules
 # could match it, so the highest-impact credential in the repo was the one class
 # the scanner was blind to.
 #
-# The rules below close that gap. They are ADDITIVE — `useDefault = true` keeps
+# The rules below close that gap. They are ADDITIVE: `useDefault = true` keeps
 # every upstream rule intact.
 #
 # Gitleaks picks this file up automatically from the repo root, and
@@ -54,20 +54,20 @@ keywords = ["mongodb://", "mongodb+srv://"]
     '''(^|/)\.env\.(?:example|sample|template|dist)$''',
   ]
   commits = [
-    # ══ KNOWN HISTORICAL LEAK — DO NOT COPY THIS PATTERN FOR NEW FINDINGS ══
+    # ══ KNOWN HISTORICAL LEAK: DO NOT COPY THIS PATTERN FOR NEW FINDINGS ══
     # The "initial commit" hardcoded a real MongoDB Atlas URI in
     # server/src/index.ts. It was removed from the tree in 99bfd49, but git
     # history is immutable, so every future scan would re-report it and leave CI
-    # permanently red — which trains people to ignore this job, defeating the
+    # permanently red, which trains people to ignore this job, defeating the
     # whole control.
     #
     # REQUIRED REMEDIATION (this entry does NOT fix the leak):
-    #   1. Rotate the Atlas database user's password — assume the credential is
+    #   1. Rotate the Atlas database user's password. Assume the credential is
     #      compromised; it has been public in this repo's history.
     #   2. Optionally purge it from history (git filter-repo / BFG) and
     #      force-push, then delete this entry.
     # Scoped to this one rule and this one commit, so any *other* secret in that
-    # commit — and every credentialed URI in every other commit — still fails.
+    # commit, and every credentialed URI in every other commit, still fails.
     "a8cfcd7570186abe73a278596644bc5bf8955cda",
   ]
 

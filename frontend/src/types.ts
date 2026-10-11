@@ -142,7 +142,7 @@ export interface User {
 
 /**
  * An analysis as it appears in a list. The history endpoint deliberately omits
- * `documentText` — it dwarfs everything else in the payload and no list view
+ * `documentText`: it dwarfs everything else in the payload and no list view
  * renders it. Fetch the full record with `getAnalysisById` when one is opened.
  */
 export interface AnalysisSummary {

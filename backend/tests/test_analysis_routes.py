@@ -3,7 +3,7 @@
 Same direct-call style as the other suites: handlers are awaited with a tiny
 fake Request, no server and no network.
 
-The tenancy checks here are the important ones — nothing previously verified
+The tenancy checks here are the important ones: nothing previously verified
 that one user cannot read or delete another user's analyses.
 """
 
@@ -175,7 +175,7 @@ async def test_missing_analysis_is_404(override_settings, seed_user):
 # ── Upload size guard ────────────────────────────────────────────────────────
 #
 # The cap is enforced *during* the read, not on the length of bytes already
-# buffered — that was the bug: len() of a fully-materialised body enforces
+# buffered. That was the bug: len() of a fully-materialised body enforces
 # nothing, so the "limit" only ever measured RAM that had already been spent.
 
 
@@ -429,7 +429,7 @@ async def test_simulate_rejects_an_analysis_id_the_caller_does_not_own(
 async def test_simulate_still_serves_the_cli_with_no_analysis_id(
     override_settings, seed_user, monkeypatch
 ):
-    """The published CLI posts raw text and no id — that path must keep working."""
+    """The published CLI posts raw text and no id; that path must keep working."""
     from app.schemas import SimulateRequest
     from app.services import document_chat_service
 
@@ -470,7 +470,7 @@ async def test_expired_verdict_plan_is_denied_the_directory(seed_user):
 
     Verdict is sold as lifetime today, but a Verdict record carrying an expiry
     (a refund, a trial, a future time-limited tier) must lose access like any
-    other lapsed plan — that is the whole point of routing through
+    other lapsed plan; that is the whole point of routing through
     effective_plan.
     """
     user = seed_user(plan="Verdict", planExpiresAt=datetime.now(timezone.utc) - timedelta(days=1))
@@ -531,7 +531,7 @@ def stub_llm(monkeypatch):
         state["max_in_flight"] = max(state["max_in_flight"], state["in_flight"])
         try:
             # Yield, so concurrent callers actually overlap and in_flight is
-            # meaningful — a fake that never awaits cannot show serialisation.
+            # meaningful: a fake that never awaits cannot show serialisation.
             await asyncio.sleep(0)
             if "legal document classifier" in system:
                 return '{"isLegal": true}'

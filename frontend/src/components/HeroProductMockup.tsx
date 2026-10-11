@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 /**
- * An interactive mock of the real UnBind analysis UI — rendered from live
+ * An interactive mock of the real UnBind analysis UI, rendered from live
  * components (not a screenshot) in the Linear-marketing idiom: a surface-1
  * charcoal panel with a hairline border, a faux app chrome bar, and a
  * clause-analysis result laid out the way the product actually presents it.
@@ -51,7 +51,7 @@ const CLAUSES: Clause[] = [
     title: "Late Payment Penalty",
     level: "High",
     quote: "Late payments shall incur a fee of $200 per day, compounding daily, with no cap.",
-    plain: "You'd be charged $200 for every late day, and that fee grows on itself — with no ceiling.",
+    plain: "You'd be charged $200 for every late day, and that fee grows on itself, with no ceiling.",
     rewrite: "Late payments incur a one-time fee of $50, capped at one month's rent.",
   },
   {
@@ -76,7 +76,7 @@ const CLAUSES: Clause[] = [
     level: "Low",
     quote: "This lease shall be governed by the laws of the state.",
     plain: "Standard clause. Nothing unusual here.",
-    rewrite: "No changes needed — this is a standard, fair clause.",
+    rewrite: "No changes needed. This is a standard, fair clause.",
   },
 ];
 
@@ -167,7 +167,7 @@ export default function HeroProductMockup() {
             ))}
           </div>
 
-          {/* Role switcher — real toggle, re-labels the analysis perspective */}
+          {/* Role switcher: real toggle, re-labels the analysis perspective */}
           <div>
             <div className="mb-1.5 text-[10.5px] font-medium uppercase tracking-wide" style={{ color: "var(--ln-ink-tertiary)" }}>
               Analysing as
@@ -289,7 +289,7 @@ export default function HeroProductMockup() {
           </div>
 
           <p className="mt-3 text-center text-[11px]" style={{ color: "var(--ln-ink-tertiary)" }}>
-            Click any clause to see the full breakdown — {clause.title} shown above.
+            Click any clause to see the full breakdown ({clause.title} shown above).
           </p>
         </main>
       </div>

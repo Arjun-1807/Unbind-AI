@@ -40,7 +40,7 @@ function read<T>(kind: StorageKind, key: string): T | null {
 /**
  * Write `value` (or remove the key when it is null/undefined).
  * Returns true when the value is durably stored, false when the write was
- * dropped — quota exceeded (a big `documentText` easily blows the ~5 MB cap),
+ * dropped: quota exceeded (a big `documentText` easily blows the ~5 MB cap),
  * private browsing, or no `window` at all. Callers that need the value back
  * later should treat false as "not cached" and fall back to refetching.
  */
@@ -55,7 +55,7 @@ function write<T>(kind: StorageKind, key: string, value: T | null): boolean {
     }
     return true;
   } catch {
-    // Ignore write failures (quota exceeded, private browsing, etc.) — losing
+    // Ignore write failures (quota exceeded, private browsing, etc.); losing
     // a cached value is preferable to crashing the UI.
     return false;
   }

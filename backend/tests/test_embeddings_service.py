@@ -1,6 +1,6 @@
 """Tests for embedding-client isolation.
 
-The point of these is not that embeddings work — it's that a hung embedding
+The point of these is not that embeddings work; it's that a hung embedding
 provider can't take the rest of the process down with it. Two defences: a
 request timeout, and a dedicated thread pool so a stall never eats the shared
 ``asyncio.to_thread`` executor that outbound SMTP also runs on.

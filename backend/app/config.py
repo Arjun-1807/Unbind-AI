@@ -49,12 +49,12 @@ class Settings(BaseSettings):
     MONGO_SERVER_SELECTION_TIMEOUT_MS: int = 5_000
     MONGO_CONNECT_TIMEOUT_MS: int = 5_000
     # Index creation is a deploy step (`python -m app.scripts.ensure_indexes`),
-    # not a per-request cost — see connect_db. Turn this on for local dev or a
+    # not a per-request cost; see connect_db. Turn this on for local dev or a
     # first boot against a brand-new cluster.
     RUN_INDEX_CREATION_ON_BOOT: bool = False
     # Which deployment this is. Every security-relevant relaxation (insecure
     # defaults, non-Secure cookies) is gated on this single explicit switch
-    # rather than inferred from FRONTEND_URL — a forgotten env var must fail
+    # rather than inferred from FRONTEND_URL: a forgotten env var must fail
     # closed, so "production" is the default and dev opts out.
     ENVIRONMENT: Literal["development", "production"] = "production"
     # No default: an unset JWT_SECRET is a hard startup failure in every
@@ -80,7 +80,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("NEGOTIATION_API_KEY", "NEGOTIATION_KEY"),
     )
     # Separate Groq API key used only for vision OCR (reading photographed/scanned
-    # contracts). Same rationale as the HyDE/negotiation keys — its own per-key
+    # contracts). Same rationale as the HyDE/negotiation keys: its own per-key
     # rate limit so OCR never competes with the main analysis quota. Accepts
     # either GROQ_VISION_API_KEY or GROQ_VISION in the env; falls back to
     # GROQ_API_KEY when empty.
@@ -90,14 +90,14 @@ class Settings(BaseSettings):
     )
     # Vision-capable Groq model used for OCR. Groq's current production vision
     # model (llama-4-scout/maverick were deprecated in 2026). Verify against
-    # Groq's model list before changing — vision model IDs churn over time.
+    # Groq's model list before changing: vision model IDs churn over time.
     OCR_MODEL: str = "qwen/qwen3.6-27b"
     # Chat / analysis models, by plan tier.
     #
     # Settings rather than constants for the same reason OCR_MODEL is one:
     # Groq retires model IDs on its own schedule. `llama-3.3-70b-versatile`
     # vanished from every key and took the entire analysis pipeline down with
-    # it — every clause extraction, summary, HyDE expansion, negotiation draft
+    # it: every clause extraction, summary, HyDE expansion, negotiation draft
     # and chat answer returned 404. Keeping these in the environment means
     # recovering from the next deprecation is a config change, not a deploy.
     #
@@ -133,17 +133,17 @@ class Settings(BaseSettings):
     # Test keys (rzp_test_…) hit Razorpay's sandbox; swap for live keys
     # (rzp_live_…) in production. KEY_ID is public (sent to the browser),
     # KEY_SECRET is private (used server-side to create orders and verify
-    # payment signatures — must never reach the frontend).
+    # payment signatures; it must never reach the frontend).
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
     # Secret configured on the Razorpay dashboard for the webhook endpoint. Used
-    # to verify the X-Razorpay-Signature on server-to-server payment callbacks —
+    # to verify the X-Razorpay-Signature on server-to-server payment callbacks,
     # the reliable source of truth even if the browser never calls /verify.
     RAZORPAY_WEBHOOK_SECRET: str = ""
     # The single origin the API trusts: it is the only entry in main.py's
     # `allowed_origins`, which feeds BOTH the CORS allowlist (allow_credentials
     # =True) and the Origin/CSRF allowlist. The localhost default is a dev
-    # convenience only — the production validator below rejects it, because a
+    # convenience only; the production validator below rejects it, because a
     # deploy that forgot this var would otherwise hand any page on
     # http://localhost:3000 credentialed, CSRF-passing access to production.
     FRONTEND_URL: str = "http://localhost:3000"
@@ -165,7 +165,7 @@ class Settings(BaseSettings):
     # Shared secret the deadline-reminder scheduler presents to POST
     # /api/reminders/sweep. That endpoint emails every user with a due deadline,
     # so it must not be callable by anyone who knows the URL. Left empty by
-    # default and the endpoint refuses to run — an unset secret is a
+    # default and the endpoint refuses to run: an unset secret is a
     # misconfiguration, not permission.
     REMINDER_SWEEP_SECRET: str = ""
 
@@ -190,7 +190,7 @@ class Settings(BaseSettings):
 
         # JWT_SECRET being merely *present* is not enough. Tokens are HS256 and
         # every user is handed one, so a short or guessable key is crackable
-        # offline — and forging {"userId": ..., "purpose": "session"} is a
+        # offline, and forging {"userId": ..., "purpose": "session"} is a
         # complete account takeover for any account the attacker names.
         secret = self.JWT_SECRET.strip()
         if len(secret) < _MIN_JWT_SECRET_LENGTH:
@@ -207,7 +207,7 @@ class Settings(BaseSettings):
 
         # FRONTEND_URL is the sole trusted origin for CORS (with credentials) and
         # for the Origin/CSRF check, so an unset or non-production value here is
-        # not cosmetic — it decides who may make authenticated cross-site calls
+        # not cosmetic: it decides who may make authenticated cross-site calls
         # against this deploy. Same fail-closed rule as ENVIRONMENT: a forgotten
         # env var must stop the boot, not silently trust localhost.
         frontend = self.FRONTEND_URL.strip()
@@ -221,7 +221,7 @@ class Settings(BaseSettings):
         elif parts.scheme != "https":
             errors.append(
                 f"FRONTEND_URL uses {parts.scheme!r}. A production origin must be "
-                "https:// — the auth cookie is Secure and only travels over TLS."
+                "https://; the auth cookie is Secure and only travels over TLS."
             )
         elif host in _LOCAL_HOSTS:
             errors.append(

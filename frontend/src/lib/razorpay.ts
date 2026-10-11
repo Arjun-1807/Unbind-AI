@@ -1,5 +1,5 @@
 // Loads Razorpay's hosted Checkout script on demand and exposes the minimal
-// types we use. The script must come from Razorpay's CDN — it can't be bundled.
+// types we use. The script must come from Razorpay's CDN; it can't be bundled.
 const CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
 export interface RazorpaySuccessResponse {

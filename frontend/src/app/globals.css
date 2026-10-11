@@ -21,11 +21,11 @@
   --ln-ink-muted: #d0d6e0;
   --ln-ink-subtle: #8a8f98;
   --ln-ink-tertiary: #62666d;
-  /* Lavender-blue accent — the single chromatic accent */
+  /* Lavender-blue accent: the single chromatic accent */
   --ln-primary: #5e6ad2;
   --ln-primary-hover: #828fff;
   --ln-primary-focus: #5e69d1;
-  /* Semantic — used sparingly for risk/status only */
+  /* Semantic: used sparingly for risk/status only */
   --ln-success: #27a644;
   --ln-danger: #f87171;
   --ln-warning: #fbbf24;
@@ -40,7 +40,7 @@
    data-theme attribute is set, preserving today's look for existing users. */
 :root[data-theme="light"] {
   /* Bone white, not #ffffff. Pure white is the brightest thing a display can
-     emit, and these are documents people read for an hour at a stretch — the
+     emit, and these are documents people read for an hour at a stretch; the
      glare is what makes long review sessions tiring. A trace of warmth takes
      the edge off without reading as a colour; it should feel like paper, not
      like a cream theme. Everything below is warmed to match, because a warm
@@ -59,14 +59,14 @@
   --ln-ink-muted: #403e37;
   --ln-ink-subtle: #6f6c63;
   --ln-ink-tertiary: #8f8c82;
-  /* Lavender-blue accent — darkened slightly for AA contrast on the canvas */
+  /* Lavender-blue accent, darkened slightly for AA contrast on the canvas */
   --ln-primary: #4550c8;
   --ln-primary-hover: #5e6ad2;
   --ln-primary-focus: #4550c8;
-  /* Semantic — used sparingly for risk/status only */
+  /* Semantic: used sparingly for risk/status only */
   --ln-success: #16803d;
   --ln-danger: #b91c1c;  /* red-700, not red-600: on the off-white canvas
-                          #dc2626 sat at 4.59:1 — over the AA floor at
+                          #dc2626 sat at 4.59:1, over the AA floor at
                           rest, but any tinted hover state pushed it under.
                           This holds 6.15:1 resting and 5.21:1 on a 10%
                           tint, so destructive controls stay legible in
@@ -79,7 +79,7 @@
    choice (no data-theme attribute present at all). */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    /* Same bone-white canvas as the explicit opt-in above — arriving at light
+    /* Same bone-white canvas as the explicit opt-in above: arriving at light
        mode via the OS must not give you a different, harsher product. */
     --ln-canvas: #faf9f6;
     --ln-surface-1: #f3f2ee;
@@ -98,7 +98,7 @@
     --ln-primary-focus: #4550c8;
     --ln-success: #16803d;
     --ln-danger: #b91c1c;  /* red-700, not red-600: on the off-white canvas
-                          #dc2626 sat at 4.59:1 — over the AA floor at
+                          #dc2626 sat at 4.59:1, over the AA floor at
                           rest, but any tinted hover state pushed it under.
                           This holds 6.15:1 resting and 5.21:1 on a 10%
                           tint, so destructive controls stay legible in
@@ -152,7 +152,7 @@ html {
 /* ── Linear component primitives ──
    Reusable classes so components share one visual vocabulary. */
 
-/* Surface-1 charcoal card with hairline border — the default panel. */
+/* Surface-1 charcoal card with hairline border: the default panel. */
 .ln-card {
   background: var(--ln-surface-1);
   border: 1px solid var(--ln-hairline);
@@ -266,7 +266,7 @@ html {
 .fade-in {
   /* Deliberately NOT `forwards`. The keyframe's end state (opacity 1,
      translateY(0)) is identical to the element's natural style, so holding
-     it buys nothing — but a retained `transform`, even translateY(0),
+     it buys nothing, but a retained `transform`, even translateY(0),
      permanently makes the element a containing block for `position: fixed`
      descendants and promotes a page-tall compositing layer. Letting the
      animation release avoids both. */
@@ -346,7 +346,7 @@ html {
   animation-delay: calc(var(--i, 0) * 100ms);
 }
 
-/* Shimmer sweep — a diagonal light pass across a surface. Apply to a
+/* Shimmer sweep: a diagonal light pass across a surface. Apply to a
    positioned element; the ::after runs the sweep. */
 @keyframes shimmerSweep {
   0% { transform: translateX(-120%) skewX(-18deg); }
@@ -390,7 +390,7 @@ html {
   animation: glowPulse 4s ease-in-out infinite;
 }
 
-/* Button sheen — a light streak sweeps on hover. */
+/* Button sheen: a light streak sweeps on hover. */
 .btn-sheen {
   position: relative;
   overflow: hidden;
@@ -416,7 +416,7 @@ html {
   transform: translateX(320%) skewX(-20deg);
 }
 
-/* Card hover lift — springy translate + accent border/shadow. */
+/* Card hover lift: springy translate + accent border/shadow. */
 .lift {
   transition:
     transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
@@ -562,7 +562,7 @@ html {
    difference between motion that glides and motion that stutters.
 
    Blur, gradients and shadows are expensive to recompute, so where
-   they appear they are applied ONCE at rest and then transformed —
+   they appear they are applied ONCE at rest and then transformed,
    never re-derived per frame. One-shot transitions (a panel blurring
    in over 400ms) may animate `filter`, because the cost is paid once
    on a small surface rather than every frame forever.
@@ -604,7 +604,7 @@ html {
   will-change: transform;
   /* NO `filter: blur()` here, deliberately.
      A large-radius blur on a viewport-scale layer was measured at ~65ms per
-     frame during scroll (≈15fps) versus 16.7ms (a locked 60) without it — and
+     frame during scroll (≈15fps) versus 16.7ms (a locked 60) without it, and
      it stayed expensive even with the drift animation paused, so the cost is
      rasterising the blur, not moving the layer. It was also redundant: these
      masses are radial gradients, which are already perfectly smooth. The
@@ -648,7 +648,7 @@ html {
   50% { transform: translate3d(-8vw, -9vh, 0); }
 }
 
-/* Film grain. Static — a moving grain plate is a full-viewport
+/* Film grain. Static: a moving grain plate is a full-viewport
    repaint every frame and the single most common cause of a
    "premium" backdrop tanking a scroll. */
 .atmos__grain {
@@ -761,7 +761,7 @@ html {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
-/* Animated only while hovered — see the note above. */
+/* Animated only while hovered. See the note above. */
 .conic-ring:hover::before {
   animation: conicSpin 4s linear infinite;
 }
@@ -892,7 +892,7 @@ html {
 
    Calibrated against the measured type ramp of the reference site
    (scale.com at 1440x900): display 116px/400, section 64px/400,
-   sub 40px/400, card 24px/500, body 14px, mono label 11px — with
+   sub 40px/400, card 24px/500, body 14px, mono label 11px, with
    letter-spacing pinned at a constant -0.01em at every size and
    line-height tightening as size grows (1.0 at 116px, 1.05 at 64px,
    1.25 at 40px, 1.5 at 24px).
@@ -907,7 +907,7 @@ html {
 .t-display {
   /* Capped at 88px rather than pushed to the reference's 116px: the headline
      animates through a longer transient phrase that is set `nowrap`, and above
-     this size that phrase forces a third line which then collapses away —
+     this size that phrase forces a third line which then collapses away,
      trading a layout shift on first paint for 16px of display size. */
   font-size: clamp(2.5rem, 6.2vw, 5.5rem);
   font-weight: 500;
@@ -950,7 +950,7 @@ html {
 }
 
 /* Mono taxonomy label. Positive tracking, matching the reference's
-   11px/0.05em treatment — the one place tracking goes positive. */
+   11px/0.05em treatment, the one place tracking goes positive. */
 .t-label {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 11px;
@@ -964,7 +964,7 @@ html {
    Registered so `calc()` treats them as real numbers, and inherited
    so a container's phase reaches the words inside it. The initial
    values are the fully-arrived state, which is what renders with no
-   JavaScript at all — a crawler, a failed hydration, or reduced
+   JavaScript at all: a crawler, a failed hydration, or reduced
    motion all get finished content rather than a blank screen. */
 @property --enter {
   syntax: "<number>";
@@ -995,14 +995,14 @@ html {
   );
 }
 
-/* Entrance only — for blocks that should stay put once arrived
+/* Entrance only: for blocks that should stay put once arrived
    (pricing, FAQ: content you may scroll back up to re-read). */
 .scene--hold {
   opacity: var(--enter);
   transform: translate3d(0, calc((1 - var(--enter)) * 3.25rem), 0);
 }
 
-/* The hero artwork receding as the page moves past it — the camera
+/* The hero artwork receding as the page moves past it: the camera
    pulling back off the product rather than the product simply
    scrolling out of frame. */
 .hero-depart {
@@ -1024,7 +1024,7 @@ html {
 /* ── Scroll-scrubbed word reveal ─────────────────────────────────
    A line of text split into words, each interpolating its own
    opacity and a small horizontal offset from scroll position, so the
-   sentence resolves left to right as it rises — as if being read.
+   sentence resolves left to right as it rises, as if being read.
 
    One JS write per frame drives the whole thing. React sets a single
    `--reveal` (0→1) on the container; each word derives `--wt`, its

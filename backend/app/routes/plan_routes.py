@@ -26,11 +26,11 @@ RAZORPAY_API = "https://api.razorpay.com/v1"
 
 # ── Plan catalogue ────────────────────────────────────────────────────────────
 # The price is the source of truth on the server. NEVER trust an amount sent by
-# the client — the browser only ever tells us *which* plan; we look up the price
+# the client: the browser only ever tells us *which* plan; we look up the price
 # here so a tampered request can't buy a plan for less. Amounts are in paise
 # (₹1 = 100 paise), which is the smallest unit Razorpay charges in.
 #
-# Brief and Motion are both 30-day passes that lapse and must be repurchased —
+# Brief and Motion are both 30-day passes that lapse and must be repurchased;
 # nothing auto-renews, and the Terms page says so. They differ by daily quota
 # (see plan_service.PLAN_LIMITS), not by duration. Verdict is bought once and
 # never expires, which is why its duration_days is None.
@@ -69,7 +69,7 @@ def _resolve_grant(
     new_expires_at: datetime | None,
 ) -> tuple[str, datetime | None]:
     """Merge a newly purchased plan into whatever the user already has, keeping
-    the better of the two — extend or upgrade, never downgrade.
+    the better of the two: extend or upgrade, never downgrade.
 
     ``current_plan`` must be the *effective* plan (see
     ``plan_service.effective_plan``), so a lapsed Brief counts as free tier and
@@ -110,7 +110,7 @@ async def _rzp_request(
     """Call the Razorpay REST API directly over httpx.
 
     Retries transient failures (timeouts, connection errors, 5xx, or an empty/
-    non-JSON body — which is what Razorpay's API returns during a brief outage).
+    non-JSON body, which is what Razorpay's API returns during a brief outage).
     On a definitive error it logs the real HTTP status and body so failures are
     diagnosable instead of surfacing as an opaque JSON-decode error, then raises
     a 502.
@@ -137,7 +137,7 @@ async def _rzp_request(
                         return resp.json()
                     except ValueError:
                         last_detail = f"200 but non-JSON body: {resp.text[:200]!r}"
-                # A 4xx is a real client error (bad request/auth) — don't retry it.
+                # A 4xx is a real client error (bad request/auth); don't retry it.
                 elif 400 <= resp.status_code < 500:
                     logger.error(
                         "Razorpay %s %s -> %d: %s", method, path, resp.status_code, resp.text[:500]
@@ -145,7 +145,7 @@ async def _rzp_request(
                     raise HTTPException(
                         status_code=502, detail="Payment provider rejected the request"
                     )
-                else:  # 5xx — Razorpay-side, worth retrying
+                else:  # 5xx: Razorpay-side, worth retrying
                     last_detail = f"HTTP {resp.status_code}: {resp.text[:200]!r}"
                 logger.warning(
                     "Razorpay %s %s transient (attempt %d): %s",
@@ -314,7 +314,7 @@ class VerifyPaymentRequest(BaseModel):
 @router.post("/create-order")
 async def create_order(request: Request, body: CreateOrderRequest):
     """Create a Razorpay order for the chosen plan and return the details the
-    frontend Checkout needs. No plan is granted here — that only happens in
+    frontend Checkout needs. No plan is granted here; that only happens in
     /verify after the payment signature checks out."""
     user_id = await get_current_user_id(request)
 
@@ -341,7 +341,7 @@ async def create_order(request: Request, body: CreateOrderRequest):
         "orderId": order["id"],
         "amount": order["amount"],
         "currency": order["currency"],
-        "keyId": settings.RAZORPAY_KEY_ID,  # public key — safe to expose
+        "keyId": settings.RAZORPAY_KEY_ID,  # public key, safe to expose
         "plan": plan,
         "description": catalogue["label"],
     }
@@ -351,7 +351,7 @@ async def create_order(request: Request, body: CreateOrderRequest):
 async def verify_payment(request: Request, body: VerifyPaymentRequest):
     """Verify the Razorpay payment signature and, only if genuine, activate the
     plan tied to the order. The signature is an HMAC-SHA256 of
-    "order_id|payment_id" keyed with the secret — a client cannot forge it."""
+    "order_id|payment_id" keyed with the secret; a client cannot forge it."""
     user_id = await get_current_user_id(request)
 
     # 1) Cryptographically verify the callback really came from Razorpay.
@@ -365,7 +365,7 @@ async def verify_payment(request: Request, body: VerifyPaymentRequest):
     #    one plan being replayed to unlock a more expensive one.
     order = await _rzp_request("GET", f"/orders/{body.razorpay_order_id}")
 
-    # 2a) The signature only proves the handshake is genuine — confirm the order
+    # 2a) The signature only proves the handshake is genuine; confirm the order
     #     was actually paid before granting anything.
     if order.get("status") != "paid":
         raise HTTPException(status_code=400, detail="Payment not captured")
@@ -377,7 +377,7 @@ async def verify_payment(request: Request, body: VerifyPaymentRequest):
     if order.get("amount") != PLAN_CATALOGUE[plan]["amount"]:
         raise HTTPException(status_code=400, detail="Order amount mismatch")
 
-    # 2b) The order must belong to the caller — a captured payment can only ever
+    # 2b) The order must belong to the caller: a captured payment can only ever
     #     unlock the account that created the order.
     if notes.get("user_id") != user_id:
         raise HTTPException(status_code=403, detail="Order does not belong to this user")
@@ -401,7 +401,7 @@ async def razorpay_webhook(request: Request):
     /verify (tab closed, network dropped after paying), Razorpay still delivers
     the ``payment.captured`` / ``order.paid`` event here and the plan is
     granted. The X-Razorpay-Signature header is an HMAC-SHA256 of the *raw*
-    request body keyed with the webhook secret — recomputing it proves the event
+    request body keyed with the webhook secret; recomputing it proves the event
     is genuine. Grants are idempotent, so overlap with /verify is harmless.
     """
     settings = get_settings()
@@ -414,7 +414,7 @@ async def razorpay_webhook(request: Request):
     expected = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
     # Bytes, not str: Starlette decodes headers as latin-1, so a signature header
     # containing a non-ASCII byte produces a str that compare_digest rejects with
-    # TypeError — a 500 (and a stack trace) where an unauthenticated caller
+    # TypeError: a 500 (and a stack trace) where an unauthenticated caller
     # should only ever get the 400 below.
     if not hmac.compare_digest(expected.encode(), signature.encode("latin-1", "ignore")):
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
@@ -513,7 +513,7 @@ async def get_plan(request: Request):
     daily_count = user.get("dailyAnalysisCount", 0) if user.get("lastAnalysisDate") == today else 0
     query_count = user.get("dailyQueryCount", 0) if user.get("lastQueryDate") == today else 0
 
-    # Brief and Motion are 30-day passes that lapse and must be repurchased —
+    # Brief and Motion are 30-day passes that lapse and must be repurchased;
     # nothing auto-renews. The UI needs two things this endpoint is the only
     # place to get: when an active plan runs out (so it can warn before the
     # user hits a 429), and which plan just ended (so a lapsed user is told

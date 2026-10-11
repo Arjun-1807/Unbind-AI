@@ -7,7 +7,7 @@ import { getToken, setToken, getApiUrl } from './config.js';
 // undici (Node's fetch) has no default response timeout: a server that accepts
 // the connection and then never replies would hang the spinner forever.
 const REQUEST_TIMEOUT_MS = 30_000;
-const UPLOAD_TIMEOUT_MS = 180_000; // analysis is slow — give the model room
+const UPLOAD_TIMEOUT_MS = 180_000; // analysis is slow; give the model room
 
 /** True when a fetch rejection is our own AbortSignal.timeout() firing. */
 const isTimeout = (err) => err?.name === 'TimeoutError' || err?.name === 'AbortError';
@@ -22,7 +22,7 @@ const JWT_RE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
  * We parse it from the Set-Cookie response header and store it as a
  * Bearer token so every subsequent request can authenticate.
  *
- * Only ever called for a successful login/signup response — any other endpoint
+ * Only ever called for a successful login/signup response; any other endpoint
  * (or a hostile `--server` host answering 4xx) must not be able to pin a token
  * of its choosing into the local config or clobber a valid session. The shape
  * check is a second line of defence against storing arbitrary cookie junk.
@@ -167,7 +167,7 @@ export async function uploadAndAnalyze(filePath, role = '') {
     throw err;
   }
 
-  // Not an auth endpoint — never accept a session token from this response.
+  // Not an auth endpoint; never accept a session token from this response.
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -180,7 +180,7 @@ export async function uploadAndAnalyze(filePath, role = '') {
 }
 
 /**
- * POST /api/analysis/simulate  — free-form AI question against the document.
+ * POST /api/analysis/simulate: free-form AI question against the document.
  * Returns { result: string }.
  */
 export async function askQuestion(documentText, question) {
@@ -191,7 +191,7 @@ export async function askQuestion(documentText, question) {
   });
 }
 
-/** GET /api/analysis/history — returns all stored analyses for the user. */
+/** GET /api/analysis/history: returns all stored analyses for the user. */
 export async function getAnalysisHistory() {
   return apiFetch('/analysis/history');
 }

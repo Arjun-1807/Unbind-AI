@@ -15,7 +15,7 @@ interface AuthContextValue {
   authReady: boolean;
   /**
    * Set when the boot session check could not reach the backend. Distinct from
-   * `user === null`, which means "definitely signed out" — this means "we do
+   * `user === null`, which means "definitely signed out"; this means "we do
    * not know", and route guards must not redirect on it.
    */
   authError: boolean;

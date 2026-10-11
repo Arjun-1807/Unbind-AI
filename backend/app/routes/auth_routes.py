@@ -55,7 +55,7 @@ async def signup(body: SignupRequest, request: Request, response: Response):
     now = datetime.now(timezone.utc)
     # A blank or absent display name falls back to the email's local part,
     # matching the Google path. There is no endpoint to rename an account, so
-    # this is the name the user keeps — deriving it beats storing "".
+    # this is the name the user keeps; deriving it beats storing "".
     email = body.email.lower()
     username = (body.username or "").strip() or email.split("@")[0]
     doc = {
@@ -81,7 +81,7 @@ async def signup(body: SignupRequest, request: Request, response: Response):
 
     return UserResponse(
         id=user_id,
-        # The derived name, not body.username — that is now optional, and
+        # The derived name, not body.username; that is now optional, and
         # returning null here would hand the client a user whose display name
         # is missing while the stored one is fine.
         username=username,
@@ -151,7 +151,7 @@ async def me(request: Request):
 
     # This endpoint slides the session forward on every call. Carry the original
     # session start into the new token so renewal can't outrun the absolute
-    # ceiling — otherwise a captured token stays alive forever by polling here.
+    # ceiling; otherwise a captured token stays alive forever by polling here.
     token = create_access_token(user_id, session_start=session_start_from_payload(payload))
     # See the note in login(): the stored ``pro``/``plan`` fields go stale when a
     # time-limited plan lapses, so report what effective_plan says instead.
@@ -200,8 +200,8 @@ async def update_password(body: UpdatePasswordRequest, request: Request):
 async def update_name(body: UpdateNameRequest, request: Request):
     """Rename the signed-in account.
 
-    Email signup stopped collecting a display name — the server derives one
-    from the email address — so this is the only way to change what the app
+    Email signup stopped collecting a display name (the server derives one
+    from the email address), so this is the only way to change what the app
     calls you. Without it that derived name is permanent.
     """
     user_id = await get_current_user_id(request)
@@ -292,7 +292,7 @@ async def google_login(body: GoogleLoginRequest, request: Request, response: Res
         # trusting an *unverified* email claim: anyone could put a victim's
         # address on a Google account they owned. A verified claim means Google
         # confirmed control of that mailbox, which is the same assurance a
-        # password-reset email carries — so it is sufficient to link, and it
+        # password-reset email carries, so it is sufficient to link, and it
         # keeps the Google button working for users who signed up with a
         # password. Do not relax the email_verified check above without
         # revisiting this.
@@ -305,7 +305,7 @@ async def google_login(body: GoogleLoginRequest, request: Request, response: Res
         user_id = str(user["_id"])
         username = user["username"]
         email = user["email"]
-        # effective_plan, not the raw ``pro`` flag — see login().
+        # effective_plan, not the raw ``pro`` flag; see login().
         pro = bool(effective_plan(user))
         created_at = user.get("createdAt", now)
     else:

@@ -80,8 +80,8 @@ const DocumentView: React.FC<DocumentViewProps> = ({
     let segments: Array<ClausePart | CitationPart> = matchedClauses;
 
     // Fold in the cited passage (if any). Offsets are exact, so we clamp them
-    // to the document and drop any clause highlights that overlap the citation
-    // — otherwise the same text would be wrapped twice and the walk below,
+    // to the document and drop any clause highlights that overlap the citation;
+    // otherwise the same text would be wrapped twice and the walk below,
     // which assumes non-overlapping segments, would misalign.
     if (
       activeCitation &&

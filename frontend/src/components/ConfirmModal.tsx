@@ -123,7 +123,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         {/* Message */}
         <p className="text-sm text-ink-subtle mb-6 leading-relaxed">{message}</p>
 
-        {/* Actions — stack on mobile, side-by-side on larger screens */}
+        {/* Actions: stack on mobile, side-by-side on larger screens */}
         <div className="flex flex-col-reverse sm:flex-row gap-3">
           <button
             onClick={onCancel}
